@@ -4,4 +4,4 @@ from django.shortcuts import render
 def runoob(request):
     context = {}
     context['hello'] = 'Hello World!'
-    return render(request, 'webgazer.html', context)
+    return render(request, 'hello.html', context)
