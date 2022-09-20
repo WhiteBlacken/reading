@@ -16,9 +16,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, re_path
 
+import action.views
 from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    re_path(r'^$', views.runoob)
+    re_path(r'^$', views.runoob),
+    path("translate/", action.views.translate),
+    path("text/",views.get_text)
 ]
