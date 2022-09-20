@@ -45,6 +45,6 @@ def get_text(request):
                     zh = response["zh"]
                     # 存入字典
                     Dictionary.objects.create(en=word.lower(), zh=zh)
-                cnt = cnt + 1
                 words_dict[cnt] = {"en": word, "zh": zh, "sentence_zh": sentence_zh}
+                cnt = cnt + 1
     return JsonResponse(words_dict, json_dumps_params={"ensure_ascii": False})
