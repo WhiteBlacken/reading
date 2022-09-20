@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reading</title>
+    <script src="/static/plugins/jquery/jquery.min.js"></script>
+    <script src="/static/plugins/vue@2/vue@2.6.10.js"></script>
+    <script src="/static/js/axios@0.18.0.min.js"></script>
+    <script src="/static/plugins/element@vue2/index.js"></script>
+    <link href="/static/plugins/element@vue2/index.css" type="text/css" rel="stylesheet" charset="utf-8">
+    <link href="/static/css/onlineReading.css" type="text/css" rel="stylesheet" charset="utf-8">
+</head>
+<body>
+<div id="app">
+    <div id="reading">
+    <el-container>
+      <el-main style="padding: 0 !important;">
+          <div id="readArea">
+            <div id="para">
+            </div>
+          </div>
+      </el-main>
+      <el-footer>
+          <div id="pageBox">
+             <el-pagination
+                layout="prev, pager, next"
+                :total="totalPage * 10">
+             </el-pagination>
+          </div>
+      </el-footer>
+    </el-container>
+  </div>
+
+</div>
+</body>
+<script>
+    var app= new Vue({
+        el: '#app',
+        data: {
+            content: "As a rule, mirroring means that conversationalists enjoy " +
+                "their communication and that there's a certain level of agreement between" +
+                " them. The topic of discussion is equally interesting for both " +
+                "and they know their interests meet.",
+            words: [],
+            page: 1,
+            totalPage: 5,
+            translation: [],
+            rereading: [],
+        },
+        methods: {
+
+            makeContent: function () {
+                let num = 0;
+                var e = document.getElementById('para');
+                var Content = this.content.split('.');
+                for(let i = 0; i < Content.length; i++){
+                    var sentence = Content[i].split(' ');
+                    {#console.log(sentence);#}
+                    for(let j = 0; j < sentence.length; j++){
+                        if(sentence[j] && sentence[j] !== ""){
+                            this.words.push(sentence[j].split(',')[0]);
+                            var el = document.createElement("button");
+                            el.className = "word";
+                            el.id = num.toString();
+                            el.innerHTML = sentence[j];
+                            if(j == sentence.length - 1)
+                                el.innerHTML = sentence[j]+'.';
+                            e.appendChild(el);
+                            var ele = document.createElement("div");
+                            ele.className = "wordTranslation";
+                            ele.id = num.toString();
+                            ele.innerHTML = this.translation[num]['zh'];
+                            ele.style.width = el.style.width;
+                            e.appendChild(ele);
+                            num += 1;
+                        }
+                    }
+                }
+                {#console.log(this.contentArray)#}
+            },
+
+            getTranslation: function (num) {
+                let e = document.getElementsByClassName('wordTranslation')[num];
+
+            },
+
+
+            getContent: function () {
+                {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
+                {#).then((response) => {#}
+                {#    this.$nextTick(() => {#}
+                {#        this.setSheet();#}
+                {#    });});#}
+
+                axios.get("/text").then((response) => {
+                    this.translation = response;
+                });
+
+            },
+        },
+        created() {
+            let msg = "You need the full screen display of the web page to proceed with the next" +
+                " operations. Please enter \"F11\" to request the full screen.";
+            alert(msg);
+            this.getContent();
+            this.makeContent();
+        },
+        async mounted() {
+            window["musicEnd"] = (num) => {
+                this.musicEnd(num);
+            }
+        },
+    })
+
+
+</script>
+</html>

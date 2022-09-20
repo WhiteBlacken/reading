@@ -48,3 +48,4 @@ def get_text(request):
                 words_dict[cnt] = {"en": word, "zh": zh, "sentence_zh": sentence_zh}
                 cnt = cnt + 1
     return JsonResponse(words_dict, json_dumps_params={"ensure_ascii": False})
+
