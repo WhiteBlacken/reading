@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reading</title>
+    <script src="/static/plugins/jquery/jquery.min.js"></script>
+    <script src="/static/plugins/vue@2/vue@2.6.10.js"></script>
+    <script src="/static/js/axios@0.18.0.min.js"></script>
+    <script src="/static/plugins/element@vue2/index.js"></script>
+    <link href="/static/plugins/element@vue2/index.css" type="text/css" rel="stylesheet" charset="utf-8">
+    <link href="/static/css/onlineReading.css" type="text/css" rel="stylesheet" charset="utf-8">
+</head>
+<body>
+<div id="app">
+    <div id="reading">
+    <el-container>
+      <el-main style="padding: 0 !important;">
+          <div id="readArea">
+              <div id="trans">
+
+              </div>
+              <div id="para">
+
+              </div>
+          </div>
+      </el-main>
+      <el-footer>
+          <div id="pageBox">
+             <el-pagination
+                layout="prev, pager, next"
+                :total="totalPage * 10">
+             </el-pagination>
+          </div>
+      </el-footer>
+    </el-container>
+  </div>
+
+</div>
+</body>
+<script>
+    var app= new Vue({
+        el: '#app',
+        data: {
+            content: "As a rule, mirroring means that conversationalists enjoy " +
+                "their communication and that there's a certain level of agreement between" +
+                " them. The topic of discussion is equally interesting for both " +
+                "and they know their interests meet.",
+            words: [],
+            page: 1,
+            totalPage: 5,
+            translation: [],
+            rereading: [],
+            wordLocation: 0,
+        },
+        methods: {
+
+            makeContent: function () {
+                let num = 0;
+                var e = document.getElementById('para');
+                var Content = this.content.split('.');
+                for(let i = 0; i < Content.length; i++){
+                    var sentence = Content[i].split(' ');
+                    {#console.log(sentence);#}
+                    for(let j = 0; j < sentence.length; j++){
+                        if(sentence[j] && sentence[j] !== ""){
+                            this.words.push(sentence[j].split(',')[0]);
+                            var el = document.createElement("button");
+                            el.className = "word";
+                            el.id = num.toString();
+                            el.innerHTML = sentence[j];
+                            el.setAttribute("onclick","getWordTranslation("+num+")");
+                            el.setAttribute("ondblclick","getSentenceTranslation("+num+")");
+                            if(j == sentence.length - 1)
+                                el.innerHTML = sentence[j]+'.';
+                            e.appendChild(el);
+                            num += 1;
+                        }
+                    }
+                }
+                {#console.log(this.contentArray)#}
+            },
+
+            getWordLocation: function (num) {
+                this.wordLocation = {left: $('.word:eq('+num+')').offset().left, top: $('.word:eq('+num+')').offset().top};
+            },
+
+            getWordTranslation: function (num) {
+                this.changeTextStyle(num,num+1);
+                this.getWordLocation(num);
+                var e = document.getElementById('trans');
+                e.innerHTML = this.translation[num].zh;
+                e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq('+num+')').width() / 2 - $('#trans').width() / 2 - 13 + "px";
+                e.style.marginTop = this.wordLocation.top - 5 +"px";
+            },
+
+            getSentenceTranslation: function (num) {
+
+                this.getWordLocation(num);
+                var e = document.getElementById('trans');
+                e.innerHTML = this.translation[num].sentence_zh;
+                if(this.wordLocation.left - 190 + $('.word:eq('+num+')').width() / 2 - $('#trans').width() / 2 - 13 < 0)
+                    e.style.marginLeft = "0";
+                else
+                    e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq('+num+')').width() / 2 - $('#trans').width() / 2 - 13 + "px";
+                console.log($('#trans').height())
+                if($('#trans').height() > 35)
+                    e.style.marginTop = this.wordLocation.top + 25 - $('#trans').height() +"px";
+                else
+                    e.style.marginTop = this.wordLocation.top - 5 +"px";
+            },
+
+
+            changeTextStyle: function (start, end){
+                for(let i = 0 ; i < start; i++) {
+                    document.getElementsByClassName('word')[i].style.textDecoration = "";
+                    document.getElementsByClassName('word')[i].style.color = "black";
+                }
+                for(let i = end ; i < this.words.length; i++) {
+                    document.getElementsByClassName('word')[i].style.textDecoration = "";
+                    document.getElementsByClassName('word')[i].style.color = "black";
+                }
+                for(let i = start; i < end; i++){
+                    document.getElementsByClassName('word')[i].style.textDecoration = "underline";
+                    document.getElementsByClassName('word')[i].style.color = "blue";
+                }
+            },
+
+            getContent: async function () {
+                {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
+                {#).then((response) => {#}
+                {#    this.$nextTick(() => {#}
+                {#        this.setSheet();#}
+                {#    });});#}
+
+                await axios.get("/text").then((response) => {
+                    this.translation = response.data;
+                });
+            },
+        },
+        async created() {
+            let msg = "You need the full screen display of the web page to proceed with the next" +
+                " operations. Please enter \"F11\" to request the full screen.";
+            alert(msg);
+            await this.getContent();
+            this.makeContent();
+            {#this.makeTranslation();#}
+        },
+        mounted() {
+            window["getWordTranslation"] = (num) => {
+                this.getWordTranslation(num);
+            }
+            window["getSentenceTranslation"] = (num) => {
+                this.getSentenceTranslation(num);
+            }
+        },
+    })
+
+
+</script>
+</html>

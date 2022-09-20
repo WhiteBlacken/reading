@@ -8,7 +8,7 @@ from action.views import translate
 def runoob(request):
     """首页测试"""
     context = {"hello": "Hello World!"}
-    return render(request, "hello.html", context)
+    return render(request, "onlineReading.html", context)
 
 
 def get_text(request):
@@ -48,3 +48,4 @@ def get_text(request):
                 words_dict[cnt] = {"en": word, "zh": zh, "sentence_zh": sentence_zh}
                 cnt = cnt + 1
     return JsonResponse(words_dict, json_dumps_params={"ensure_ascii": False})
+
