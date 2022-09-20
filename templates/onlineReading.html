@@ -85,6 +85,7 @@
             },
 
             getWordTranslation: function (num) {
+                document.getElementById('trans').style.border = "1px solid red";
                 this.changeTextStyle(num,num+1);
                 this.getWordLocation(num);
                 var e = document.getElementById('trans');
@@ -94,7 +95,7 @@
             },
 
             getSentenceTranslation: function (num) {
-
+                document.getElementById('trans').style.border = "1px solid red";
                 this.getWordLocation(num);
                 var e = document.getElementById('trans');
                 e.innerHTML = this.translation[num].sentence_zh;
@@ -143,6 +144,7 @@
             alert(msg);
             await this.getContent();
             this.makeContent();
+
             {#this.makeTranslation();#}
         },
         mounted() {
