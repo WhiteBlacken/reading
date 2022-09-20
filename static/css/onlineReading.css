@@ -14,9 +14,21 @@ body{
 #readArea{
     width: auto;
     height: 772px;
-    border: 1px solid red;
     padding: 0px 190px;
     display: table;
+}
+
+#trans{
+    position: absolute;
+    z-index: -1;
+    width: auto;
+    height: auto;
+    text-align: center;
+    padding: 10px 20px;
+    border: 1px solid red;
+    border-radius: 5px;
+    font-size: 16pt;
+    display: none;
 }
 
 #para{
@@ -24,6 +36,7 @@ body{
     height: auto;
     display: table-cell;
     vertical-align: middle;
+
 }
 
 .word{
@@ -31,7 +44,7 @@ body{
     padding: 85px 7px;
     width: auto;
     height: auto;
-    border-width: 1px;
+    border-width: 0;
     display: inline;
     background: rgba(0,0,0,0);
     cursor: pointer;
@@ -42,16 +55,17 @@ body{
     color: blue;
 }
 
-.wordTranslation{
-    border: 1px solid red;
-    height: 197px;
-    z-index: 1;
-    position: absolute;
-}
+/*.wordTranslation{*/
+/*    height: 197px;*/
+/*    display: inline;*/
+/*    font-size: 8pt;*/
+/*    border-width: 0;*/
+/*    background: rgba(0,0,0,0);*/
+/*}*/
 
-.sentenceTranslation{
+/*.sentenceTranslation{*/
 
-}
+/*}*/
 
 #pageBox{
     height: 90px;

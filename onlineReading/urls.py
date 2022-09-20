@@ -23,5 +23,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     re_path(r'^$', views.runoob),
     path("translate/", action.views.translate),
-    path("text/",views.get_text)
+    path("text/", views.get_text)
 ]

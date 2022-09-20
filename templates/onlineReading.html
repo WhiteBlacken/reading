@@ -16,8 +16,12 @@
     <el-container>
       <el-main style="padding: 0 !important;">
           <div id="readArea">
-            <div id="para">
-            </div>
+              <div id="trans">
+
+              </div>
+              <div id="para">
+
+              </div>
           </div>
       </el-main>
       <el-footer>
@@ -46,6 +50,7 @@
             totalPage: 5,
             translation: [],
             rereading: [],
+            wordLocation: 0,
         },
         methods: {
 
@@ -63,15 +68,11 @@
                             el.className = "word";
                             el.id = num.toString();
                             el.innerHTML = sentence[j];
+                            el.setAttribute("onclick","getWordTranslation("+num+")");
+                            el.setAttribute("ondblclick","getSentenceTranslation("+num+")");
                             if(j == sentence.length - 1)
                                 el.innerHTML = sentence[j]+'.';
                             e.appendChild(el);
-                            var ele = document.createElement("div");
-                            ele.className = "wordTranslation";
-                            ele.id = num.toString();
-                            ele.innerHTML = this.translation[num]['zh'];
-                            ele.style.width = el.style.width;
-                            e.appendChild(ele);
                             num += 1;
                         }
                     }
@@ -79,35 +80,77 @@
                 {#console.log(this.contentArray)#}
             },
 
-            getTranslation: function (num) {
-                let e = document.getElementsByClassName('wordTranslation')[num];
+            getWordLocation: function (num) {
+                this.wordLocation = {left: $('.word:eq('+num+')').offset().left, top: $('.word:eq('+num+')').offset().top};
+            },
 
+            getWordTranslation: function (num) {
+                this.changeTextStyle(num,num+1);
+                this.getWordLocation(num);
+                var e = document.getElementById('trans');
+                e.innerHTML = this.translation[num].zh;
+                e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq('+num+')').width() / 2 - $('#trans').width() / 2 - 13 + "px";
+                e.style.marginTop = this.wordLocation.top - 5 +"px";
+            },
+
+            getSentenceTranslation: function (num) {
+
+                this.getWordLocation(num);
+                var e = document.getElementById('trans');
+                e.innerHTML = this.translation[num].sentence_zh;
+                if(this.wordLocation.left - 190 + $('.word:eq('+num+')').width() / 2 - $('#trans').width() / 2 - 13 < 0)
+                    e.style.marginLeft = "0";
+                else
+                    e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq('+num+')').width() / 2 - $('#trans').width() / 2 - 13 + "px";
+                console.log($('#trans').height())
+                if($('#trans').height() > 35)
+                    e.style.marginTop = this.wordLocation.top + 25 - $('#trans').height() +"px";
+                else
+                    e.style.marginTop = this.wordLocation.top - 5 +"px";
             },
 
 
-            getContent: function () {
+            changeTextStyle: function (start, end){
+                for(let i = 0 ; i < start; i++) {
+                    document.getElementsByClassName('word')[i].style.textDecoration = "";
+                    document.getElementsByClassName('word')[i].style.color = "black";
+                }
+                for(let i = end ; i < this.words.length; i++) {
+                    document.getElementsByClassName('word')[i].style.textDecoration = "";
+                    document.getElementsByClassName('word')[i].style.color = "black";
+                }
+                for(let i = start; i < end; i++){
+                    document.getElementsByClassName('word')[i].style.textDecoration = "underline";
+                    document.getElementsByClassName('word')[i].style.color = "blue";
+                }
+            },
+
+            getContent: async function () {
                 {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
                 {#).then((response) => {#}
                 {#    this.$nextTick(() => {#}
                 {#        this.setSheet();#}
                 {#    });});#}
 
-                axios.get("/text").then((response) => {
-                    this.translation = response;
+                await axios.get("/text").then((response) => {
+                    this.translation = response.data;
                 });
-
             },
         },
-        created() {
+        async created() {
             let msg = "You need the full screen display of the web page to proceed with the next" +
                 " operations. Please enter \"F11\" to request the full screen.";
             alert(msg);
-            this.getContent();
+            await this.getContent();
             this.makeContent();
+            {#this.makeTranslation();#}
         },
-        async mounted() {
-            window["musicEnd"] = (num) => {
-                this.musicEnd(num);
+        mounted() {
+            window["getWordTranslation"] = (num) => {
+                this.getWordTranslation(num);
+            }
+            window["getSentenceTranslation"] = (num) => {
+                this.getSentenceTranslation(num);
             }
         },
     })
