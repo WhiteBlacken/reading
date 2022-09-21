@@ -78,10 +78,7 @@
     var app = new Vue({
         el: '#app',
         data: {
-            content: "As a rule, mirroring means that conversationalists enjoy " +
-                "their communication and that there's a certain level of agreement between" +
-                " them. The topic of discussion is equally interesting for both " +
-                "and they know their interests meet.",
+            content: "",
             words: [],
             page: 1,
             totalPage: 5,
@@ -92,32 +89,6 @@
             selectNode: null,
         },
         methods: {
-
-            makeContent: function () {
-                let num = 0;
-                var e = document.getElementById('para');
-                var Content = this.content.split('.');
-                for (let i = 0; i < Content.length; i++) {
-                    var sentence = Content[i].split(' ');
-                    {#console.log(sentence);#}
-                    for (let j = 0; j < sentence.length; j++) {
-                        if (sentence[j] && sentence[j] !== "") {
-                            this.words.push(sentence[j].split(',')[0]);
-                            var el = document.createElement("button");
-                            el.className = "word";
-                            el.id = num.toString();
-                            el.innerHTML = sentence[j];
-                            el.setAttribute("onclick", "getWordTranslation(" + num + ")");
-                            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
-                            if (j == sentence.length - 1)
-                                el.innerHTML = sentence[j] + '.';
-                            e.appendChild(el);
-                            num += 1;
-                        }
-                    }
-                }
-                {#console.log(this.contentArray)#}
-            },
 
             getWordLocation: function (num) {
                 this.wordLocation = {
@@ -183,16 +154,41 @@
                 }
             },
 
-            getContent: async function () {
+            getContent: function () {
                 {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
                 {#).then((response) => {#}
                 {#    this.$nextTick(() => {#}
                 {#        this.setSheet();#}
                 {#    });});#}
 
-                await axios.get("/text").then((response) => {
-                    this.translation = response.data;
+                axios.get("/text").then((response) => {
+                    this.content = response.data[0];
+                    for(let i = 1; i < response.data.length; i++){
+                        this.translation.push(response.data[i]);
+                    }
                 });
+                let num = 0;
+                var e = document.getElementById('para');
+                var Content = this.content.split('.');
+                for (let i = 0; i < Content.length; i++) {
+                    var sentence = Content[i].split(' ');
+                    {#console.log(sentence);#}
+                    for (let j = 0; j < sentence.length; j++) {
+                        if (sentence[j] && sentence[j] !== "") {
+                            this.words.push(sentence[j].split(',')[0]);
+                            var el = document.createElement("button");
+                            el.className = "word";
+                            el.id = num.toString();
+                            el.innerHTML = sentence[j];
+                            el.setAttribute("onclick", "getWordTranslation(" + num + ")");
+                            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
+                            if (j == sentence.length - 1)
+                                el.innerHTML = sentence[j] + '.';
+                            e.appendChild(el);
+                            num += 1;
+                        }
+                    }
+                }
             },
 
             listen: function () {
@@ -216,10 +212,9 @@
               })
             }
         },
-        async created() {
+        created() {
             document.getElementById('trans').style.display = "none";
-            await this.getContent();
-            this.makeContent();
+            this.getContent();
             this.listen();
 
         },
