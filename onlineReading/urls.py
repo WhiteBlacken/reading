@@ -20,10 +20,11 @@ import action.views
 from . import views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     re_path(r'^$', views.login_page),
-    path("login/",views.login,name="login"),
+    path('admin/', admin.site.urls),
+    path("login/", views.login, name="login"),
     path("translate/", action.views.translate),
     path("text/", views.get_text),
-    path("image/",views.get_image),
+    path("image/", views.get_image),
+    path("cal/", views.cal),
 ]
