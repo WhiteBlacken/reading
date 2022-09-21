@@ -1,5 +1,5 @@
 //截图
-function save_html_as_png(filename = 'image') {
+function send_base64_gaze_2_remote(x,y) {
     let opts = {
         //scale: scale, // 添加的scale 参数
         //canvas: canvas, //自定义 canvas
@@ -27,6 +27,8 @@ function save_html_as_png(filename = 'image') {
 
         let formdata = new FormData();
         formdata.append("image", url.toString());
+        formdata.append("x",x);
+        formdata.append("y",y);
         $.ajax({
             type: 'POST',
             url: '/image/',

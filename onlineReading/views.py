@@ -55,7 +55,20 @@ def get_text(request):
 
 def get_image(request):
     """获取截图的图片+eye gaze，并生成眼动热点图"""
-    image_base64 = request.POST.get("image")
+    image_base64 = request.POST.get("image")  # base64类型
+    x = request.POST.get("x")  # str类型
+    y = request.POST.get("y")  # str类型
+
+    # 1. 处理坐标
+    list_x = x.split(',')
+    list_y = y.split(',')
+
+    coordinates = []
+    for i, item in enumerate(list_x):
+        coordinate = (int(float(list_x[i])), int(float(list_y[i])))
+        coordinates.append(coordinate)
+
+    # 2. 处理图片
     data = image_base64.split(",")[1]
     # 将str解码为byte
     image_data = base64.b64decode(data)
@@ -68,14 +81,17 @@ def get_image(request):
     path = "static/user/"  # TODO 不同的用户放入不同的文件夹
     with open(path + filename, "wb") as f:
         f.write(image_data)
-    paint_image(path + filename)
+    paint_image(path + filename, coordinates)
     return HttpResponse("1")
 
 
-def paint_image(path):
+def paint_image(path, coordinates):
     """在指定图片上绘图"""
     import cv2
 
     img = cv2.imread(path)
-    cv2.circle(img, (100, 100), 20, (0, 0, 255), -1)
+    cnt = 0
+    for coordinate in coordinates:
+        cv2.circle(img, (coordinate[0],coordinate[1]), 7, (0, 0, 255), 1)
+        cnt = cnt + 1
     cv2.imwrite(path, img)
