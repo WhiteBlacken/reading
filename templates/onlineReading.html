@@ -61,7 +61,6 @@
             </el-container>
         </div>
     </div>
-
 </div>
 </body>
 <!--bp5 js集成文件-->
@@ -125,8 +124,12 @@
                 };
             },
 
-            getWordTranslation: function (num) {
-                document.getElementById('trans').style.border = "1px solid red";
+            getWordTranslation: async function (num) {
+                if($('#trans').css('display') == "none")
+                    $('#trans').css('display','');
+                else
+                    $('#trans').css('display','none');
+
                 this.changeTextStyle(num, num + 1);
                 this.getWordLocation(num);
                 var e = document.getElementById('trans');
@@ -136,7 +139,11 @@
             },
 
             getSentenceTranslation: function (num) {
-                document.getElementById('trans').style.border = "1px solid red";
+                if($('#trans').css('display') == "none")
+                    $('#trans').css('display','');
+                else
+                    $('#trans').css('display','none');
+                this.changeTextStyle(num,num+1);
                 this.getWordLocation(num);
                 var e = document.getElementById('trans');
                 e.innerHTML = this.translation[num].sentence_zh;
@@ -162,8 +169,15 @@
                     document.getElementsByClassName('word')[i].style.color = "black";
                 }
                 for (let i = start; i < end; i++) {
-                    document.getElementsByClassName('word')[i].style.textDecoration = "underline";
-                    document.getElementsByClassName('word')[i].style.color = "blue";
+                    if($('.word:eq('+i+')').css('text-decoration') == 'underline solid rgb(0, 0, 255)'){
+                        $('.word:eq('+i+')').css('text-decoration',"");
+                        $('.word:eq('+i+')').css('color',"black");
+                    }
+                    else{
+                        console.log($('.word:eq('+i+')').css('text-decoration'))
+                        $('.word:eq('+i+')').css('text-decoration',"underline");
+                        $('.word:eq('+i+')').css('color',"blue");
+                    }
                 }
             },
 
@@ -214,6 +228,7 @@
             }
         },
         async created() {
+            document.getElementById('trans').style.display = "none";
             await this.getContent();
             this.makeContent();
             this.listen();
@@ -252,6 +267,8 @@
         }
 
     });
+
+
 
 </script>
 </html>

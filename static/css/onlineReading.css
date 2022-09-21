@@ -25,10 +25,9 @@ body{
     height: auto;
     text-align: center;
     padding: 10px 20px;
-    border-width: 0;
+    border: 1px solid red;
     border-radius: 5px;
     font-size: 16pt;
-
 }
 
 #para{

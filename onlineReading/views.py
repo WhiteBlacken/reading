@@ -1,3 +1,7 @@
+import base64
+
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
@@ -50,6 +54,28 @@ def get_text(request):
 
 
 def get_image(request):
-    image = request.POST.get("image")
-    print(image)
+    """获取截图的图片+eye gaze，并生成眼动热点图"""
+    image_base64 = request.POST.get("image")
+    data = image_base64.split(",")[1]
+    # 将str解码为byte
+    image_data = base64.b64decode(data)
+    # 获取名称
+    import time
+
+    filename = time.strftime("%Y%m%d%H%M%S") + ".png"
+    print("filename:%s" % filename)
+    # 存储地址
+    path = "static/user/"  # TODO 不同的用户放入不同的文件夹
+    with open(path + filename, "wb") as f:
+        f.write(image_data)
+    paint_image(path + filename)
     return HttpResponse("1")
+
+
+def paint_image(path):
+    """在指定图片上绘图"""
+    import cv2
+
+    img = cv2.imread(path)
+    cv2.circle(img, (100, 100), 20, (0, 0, 255), -1)
+    cv2.imwrite(path, img)
