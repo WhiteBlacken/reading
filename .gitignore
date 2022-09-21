@@ -4,3 +4,4 @@ __pycache__
 **/migrations/
 .vscode
 secret_id_key.yml
+static/user/

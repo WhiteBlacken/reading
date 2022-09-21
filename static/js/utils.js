@@ -17,13 +17,16 @@ function save_html_as_png(filename = 'image') {
         console.log(canvasHeight, canvasWidth);
         //sleep(2);
         // 调用Canvas2Image插件
-        let img = Canvas2Image.convertToImage(canvas, canvasWidth, canvasHeight);
+        // let img = Canvas2Image.convertToImage(canvas, canvasWidth, canvasHeight);
+        // let image_data = $(img).attr('src');
+
+        let url = canvas.toDataURL();
+
         // // 调用Canvas2Image插件
         // Canvas2Image.saveAsImage(canvas, canvasWidth, canvasHeight, 'png', filename);
-        // console.log('ok');
-        console.log(typeof img);
+
         let formdata = new FormData();
-        formdata.append("image", img);
+        formdata.append("image", url.toString());
         $.ajax({
             type: 'POST',
             url: '/image/',
