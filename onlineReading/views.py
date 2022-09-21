@@ -25,14 +25,6 @@ def index(request):
     """首页"""
     return render(request, "onlineReading.html")
 
-def signin(request):
-    """登录"""
-    return render(request, "signin.html")
-
-def signup(request):
-    """登录"""
-    return render(request, "signup.html")
-
 def get_text(request):
     words_dict = {}
     text = Text.objects.first()
@@ -124,3 +116,6 @@ def paint_image(path, coordinates):
         cv2.circle(img, (coordinate[0], coordinate[1]), 7, (0, 0, 255), 1)
         cnt = cnt + 1
     cv2.imwrite(path, img)
+
+def cal(request):
+    return render(request, "calibration.html")

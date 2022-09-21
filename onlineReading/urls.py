@@ -26,4 +26,5 @@ urlpatterns = [
     path("translate/", action.views.translate),
     path("text/", views.get_text),
     path("image/", views.get_image),
+    path("cal/", views.cal),
 ]
