@@ -9,36 +9,72 @@
     <script src="/static/plugins/element@vue2/index.js"></script>
     <link href="/static/plugins/element@vue2/index.css" type="text/css" rel="stylesheet" charset="utf-8">
     <link href="/static/css/onlineReading.css" type="text/css" rel="stylesheet" charset="utf-8">
+    <!--bp5 css文件-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
 <div id="app">
-    <div id="reading">
-    <el-container>
-      <el-main style="padding: 0 !important;">
-          <div id="readArea">
-              <div id="trans">
+    <div id="tips_begin">
+        <div class="px-4 py-5 my-5 text-center">
+            <h1 class="display-5 fw-bold">MemXEdu</h1>
+            <div class="col-lg-6 mx-auto mt-3">
+                <p class="lead mb-4">
+                    点击下方的“<strong>开始使用</strong>”按钮，即可使用本阅读软件。请注意：软件将以全屏模式运行，你可以使用“<strong>空格</strong>”键来结束使用。
+                </p>
+                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                    <button type="button" class="btn btn-primary btn-lg px-4 gap-3" onclick="get_start()">开始使用</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="tips_end" style="display: none">
+        <div class="px-4 py-5 my-5 text-center">
+            <h1 class="display-5 fw-bold">MemXEdu</h1>
+            <div class="col-lg-6 mx-auto mt-3">
+                <p class="lead mb-4">
+                    阅读结束
+                </p>
+            </div>
+        </div>
+    </div>
+    <div id="mainContent" style="display: none">
+        <div id="reading">
+            <el-container>
+                <el-main style="padding: 0 !important;">
+                    <div id="readArea">
+                        <div id="trans">
 
-              </div>
-              <div id="para">
+                        </div>
+                        <div id="para">
 
-              </div>
-          </div>
-      </el-main>
-      <el-footer>
-          <div id="pageBox">
-             <el-pagination
-                layout="prev, pager, next"
-                :total="totalPage * 10">
-             </el-pagination>
-          </div>
-      </el-footer>
-    </el-container>
-  </div>
+                        </div>
+                    </div>
+                </el-main>
+                <el-footer>
+                    <div id="pageBox">
+                        <el-pagination
+                                layout="prev, pager, next"
+                                :total="totalPage * 10">
+                        </el-pagination>
+                    </div>
+                </el-footer>
+            </el-container>
+        </div>
+    </div>
 
 </div>
 </body>
+<!--bp5 js集成文件-->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!--截图相关-->
+<script src="/static/js/canvas2image.js"></script>
+<script src="/static/js/html2canvas.js"></script>
+<!--自己写的js工具包-->
+<script src="/static/js/utils.js"></script>
+
+
 <script>
-    var app= new Vue({
+    var app = new Vue({
         el: '#app',
         data: {
             content: "As a rule, mirroring means that conversationalists enjoy " +
@@ -58,20 +94,20 @@
                 let num = 0;
                 var e = document.getElementById('para');
                 var Content = this.content.split('.');
-                for(let i = 0; i < Content.length; i++){
+                for (let i = 0; i < Content.length; i++) {
                     var sentence = Content[i].split(' ');
                     {#console.log(sentence);#}
-                    for(let j = 0; j < sentence.length; j++){
-                        if(sentence[j] && sentence[j] !== ""){
+                    for (let j = 0; j < sentence.length; j++) {
+                        if (sentence[j] && sentence[j] !== "") {
                             this.words.push(sentence[j].split(',')[0]);
                             var el = document.createElement("button");
                             el.className = "word";
                             el.id = num.toString();
                             el.innerHTML = sentence[j];
-                            el.setAttribute("onclick","getWordTranslation("+num+")");
-                            el.setAttribute("ondblclick","getSentenceTranslation("+num+")");
-                            if(j == sentence.length - 1)
-                                el.innerHTML = sentence[j]+'.';
+                            el.setAttribute("onclick", "getWordTranslation(" + num + ")");
+                            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
+                            if (j == sentence.length - 1)
+                                el.innerHTML = sentence[j] + '.';
                             e.appendChild(el);
                             num += 1;
                         }
@@ -81,17 +117,20 @@
             },
 
             getWordLocation: function (num) {
-                this.wordLocation = {left: $('.word:eq('+num+')').offset().left, top: $('.word:eq('+num+')').offset().top};
+                this.wordLocation = {
+                    left: $('.word:eq(' + num + ')').offset().left,
+                    top: $('.word:eq(' + num + ')').offset().top
+                };
             },
 
             getWordTranslation: function (num) {
                 document.getElementById('trans').style.border = "1px solid red";
-                this.changeTextStyle(num,num+1);
+                this.changeTextStyle(num, num + 1);
                 this.getWordLocation(num);
                 var e = document.getElementById('trans');
                 e.innerHTML = this.translation[num].zh;
-                e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq('+num+')').width() / 2 - $('#trans').width() / 2 - 13 + "px";
-                e.style.marginTop = this.wordLocation.top - 5 +"px";
+                e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2 - $('#trans').width() / 2 - 13 + "px";
+                e.style.marginTop = this.wordLocation.top - 5 + "px";
             },
 
             getSentenceTranslation: function (num) {
@@ -99,28 +138,28 @@
                 this.getWordLocation(num);
                 var e = document.getElementById('trans');
                 e.innerHTML = this.translation[num].sentence_zh;
-                if(this.wordLocation.left - 190 + $('.word:eq('+num+')').width() / 2 - $('#trans').width() / 2 - 13 < 0)
+                if (this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2 - $('#trans').width() / 2 - 13 < 0)
                     e.style.marginLeft = "0";
                 else
-                    e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq('+num+')').width() / 2 - $('#trans').width() / 2 - 13 + "px";
+                    e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2 - $('#trans').width() / 2 - 13 + "px";
                 console.log($('#trans').height())
-                if($('#trans').height() > 35)
-                    e.style.marginTop = this.wordLocation.top + 25 - $('#trans').height() +"px";
+                if ($('#trans').height() > 35)
+                    e.style.marginTop = this.wordLocation.top + 25 - $('#trans').height() + "px";
                 else
-                    e.style.marginTop = this.wordLocation.top - 5 +"px";
+                    e.style.marginTop = this.wordLocation.top - 5 + "px";
             },
 
 
-            changeTextStyle: function (start, end){
-                for(let i = 0 ; i < start; i++) {
+            changeTextStyle: function (start, end) {
+                for (let i = 0; i < start; i++) {
                     document.getElementsByClassName('word')[i].style.textDecoration = "";
                     document.getElementsByClassName('word')[i].style.color = "black";
                 }
-                for(let i = end ; i < this.words.length; i++) {
+                for (let i = end; i < this.words.length; i++) {
                     document.getElementsByClassName('word')[i].style.textDecoration = "";
                     document.getElementsByClassName('word')[i].style.color = "black";
                 }
-                for(let i = start; i < end; i++){
+                for (let i = start; i < end; i++) {
                     document.getElementsByClassName('word')[i].style.textDecoration = "underline";
                     document.getElementsByClassName('word')[i].style.color = "blue";
                 }
@@ -139,9 +178,6 @@
             },
         },
         async created() {
-            let msg = "You need the full screen display of the web page to proceed with the next" +
-                " operations. Please enter \"F11\" to request the full screen.";
-            alert(msg);
             await this.getContent();
             this.makeContent();
 
@@ -157,6 +193,29 @@
         },
     })
 
+    //开始使用
+    function get_start() {
+        //全屏
+        full_screen();
+        //展示阅读内容
+        document.getElementById("mainContent").style.display = "inline";
+        //隐藏提示
+        document.getElementById("tips_begin").style.display = "none";
+    }
+
+    //监听空格事件
+    $(document).keyup(function (event) {
+
+        switch (event.keyCode) {
+            case 32:
+                save_html_as_png("test");
+                document.getElementById("mainContent").style.display = "none";
+                document.getElementById("tips_end").style.display = "inline";
+                esc_full_screen();
+
+        }
+
+    });
 
 </script>
 </html>

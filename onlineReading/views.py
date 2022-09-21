@@ -5,10 +5,9 @@ from action.models import Text, Dictionary
 from action.views import translate
 
 
-def runoob(request):
-    """首页测试"""
-    context = {"hello": "Hello World!"}
-    return render(request, "onlineReading.html", context)
+def index(request):
+    """首页"""
+    return render(request, "onlineReading.html")
 
 
 def get_text(request):
@@ -49,3 +48,8 @@ def get_text(request):
                 cnt = cnt + 1
     return JsonResponse(words_dict, json_dumps_params={"ensure_ascii": False})
 
+
+def get_image(request):
+    image = request.POST.get("image")
+    print(image)
+    return HttpResponse("1")
