@@ -1,4 +1,5 @@
 import base64
+import os
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -7,6 +8,17 @@ from django.shortcuts import render
 
 from action.models import Text, Dictionary
 from action.views import translate
+
+
+def login_page(request):
+    return render(request, "login.html")
+
+
+def login(request):
+    username = request.POST.get("username")
+    print("username:%s"%username)
+    request.session["username"] = username
+    return render(request, "onlineReading.html")
 
 
 def index(request):
@@ -22,6 +34,7 @@ def get_text(request):
     # 切成句子
     sentences = text.split(".")
     cnt = 0
+    words_dict[0] = text
     for sentence in sentences:
         # 去除句子前后空格
         sentence = sentence.strip()
@@ -48,8 +61,9 @@ def get_text(request):
                     zh = response["zh"]
                     # 存入字典
                     Dictionary.objects.create(en=word.lower(), zh=zh)
-                words_dict[cnt] = {"en": word, "zh": zh, "sentence_zh": sentence_zh}
                 cnt = cnt + 1
+                words_dict[cnt] = {"en": word, "zh": zh, "sentence_zh": sentence_zh}
+
     return JsonResponse(words_dict, json_dumps_params={"ensure_ascii": False})
 
 
@@ -60,12 +74,15 @@ def get_image(request):
     y = request.POST.get("y")  # str类型
 
     # 1. 处理坐标
-    list_x = x.split(',')
-    list_y = y.split(',')
+    list_x = x.split(",")
+    list_y = y.split(",")
 
     coordinates = []
     for i, item in enumerate(list_x):
-        coordinate = (int(float(list_x[i])), int(float(list_y[i])))
+        coordinate = (
+            int(float(list_x[i]) * 1920 / 1534),
+            int(float(list_y[i]) * 1920 / 1534),
+        )
         coordinates.append(coordinate)
 
     # 2. 处理图片
@@ -78,7 +95,12 @@ def get_image(request):
     filename = time.strftime("%Y%m%d%H%M%S") + ".png"
     print("filename:%s" % filename)
     # 存储地址
-    path = "static/user/"  # TODO 不同的用户放入不同的文件夹
+    print("session.username:%s"%request.session.get("username"))
+    path = "static/user/" + str(request.session.get("username")) + "/"
+    # 如果目录不存在，则创建目录
+    if not os.path.exists(path):
+        os.mkdir(path)
+
     with open(path + filename, "wb") as f:
         f.write(image_data)
     paint_image(path + filename, coordinates)
@@ -92,6 +114,6 @@ def paint_image(path, coordinates):
     img = cv2.imread(path)
     cnt = 0
     for coordinate in coordinates:
-        cv2.circle(img, (coordinate[0],coordinate[1]), 7, (0, 0, 255), 1)
+        cv2.circle(img, (coordinate[0], coordinate[1]), 7, (0, 0, 255), 1)
         cnt = cnt + 1
     cv2.imwrite(path, img)
