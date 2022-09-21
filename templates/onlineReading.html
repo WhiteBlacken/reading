@@ -51,6 +51,8 @@
             translation: [],
             rereading: [],
             wordLocation: 0,
+            showBox: false,
+            selectNode: null,
         },
         methods: {
 
@@ -137,11 +139,46 @@
                     this.translation = response.data;
                 });
             },
+
+            listen: function () {
+              document.addEventListener("mouseup", function (e) {
+                  if (window.getSelection().rangeCount === 0 || this.showBox) {
+                      return false;
+                  }
+
+                  // 获取选中
+                  const range = window.getSelection().getRangeAt(0);
+                  const comNode = range.commonAncestorContainer;
+                  const start = {
+                      node: range.startContainer,
+                      offset: range.startOffset
+                  };
+                  const end = {
+                      node: range.startContainer,
+                      offset: range.endOffset
+                  };
+                  // 最简单的一种情况一行选中
+                  {#if (start.offset !== end.offset) {#}
+                  {#    // 以开始选中位置切割一分为2的后半部分#}
+                  {#    const lastText = start.node.splitText(start.offset);#}
+                  {#    // 以后半部分按照开始选中到结束选中的偏移量切割，并选择前一部分#}
+                  {#    const selected = lastText.splitText(end.offset - start.offset).previousSibling;#}
+                  {#    this.selectedNode = selected;#}
+                  {#    this.styleBox = {#}
+                  {#        left: e.clientX - 16 + "px",#}
+                  {#        top: e.clientY + "px"#}
+                  {#    };#}
+                  {#    this.showBox = true;#}
+                  {# }#}
+                  console.log(start, end)
+              })
+            }
         },
         async created() {
             let msg = "You need the full screen display of the web page to proceed with the next" +
                 " operations. Please enter \"F11\" to request the full screen.";
             alert(msg);
+            this.listen();
             await this.getContent();
             this.makeContent();
 
