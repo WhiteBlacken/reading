@@ -21,7 +21,8 @@ from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    re_path(r'^$', views.runoob),
+    re_path(r'^$', views.index),
     path("translate/", action.views.translate),
-    path("text/", views.get_text)
+    path("text/", views.get_text),
+    path("image/",views.get_image)
 ]
