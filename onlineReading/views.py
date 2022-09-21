@@ -25,6 +25,13 @@ def index(request):
     """首页"""
     return render(request, "onlineReading.html")
 
+def signin(request):
+    """登录"""
+    return render(request, "signin.html")
+
+def signup(request):
+    """登录"""
+    return render(request, "signup.html")
 
 def get_text(request):
     words_dict = {}

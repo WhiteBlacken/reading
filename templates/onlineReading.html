@@ -212,19 +212,6 @@
                       node: range.startContainer,
                       offset: range.endOffset
                   };
-                  // 最简单的一种情况一行选中
-                  {#if (start.offset !== end.offset) {#}
-                  {#    // 以开始选中位置切割一分为2的后半部分#}
-                  {#    const lastText = start.node.splitText(start.offset);#}
-                  {#    // 以后半部分按照开始选中到结束选中的偏移量切割，并选择前一部分#}
-                  {#    const selected = lastText.splitText(end.offset - start.offset).previousSibling;#}
-                  {#    this.selectedNode = selected;#}
-                  {#    this.styleBox = {#}
-                  {#        left: e.clientX - 16 + "px",#}
-                  {#        top: e.clientY + "px"#}
-                  {#    };#}
-                  {#    this.showBox = true;#}
-                  {# }#}
                   console.log(start, end)
               })
             }
@@ -234,7 +221,7 @@
             await this.getContent();
             this.makeContent();
             this.listen();
-            {#this.makeTranslation();#}
+
         },
         mounted() {
             window["getWordTranslation"] = (num) => {
