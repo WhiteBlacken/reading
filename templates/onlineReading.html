@@ -87,6 +87,8 @@
             translation: [],
             rereading: [],
             wordLocation: 0,
+            showBox: false,
+            selectNode: null,
         },
         methods: {
 
@@ -123,8 +125,12 @@
                 };
             },
 
-            getWordTranslation: function (num) {
-                document.getElementById('trans').style.border = "1px solid red";
+            getWordTranslation: async function (num) {
+                if($('#trans').css('display') == "none")
+                    $('#trans').css('display','');
+                else
+                    $('#trans').css('display','none');
+
                 this.changeTextStyle(num, num + 1);
                 this.getWordLocation(num);
                 var e = document.getElementById('trans');
@@ -134,7 +140,11 @@
             },
 
             getSentenceTranslation: function (num) {
-                document.getElementById('trans').style.border = "1px solid red";
+                if($('#trans').css('display') == "none")
+                    $('#trans').css('display','');
+                else
+                    $('#trans').css('display','none');
+                this.changeTextStyle(num,num+1);
                 this.getWordLocation(num);
                 var e = document.getElementById('trans');
                 e.innerHTML = this.translation[num].sentence_zh;
@@ -160,8 +170,15 @@
                     document.getElementsByClassName('word')[i].style.color = "black";
                 }
                 for (let i = start; i < end; i++) {
-                    document.getElementsByClassName('word')[i].style.textDecoration = "underline";
-                    document.getElementsByClassName('word')[i].style.color = "blue";
+                    if($('.word:eq('+i+')').css('text-decoration') == 'underline solid rgb(0, 0, 255)'){
+                        $('.word:eq('+i+')').css('text-decoration',"");
+                        $('.word:eq('+i+')').css('color',"black");
+                    }
+                    else{
+                        console.log($('.word:eq('+i+')').css('text-decoration'))
+                        $('.word:eq('+i+')').css('text-decoration',"underline");
+                        $('.word:eq('+i+')').css('color',"blue");
+                    }
                 }
             },
 
@@ -176,11 +193,46 @@
                     this.translation = response.data;
                 });
             },
+
+            listen: function () {
+              document.addEventListener("mouseup", function (e) {
+                  if (window.getSelection().rangeCount === 0 || this.showBox) {
+                      return false;
+                  }
+
+                  // 获取选中
+                  const range = window.getSelection().getRangeAt(0);
+                  const comNode = range.commonAncestorContainer;
+                  const start = {
+                      node: range.startContainer,
+                      offset: range.startOffset
+                  };
+                  const end = {
+                      node: range.startContainer,
+                      offset: range.endOffset
+                  };
+                  // 最简单的一种情况一行选中
+                  {#if (start.offset !== end.offset) {#}
+                  {#    // 以开始选中位置切割一分为2的后半部分#}
+                  {#    const lastText = start.node.splitText(start.offset);#}
+                  {#    // 以后半部分按照开始选中到结束选中的偏移量切割，并选择前一部分#}
+                  {#    const selected = lastText.splitText(end.offset - start.offset).previousSibling;#}
+                  {#    this.selectedNode = selected;#}
+                  {#    this.styleBox = {#}
+                  {#        left: e.clientX - 16 + "px",#}
+                  {#        top: e.clientY + "px"#}
+                  {#    };#}
+                  {#    this.showBox = true;#}
+                  {# }#}
+                  console.log(start, end)
+              })
+            }
         },
         async created() {
+            document.getElementById('trans').style.display = "none";
             await this.getContent();
             this.makeContent();
-
+            this.listen();
             {#this.makeTranslation();#}
         },
         mounted() {
