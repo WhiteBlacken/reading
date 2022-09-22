@@ -27,4 +27,5 @@ urlpatterns = [
     path("text/", views.get_text),
     path("image/", views.get_image),
     path("cal/", views.cal),
+    path("reading/", views.reading),
 ]

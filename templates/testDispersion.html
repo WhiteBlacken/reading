@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="/static/css/testDispersion.css" rel="stylesheet">
+    <script src="/static/plugins/jquery/jquery.min.js"></script>
+    <!--webgazer-->
+    <script src="/static/js/webgazer.js"></script>
+    <title>Test Dispersion</title>
+</head>
+<body onload="setCircle()">
+<div id="canvas">
+    <div class="circle" id="c1"></div>
+    <div class="circle" id="c2"></div>
+    <div class="circle" id="c3"></div>
+</div>
+</body>
+<script>
+    let x = [];
+    let y = [];
+
+    webgazer.setGazeListener(function (data,elapsedTime) {
+        if(data==null){
+            return;
+        }
+        x.push(data.x);
+        y.push(data.y);
+    }).begin();
+
+
+    var gaze_1 = [];
+    var gaze_2 = [];
+    var gaze_3 = [];
+    function setCircle(){
+        showCircle(1);
+        setTimeout("showCircle(2)", "10000");
+        setTimeout("showCircle(3)", "20000");
+        setTimeout("showCircle(4)", "30000");
+    }
+    function showCircle(num){
+        $('#c1').css('display', 'none');
+        $('#c2').css('display', 'none');
+        $('#c3').css('display', 'none');
+        switch(num){
+            case 1: {
+                $('#c1').css('display', 'block');
+                break;
+            }
+            case 2: {
+                $('#c2').css('display', 'block');
+                gaze_1 = [x,y];
+                x = [];
+                y = [];
+                break;
+            }
+            case 3: {
+                $('#c3').css('display', 'block');
+                gaze_2 = [x,y];
+                x = [];
+                y = [];
+                break;
+            }
+            default: {
+                gaze_3 = [x,y];
+                console.log(gaze_1)
+                console.log(gaze_2)
+                console.log(gaze_3)
+                break;
+            }
+        }
+    }
+
+
+</script>
+</html>
