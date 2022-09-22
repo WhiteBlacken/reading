@@ -87,7 +87,7 @@ def get_image(request):
         )
         coordinates.append(coordinate)
 
-    get_fixations(coordinates)
+    fixations = get_fixations(coordinates)
 
     # 2. 处理图片
     data = image_base64.split(",")[1]
@@ -107,7 +107,7 @@ def get_image(request):
 
     with open(path + filename, "wb") as f:
         f.write(image_data)
-    paint_image(path + filename, coordinates)
+    paint_image(path + filename, fixations)
     return HttpResponse("1")
 
 
@@ -118,7 +118,8 @@ def paint_image(path, coordinates):
     img = cv2.imread(path)
     cnt = 0
     for coordinate in coordinates:
-        cv2.circle(img, (coordinate[0], coordinate[1]), 7, (0, 0, 255), 1)
+        cv2.circle(img, (coordinate[0], coordinate[1]), int(float(coordinate[2]/100)), (0, 0, 255), 1)
+        print(int(float(coordinate[2]/100)))
         cnt = cnt + 1
     cv2.imwrite(path, img)
 
