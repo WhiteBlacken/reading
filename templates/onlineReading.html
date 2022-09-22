@@ -87,6 +87,7 @@
             wordLocation: 0,
             showBox: false,
             selectNode: null,
+            currentTransWord: -1,
         },
         methods: {
 
@@ -100,21 +101,21 @@
             getWordTranslation: async function (num) {
                 if($('#trans').css('display') == "none")
                     $('#trans').css('display','');
-                else
+                else if($('#trans').css('display') != "none" && this.currentTransWord == num)
                     $('#trans').css('display','none');
-
                 this.changeTextStyle(num, num + 1);
                 this.getWordLocation(num);
                 var e = document.getElementById('trans');
                 e.innerHTML = this.translation[num].zh;
                 e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2 - $('#trans').width() / 2 - 13 + "px";
                 e.style.marginTop = this.wordLocation.top - 5 + "px";
+                this.currentTransWord = num;
             },
 
             getSentenceTranslation: function (num) {
                 if($('#trans').css('display') == "none")
                     $('#trans').css('display','');
-                else
+                else if($('#trans').css('display') == "none" && this.currentTransWord == num)
                     $('#trans').css('display','none');
                 this.changeTextStyle(num,num+1);
                 this.getWordLocation(num);
@@ -124,11 +125,11 @@
                     e.style.marginLeft = "0";
                 else
                     e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2 - $('#trans').width() / 2 - 13 + "px";
-                console.log($('#trans').height())
                 if ($('#trans').height() > 35)
                     e.style.marginTop = this.wordLocation.top + 25 - $('#trans').height() + "px";
                 else
                     e.style.marginTop = this.wordLocation.top - 5 + "px";
+                this.currentTransWord = num;
             },
 
 
@@ -147,32 +148,34 @@
                         $('.word:eq('+i+')').css('color',"black");
                     }
                     else{
-                        console.log($('.word:eq('+i+')').css('text-decoration'))
                         $('.word:eq('+i+')').css('text-decoration',"underline");
                         $('.word:eq('+i+')').css('color',"blue");
                     }
                 }
             },
 
-            getContent: function () {
+            getContent: async function () {
                 {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
                 {#).then((response) => {#}
                 {#    this.$nextTick(() => {#}
                 {#        this.setSheet();#}
                 {#    });});#}
 
-                axios.get("/text").then((response) => {
+                await axios.get("/text").then((response) => {
                     this.content = response.data[0];
-                    for(let i = 1; i < response.data.length; i++){
-                        this.translation.push(response.data[i]);
+                    let i = 1;
+                    while(response.data[i]){
+                        this.translation.push({en: response.data[i].en, zh: response.data[i].zh, sentence_zh: response.data[i].sentence_zh});
+                        i++;
                     }
+                    console.log(this.translation)
                 });
                 let num = 0;
                 var e = document.getElementById('para');
                 var Content = this.content.split('.');
                 for (let i = 0; i < Content.length; i++) {
                     var sentence = Content[i].split(' ');
-                    {#console.log(sentence);#}
+
                     for (let j = 0; j < sentence.length; j++) {
                         if (sentence[j] && sentence[j] !== "") {
                             this.words.push(sentence[j].split(',')[0]);
@@ -208,7 +211,6 @@
                       node: range.startContainer,
                       offset: range.endOffset
                   };
-                  console.log(start, end)
               })
             }
         },
@@ -243,13 +245,13 @@
 
         switch (event.keyCode) {
             case 32:
+                webgazer.pause();
                 console.log(x);
                 console.log(y);
                 send_base64_gaze_2_remote(x,y);
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
-
         }
 
     });
