@@ -93,11 +93,12 @@
         methods: {
 
             getWordLocation: function (num) {
-                this.wordLocation = {
-                    left: $('.word:eq(' + num + ')').offset().left,
-                    top: $('.word:eq(' + num + ')').offset().top
+                return {
+                    left: document.getElementsByClassName('word')[num].getBoundingClientRect().left,
+                    top: document.getElementsByClassName('word')[num].getBoundingClientRect().top,
+                    right: document.getElementsByClassName('word')[num].getBoundingClientRect().right,
+                    bottom: document.getElementsByClassName('word')[num].getBoundingClientRect().bottom,
                 };
-
             },
 
             isTranslated: function (num) {
@@ -108,21 +109,23 @@
                 return false;
             },
 
-            getWordTranslation: async function (num) {
+            getWordTranslation: function (num) {
                 if(!this.isTranslated(num)){
                     {#if($('#trans').css('display') == "none")#}
                     {#    $('#trans').css('display','');#}
                     {#else if($('#trans').css('display') != "none" && this.currentTransWord == num)#}
                     {#    $('#trans').css('display','none');#}
                     this.changeTextStyle(num, num + 1);
-                    this.getWordLocation(num);
+                    this.wordLocation = this.getWordLocation(num);
                     let el = document.createElement('div');
                     el.className = "trans";
+
                     el.innerHTML = this.translation[num].zh;
+
                     el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2  - 13 + "px";
+
                     el.style.top = this.wordLocation.top - 10 + "px";
                     let e = document.getElementById('readArea');
-                    console.log(this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2  - 13 + "px")
                     e.appendChild(el);
                     this.currentTransBox.push(num);
                     this.currentTransWord = num;
@@ -171,6 +174,32 @@
                 }
             },
 
+            catchCurrentWord: function () {
+                let gaze_x = x[x.length-1];
+                let gaze_y = y[y.length-1];
+                let i = 0;
+                console.log(gaze_x,gaze_y)
+                for(; i < this.translation.length; i++){
+                    let word = this.getWordLocation(i);
+                    if(word.top < gaze_y){
+                        if(word.bottom > gaze_y){
+                            if(word.left < gaze_x){
+                                if(word.right > gaze_x){
+                                    return i;
+                                }
+                            }
+                        }
+                    }
+                }
+                return i;
+            },
+
+            autoRandomTranslation: function () {
+                let num = this.catchCurrentWord();
+                if(num < this.translation.length)
+                    this.getWordTranslation(num);
+            },
+
             getContent: async function () {
                 {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
                 {#).then((response) => {#}
@@ -185,7 +214,6 @@
                         this.translation.push({en: response.data[i].en, zh: response.data[i].zh, sentence_zh: response.data[i].sentence_zh});
                         i++;
                     }
-                    console.log(this.translation)
                 });
                 let num = 0;
                 var e = document.getElementById('para');
@@ -209,6 +237,7 @@
                         }
                     }
                 }
+                this.auto();
             },
 
             listen: function () {
@@ -229,13 +258,20 @@
                       offset: range.endOffset
                   };
               })
-            }
+            },
 
+            auto: function (){
+                setInterval(this.autoRandomTranslation, 3000);
+            },
         },
         created() {
             {#document.getElementById('trans').style.display = "none";#}
             this.getContent();
-            this.listen();
+            {#this.listen();#}
+            {#setInterval(()=>{#}
+            {#    setTimeout(this.autoRandomTranslation, 0);#}
+            {# }, 5000);#}
+            {#this.auto();#}
         },
         mounted() {
             window["getWordTranslation"] = (num) => {
@@ -270,7 +306,6 @@
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
         }
-
     });
 
     //记录过程中的眼动坐标
