@@ -18,7 +18,19 @@ body{
     display: table;
 }
 
-#trans{
+/*#trans{*/
+/*    position: absolute;*/
+/*    z-index: -1;*/
+/*    width: auto;*/
+/*    height: auto;*/
+/*    text-align: center;*/
+/*    padding: 10px 20px;*/
+/*    border: 1px solid red;*/
+/*    border-radius: 5px;*/
+/*    font-size: 16pt;*/
+/*}*/
+
+.trans{
     position: absolute;
     z-index: -1;
     width: auto;
@@ -27,7 +39,7 @@ body{
     padding: 10px 20px;
     border: 1px solid red;
     border-radius: 5px;
-    font-size: 16pt;
+    font-size: 17pt;
 }
 
 #para{
