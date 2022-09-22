@@ -60,6 +60,7 @@ def get_fixations(coordinates):
     # 先进先出队列
     working_queue = deque()
     remaining_gaze = deque(coordinates)
+
     print("gaze length:%d" % len(remaining_gaze))
     while remaining_gaze:
         # 逐个处理所有的gaze data

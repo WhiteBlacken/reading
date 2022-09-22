@@ -319,7 +319,6 @@
         switch (event.keyCode) {
             case 32:
                 webgazer.pause();
-                send_base64_gaze_2_remote(x, y, t);
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();

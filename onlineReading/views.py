@@ -6,7 +6,9 @@ from django.core.files.storage import default_storage
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
+
 from action.models import Text, Dictionary, Dataset
+
 from onlineReading.utils import translate, get_fixations
 
 
@@ -115,7 +117,7 @@ def get_image(request):
     print(data_id)
     if data_id:
         Dataset.objects.filter(id=data_id).update(gazes=str(coordinates))
-    print("gazes:%s"%coordinates)
+    print("gazes:%s" % coordinates)
     return HttpResponse("1")
 
 
