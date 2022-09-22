@@ -52,7 +52,6 @@ def get_fixations(coordinates):
     :return:
     """
     from collections import deque
-
     fixations = []
     min_duration = 100
     max_duration = 800
@@ -61,12 +60,11 @@ def get_fixations(coordinates):
     working_queue = deque()
     remaining_gaze = deque(coordinates)
 
-    print("gaze length:%d" % len(remaining_gaze))
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if (
-            len(working_queue) < 2
-            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
+                len(working_queue) < 2
+                or (working_queue[-1][2] - working_queue[0][2]) < min_duration
         ):
             # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
             datum = remaining_gaze.popleft()
