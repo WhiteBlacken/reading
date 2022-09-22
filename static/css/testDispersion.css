@@ -1,0 +1,46 @@
+html, body{
+    padding: 0;
+    margin: 0;
+}
+
+body{
+    width: 100%;
+    height: 100%;
+}
+
+#canvas{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.circle{
+    border-radius: 50%;
+    background-color: black;
+    width: 50px;
+    height: 50px;
+}
+
+#c1{
+    position: absolute;
+    left: 50%;
+    top: 33%;
+    transform: translate(-50%,-50%);
+    display: none;
+}
+
+#c2{
+    position: absolute;
+    left: 33%;
+    top: 67%;
+    transform: translate(-50%,-50%);
+    display: none;
+}
+
+#c3{
+    position: absolute;
+    left: 67%;
+    top: 67%;
+    transform: translate(-50%,-50%);
+    display: none;
+}

@@ -119,3 +119,9 @@ def paint_image(path, coordinates):
 
 def cal(request):
     return render(request, "calibration.html")
+
+def reading(request):
+    return render(request, "onlineReading.html")
+
+def test_dispersion(request):
+    return render(request, "testDispersion.html")
