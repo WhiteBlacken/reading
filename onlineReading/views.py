@@ -16,14 +16,15 @@ def login_page(request):
 
 def login(request):
     username = request.POST.get("username")
-    print("username:%s"%username)
+    print("username:%s" % username)
     request.session["username"] = username
-    return render(request, "onlineReading.html")
+    return render(request, "calibration.html")
 
 
 def index(request):
     """首页"""
     return render(request, "onlineReading.html")
+
 
 def get_text(request):
     words_dict = {}
@@ -94,7 +95,7 @@ def get_image(request):
     filename = time.strftime("%Y%m%d%H%M%S") + ".png"
     print("filename:%s" % filename)
     # 存储地址
-    print("session.username:%s"%request.session.get("username"))
+    print("session.username:%s" % request.session.get("username"))
     path = "static/user/" + str(request.session.get("username")) + "/"
     # 如果目录不存在，则创建目录
     if not os.path.exists(path):
@@ -117,11 +118,14 @@ def paint_image(path, coordinates):
         cnt = cnt + 1
     cv2.imwrite(path, img)
 
+
 def cal(request):
     return render(request, "calibration.html")
 
+
 def reading(request):
     return render(request, "onlineReading.html")
+
 
 def test_dispersion(request):
     return render(request, "testDispersion.html")
