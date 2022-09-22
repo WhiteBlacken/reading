@@ -42,9 +42,9 @@
             <el-container>
                 <el-main style="padding: 0 !important;">
                     <div id="readArea">
-                        <div id="trans">
-
-                        </div>
+{#                        <div id="trans">#}
+{##}
+{#                        </div>#}
                         <div id="para">
 
                         </div>
@@ -88,6 +88,7 @@
             showBox: false,
             selectNode: null,
             currentTransWord: -1,
+            currentTransBox: [],
         },
         methods: {
 
@@ -96,42 +97,58 @@
                     left: $('.word:eq(' + num + ')').offset().left,
                     top: $('.word:eq(' + num + ')').offset().top
                 };
+
+            },
+
+            isTranslated: function (num) {
+                for(let i = 0 ; i < this.currentTransBox.length; i++){
+                    if(this.currentTransBox[i] == num)
+                        return true;
+                }
+                return false;
             },
 
             getWordTranslation: async function (num) {
-                if($('#trans').css('display') == "none")
-                    $('#trans').css('display','');
-                else if($('#trans').css('display') != "none" && this.currentTransWord == num)
-                    $('#trans').css('display','none');
-                this.changeTextStyle(num, num + 1);
-                this.getWordLocation(num);
-                var e = document.getElementById('trans');
-                e.innerHTML = this.translation[num].zh;
-                e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2 - $('#trans').width() / 2 - 13 + "px";
-                e.style.marginTop = this.wordLocation.top - 5 + "px";
-                this.currentTransWord = num;
+                if(!this.isTranslated(num)){
+                    {#if($('#trans').css('display') == "none")#}
+                    {#    $('#trans').css('display','');#}
+                    {#else if($('#trans').css('display') != "none" && this.currentTransWord == num)#}
+                    {#    $('#trans').css('display','none');#}
+                    this.changeTextStyle(num, num + 1);
+                    this.getWordLocation(num);
+                    let el = document.createElement('div');
+                    el.className = "trans";
+                    el.innerHTML = this.translation[num].zh;
+                    el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2  - 13 + "px";
+                    el.style.top = this.wordLocation.top - 10 + "px";
+                    let e = document.getElementById('readArea');
+                    console.log(this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2  - 13 + "px")
+                    e.appendChild(el);
+                    this.currentTransBox.push(num);
+                    this.currentTransWord = num;
+                }
+
             },
 
-            getSentenceTranslation: function (num) {
-                if($('#trans').css('display') == "none")
-                    $('#trans').css('display','');
-                else if($('#trans').css('display') == "none" && this.currentTransWord == num)
-                    $('#trans').css('display','none');
-                this.changeTextStyle(num,num+1);
-                this.getWordLocation(num);
-                var e = document.getElementById('trans');
-                e.innerHTML = this.translation[num].sentence_zh;
-                if (this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2 - $('#trans').width() / 2 - 13 < 0)
-                    e.style.marginLeft = "0";
-                else
-                    e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2 - $('#trans').width() / 2 - 13 + "px";
-                if ($('#trans').height() > 35)
-                    e.style.marginTop = this.wordLocation.top + 25 - $('#trans').height() + "px";
-                else
-                    e.style.marginTop = this.wordLocation.top - 5 + "px";
-                this.currentTransWord = num;
-            },
-
+            {#getSentenceTranslation: function (num) {#}
+                {#if($('#trans').css('display') == "none")#}
+                {#    $('#trans').css('display','');#}
+                {#else if($('#trans').css('display') == "none" && this.currentTransWord == num)#}
+                {#    $('#trans').css('display','none');#}
+            {#    this.changeTextStyle(num,num+1);#}
+            {#    this.getWordLocation(num);#}
+            {#    var e = document.getElementById('trans');#}
+            {#    e.innerHTML = this.translation[num].sentence_zh;#}
+            {#    if (this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2 - $('#trans').width() / 2 - 13 < 0)#}
+            {#        e.style.marginLeft = "0";#}
+            {#    else#}
+            {#        e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2 - $('#trans').width() / 2 - 13 + "px";#}
+            {#    if ($('#trans').height() > 35)#}
+            {#        e.style.marginTop = this.wordLocation.top + 25 - $('#trans').height() + "px";#}
+            {#    else#}
+            {#        e.style.marginTop = this.wordLocation.top - 5 + "px";#}
+            {#    this.currentTransWord = num;#}
+            {# },#}
 
             changeTextStyle: function (start, end) {
                 for (let i = 0; i < start; i++) {
@@ -213,12 +230,12 @@
                   };
               })
             }
+
         },
         created() {
-            document.getElementById('trans').style.display = "none";
+            {#document.getElementById('trans').style.display = "none";#}
             this.getContent();
             this.listen();
-
         },
         mounted() {
             window["getWordTranslation"] = (num) => {
