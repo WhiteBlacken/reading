@@ -124,7 +124,7 @@
                     el.innerHTML = this.translation[num].zh;
 
 
-                    el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
+                    el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2  - 13 + "px";
 
                     el.style.top = this.wordLocation.top - 10 + "px";
                     let e = document.getElementById('readArea');
@@ -269,7 +269,6 @@
                 })
             },
 
-
             auto: function () {
                 setInterval(this.autoRandomTranslation, 3000);
             },
@@ -350,7 +349,6 @@
 
     let t = [];
     let interventions = [];
-
 
     function setCookie(cname, cvalue) {
         document.cookie = cname + "=" + cvalue + "; path=/";

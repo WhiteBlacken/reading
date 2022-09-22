@@ -112,12 +112,6 @@ def get_image(request):
     with open(path + filename, "wb") as f:
         f.write(image_data)
     paint_image(path + filename, fixations)
-
-    data_id = request.session.get("data_id", None)
-    print(data_id)
-    if data_id:
-        Dataset.objects.filter(id=data_id).update(gazes=str(coordinates))
-    print("gazes:%s" % coordinates)
     return HttpResponse("1")
 
 
@@ -153,7 +147,7 @@ def paint_image(path, coordinates):
             (0, 0, 255),
             1,
         )
-        print(int(float(coordinate[2] / 100)))
+        print(int(float(coordinate[2] / 10)))
         cnt = cnt + 1
     cv2.imwrite(path, img)
 
