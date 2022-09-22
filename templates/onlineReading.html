@@ -123,8 +123,8 @@
 
                     el.innerHTML = this.translation[num].zh;
 
-
                     el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
+
 
                     el.style.top = this.wordLocation.top - 10 + "px";
                     let e = document.getElementById('readArea');
@@ -254,7 +254,6 @@
                     if (window.getSelection().rangeCount === 0 || this.showBox) {
                         return false;
                     }
-
                     // 获取选中
                     const range = window.getSelection().getRangeAt(0);
                     const comNode = range.commonAncestorContainer;
@@ -312,7 +311,6 @@
             } else {
                 app._data.readSequel.push(new Array(num, new Array(new Array(data.x, data.y, elapsedTime))));
             }
-
         }).begin();
         //全屏
         full_screen();
@@ -329,13 +327,6 @@
             case 32:
                 stop = true;
                 webgazer.pause();
-<<<<<<< HEAD
-=======
-                console.log(x);
-                console.log(y);
-                console.log(t);
-                send_base64_gaze_2_remote(x,y,t);
->>>>>>> 144372c (fixation)
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
@@ -348,13 +339,9 @@
     let x = [];
     let y = [];
     let t = [];
-
-<<<<<<< HEAD
-    let t = [];
     let interventions = [];
     //记录停止
     let stop = false;
-=======
     //眼动数据监听
     webgazer.setGazeListener(function (data,elapsedTime) {
         if(data==null){
@@ -364,7 +351,6 @@
         y.push(data.y);
         t.push(elapsedTime);
     }).begin();
->>>>>>> 144372c (fixation)
 
     function setCookie(cname, cvalue) {
         document.cookie = cname + "=" + cvalue + "; path=/";
