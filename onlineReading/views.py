@@ -7,7 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
 from action.models import Text, Dictionary
-from action.views import translate
+from onlineReading.utils import translate, get_fixations
 
 
 def login_page(request):
@@ -72,18 +72,22 @@ def get_image(request):
     image_base64 = request.POST.get("image")  # base64类型
     x = request.POST.get("x")  # str类型
     y = request.POST.get("y")  # str类型
-
+    t = request.POST.get("t")  # str类型
     # 1. 处理坐标
     list_x = x.split(",")
     list_y = y.split(",")
-
+    list_t = t.split(",")
+    print(list_t)
     coordinates = []
     for i, item in enumerate(list_x):
         coordinate = (
             int(float(list_x[i]) * 1920 / 1534),
             int(float(list_y[i]) * 1920 / 1534),
+            int(float(list_t[i]))
         )
         coordinates.append(coordinate)
+
+    get_fixations(coordinates)
 
     # 2. 处理图片
     data = image_base64.split(",")[1]
