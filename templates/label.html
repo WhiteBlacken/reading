@@ -22,14 +22,16 @@
                     <div id="para">
 
                     </div>
-                    <el-button type="primary" style="position: fixed;bottom: 5rem;right: 2rem;">标注完成</el-button>
+                    <el-button type="primary" style="position: fixed;bottom: 5rem;right: 2rem;"
+                               v-on:click="collect_labels">标注完成
+                    </el-button>
                 </div>
             </el-main>
             <el-footer>
                 <div id="pageBox">
                     <el-pagination
-                        layout="prev, pager, next"
-                        :total="totalPage * 10">
+                            layout="prev, pager, next"
+                            :total="totalPage * 10">
                     </el-pagination>
                 </div>
             </el-footer>
@@ -46,6 +48,7 @@
             page: 1,
             totalPage: 5,
             misUnderstandWords: [],
+            misUnderstandWordsLabel: [],
             wordLocation: 0,
         },
         methods: {
@@ -59,20 +62,21 @@
             },
 
             changeWordSelect: function (num) {
-                if($('.word:eq('+num+')').css('text-decoration') == 'underline solid rgb(0, 0, 255)'){
-                        $('.word:eq('+num+')').css('text-decoration',"");
-                        $('.word:eq('+num+')').css('color',"black");
-                        for(let i = 0; i < this.misUnderstandWords.length; i++){
-                            if(this.misUnderstandWords[i] == this.words[num])
-                                this.misUnderstandWords.splice(i,1);
-                        }
-                        console.log(this.misUnderstandWords)
+                if ($('.word:eq(' + num + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)') {
+                    $('.word:eq(' + num + ')').css('text-decoration', "");
+                    $('.word:eq(' + num + ')').css('color', "black");
+                    for (let i = 0; i < this.misUnderstandWords.length; i++) {
+                        if (this.misUnderstandWords[i] == this.words[num])
+                            this.misUnderstandWords.splice(i, 1);
                     }
-                else{
-                    $('.word:eq('+num+')').css('text-decoration',"underline");
-                    $('.word:eq('+num+')').css('color',"blue");
-                    this.misUnderstandWords.push(this.words[num]);
                     console.log(this.misUnderstandWords)
+                } else {
+                    $('.word:eq(' + num + ')').css('text-decoration', "underline");
+                    $('.word:eq(' + num + ')').css('color', "blue");
+                    this.misUnderstandWords.push(this.words[num]);
+                    this.misUnderstandWordsLabel.push(num);
+                    console.log(this.misUnderstandWordsLabel);
+                    // console.log(this.misUnderstandWords)
                 }
             },
 
@@ -106,29 +110,47 @@
                     }
                 }
             },
+            //把labels发送给后端存储
+            collect_labels: function () {
+                let formdata = new FormData();
+                formdata.append("labels", this.misUnderstandWordsLabel.toString());
+                $.ajax({
+                    type: 'POST',
+                    url: '/label/send/',
+                    data: formdata,
+                    success: function () {
+                        console.log("success");
+                    },
+                    error: function () {
+                        console.log("error");
+                    },
+                    contentType: false,
+                    processData: false,
+                })
+            },
+
         },
-        created () {
+        created() {
             this.getContent();
         },
-        mounted () {
+        mounted() {
             window["changeWordSelect"] = (num) => {
                 this.changeWordSelect(num);
             }
         },
     })
 
-    function setCookie(cname,cvalue) {
+    function setCookie(cname, cvalue) {
         document.cookie = cname + "=" + cvalue + "; ";
     }
 
     function getCookie(cname) {
         let name = cname + "=";
         let ca = document.cookie.split(';');
-        for(let i=0; i<ca.length; i++)
-        {
+        for (let i = 0; i < ca.length; i++) {
             let c = ca[i].trim();
-            if (c.indexOf(name)==0)
-                return c.substring(name.length,c.length);
+            if (c.indexOf(name) == 0)
+                return c.substring(name.length, c.length);
         }
         return "";
     }

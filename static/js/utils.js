@@ -1,5 +1,5 @@
 //截图
-function send_base64_gaze_2_remote(x,y) {
+function send_base64_gaze_2_remote(x,y,t) {
     let opts = {
         //scale: scale, // 添加的scale 参数
         //canvas: canvas, //自定义 canvas
@@ -29,10 +29,12 @@ function send_base64_gaze_2_remote(x,y) {
         formdata.append("image", url.toString());
         formdata.append("x",x);
         formdata.append("y",y);
+        formdata.append("t",t);
         $.ajax({
             type: 'POST',
             url: '/image/',
             data: formdata,
+            async: false,
             success: function () {
                 console.log("success");
             },
