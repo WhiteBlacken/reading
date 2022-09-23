@@ -6,9 +6,13 @@ from django.core.files.storage import default_storage
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
+<<<<<<< HEAD
 
 from action.models import Text, Dictionary, Dataset
 
+=======
+from action.models import Text, Dictionary, Dataset
+>>>>>>> 60fdabf (fixation)
 from onlineReading.utils import translate, get_fixations
 
 
@@ -112,6 +116,12 @@ def get_image(request):
     with open(path + filename, "wb") as f:
         f.write(image_data)
     paint_image(path + filename, fixations)
+
+    data_id = request.session.get("data_id", None)
+    print(data_id)
+    if data_id:
+        Dataset.objects.filter(id=data_id).update(gazes=str(coordinates))
+    print("gazes:%s"%coordinates)
     return HttpResponse("1")
 
 
@@ -147,7 +157,11 @@ def paint_image(path, coordinates):
             (0, 0, 255),
             1,
         )
+<<<<<<< HEAD
         print(int(float(coordinate[2] / 10)))
+=======
+        print(int(float(coordinate[2] / 100)))
+>>>>>>> 60fdabf (fixation)
         cnt = cnt + 1
     cv2.imwrite(path, img)
 
