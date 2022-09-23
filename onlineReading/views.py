@@ -129,3 +129,6 @@ def reading(request):
 
 def test_dispersion(request):
     return render(request, "testDispersion.html")
+
+def label(request):
+    return render(request, "label.html")

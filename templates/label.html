@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="/static/css/label.css" type="text/css" rel="stylesheet" charset="utf-8">
+    <script src="/static/plugins/jquery/jquery.min.js"></script>
+    <script src="/static/plugins/vue@2/vue@2.6.10.js"></script>
+    <script src="/static/js/axios@0.18.0.min.js"></script>
+    <script src="/static/plugins/element@vue2/index.js"></script>
+    <link href="/static/plugins/element@vue2/index.css" type="text/css" rel="stylesheet" charset="utf-8">
+    <title>Label</title>
+</head>
+<body>
+<div id="app">
+    <div id="instruction">
+
+    </div>
+    <div id="labeling">
+        <el-container>
+            <el-main style="padding: 0 !important;">
+                <div id="labelArea">
+                    <div id="para">
+
+                    </div>
+                    <el-button type="primary" style="position: fixed;bottom: 5rem;right: 2rem;">标注完成</el-button>
+                </div>
+            </el-main>
+            <el-footer>
+                <div id="pageBox">
+                    <el-pagination
+                        layout="prev, pager, next"
+                        :total="totalPage * 10">
+                    </el-pagination>
+                </div>
+            </el-footer>
+        </el-container>
+    </div>
+</div>
+</body>
+<script>
+    var app = new Vue({
+        el: "#app",
+        data: {
+            content: "",
+            words: [],
+            page: 1,
+            totalPage: 5,
+            misUnderstandWords: [],
+            wordLocation: 0,
+        },
+        methods: {
+            getWordLocation: function (num) {
+                return {
+                    left: document.getElementsByClassName('word')[num].getBoundingClientRect().left,
+                    top: document.getElementsByClassName('word')[num].getBoundingClientRect().top,
+                    right: document.getElementsByClassName('word')[num].getBoundingClientRect().right,
+                    bottom: document.getElementsByClassName('word')[num].getBoundingClientRect().bottom,
+                };
+            },
+
+            changeTextStyle: function (start, end) {
+                console.log($('.word:eq('+start+')').css('text-decoration'))
+                for (let i = start; i < end; i++) {
+                    if($('.word:eq('+i+')').css('text-decoration') == 'underline solid rgb(0, 0, 255)'){
+                        $('.word:eq('+i+')').css('text-decoration',"");
+                        $('.word:eq('+i+')').css('color',"black");
+                    }
+                    else{
+                        $('.word:eq('+i+')').css('text-decoration',"underline");
+                        $('.word:eq('+i+')').css('color',"blue");
+                    }
+                }
+            },
+
+            getContent: function () {
+                {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
+                {#).then((response) => {#}
+                {#    this.$nextTick(() => {#}
+                {#        this.setSheet();#}
+                {#    });});#}
+
+                this.content = getCookie('content');
+                let num = 0;
+                var e = document.getElementById('para');
+                var Content = this.content.split('.');
+                for (let i = 0; i < Content.length; i++) {
+                    var sentence = Content[i].split(' ');
+                    for (let j = 0; j < sentence.length; j++) {
+                        if (sentence[j] && sentence[j] !== "") {
+                            this.words.push(sentence[j].split(',')[0]);
+                            var el = document.createElement("button");
+                            el.className = "word";
+                            el.id = num.toString();
+                            el.innerHTML = sentence[j];
+                            el.setAttribute("onclick", "catchMisunderstandWord(" + num + ")");
+                            {#el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");#}
+                            if (j == sentence.length - 1)
+                                el.innerHTML = sentence[j] + '.';
+                            e.appendChild(el);
+                            num += 1;
+                        }
+                    }
+                }
+            },
+
+            catchMisunderstandWord: function (num) {
+                this.changeTextStyle (num, num+1);
+                this.misUnderstandWords.push(this.words[num]);
+                console.log(this.misUnderstandWords)
+            },
+        },
+        created () {
+            this.getContent();
+        },
+        mounted () {
+            window["catchMisunderstandWord"] = (num) => {
+                this.catchMisunderstandWord(num);
+            }
+        },
+    })
+
+    function setCookie(cname,cvalue) {
+        document.cookie = cname + "=" + cvalue + "; ";
+    }
+
+    function getCookie(cname) {
+        let name = cname + "=";
+        let ca = document.cookie.split(';');
+        for(let i=0; i<ca.length; i++)
+        {
+            let c = ca[i].trim();
+            if (c.indexOf(name)==0)
+                return c.substring(name.length,c.length);
+        }
+        return "";
+    }
+</script>
+</html>

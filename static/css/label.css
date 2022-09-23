@@ -1,0 +1,45 @@
+html,body{
+    width: 100%;
+    height: 100%;
+}
+body{
+    margin: 0;
+}
+#labeling{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+#labelArea{
+    width: auto;
+    height: 772px;
+    padding: 0px 190px;
+    display: table;
+}
+
+#para{
+    width: 100%;
+    height: auto;
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.word{
+    font-size: 18pt;
+    padding: 85px 7px;
+    width: auto;
+    height: auto;
+    border-width: 0;
+    display: inline;
+    background: rgba(0,0,0,0);
+    cursor: pointer;
+
+}
+
+#pageBox{
+    height: 90px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}

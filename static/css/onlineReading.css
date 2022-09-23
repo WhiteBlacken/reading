@@ -61,10 +61,7 @@ body{
     cursor: pointer;
 
 }
-.word:hover{
-    text-decoration: underline;
-    color: blue;
-}
+
 
 /*.wordTranslation{*/
 /*    height: 197px;*/

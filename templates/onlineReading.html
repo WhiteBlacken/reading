@@ -237,6 +237,8 @@
                         }
                     }
                 }
+                setCookie('content', this.content);
+                console.log(getCookie('content'));
                 this.auto();
             },
 
@@ -305,6 +307,7 @@
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
+                setTimeout(window.location.href = 'http://127.0.0.1:8000/label', 5000);
         }
     });
 
@@ -321,7 +324,21 @@
         y.push(data.y);
     }).begin();
 
+    function setCookie(cname, cvalue) {
+        document.cookie = cname + "=" + cvalue + "; path=/";
+    }
 
+    function getCookie(cname) {
+        let name = cname + "=";
+        let ca = document.cookie.split(';');
+        for(let i=0; i<ca.length; i++)
+        {
+            let c = ca[i].trim();
+            if (c.indexOf(name)==0)
+                return c.substring(name.length,c.length);
+        }
+        return "";
+    }
 
 </script>
 </html>
