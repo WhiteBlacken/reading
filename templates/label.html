@@ -58,17 +58,21 @@
                 };
             },
 
-            changeTextStyle: function (start, end) {
-                console.log($('.word:eq('+start+')').css('text-decoration'))
-                for (let i = start; i < end; i++) {
-                    if($('.word:eq('+i+')').css('text-decoration') == 'underline solid rgb(0, 0, 255)'){
-                        $('.word:eq('+i+')').css('text-decoration',"");
-                        $('.word:eq('+i+')').css('color',"black");
+            changeWordSelect: function (num) {
+                if($('.word:eq('+num+')').css('text-decoration') == 'underline solid rgb(0, 0, 255)'){
+                        $('.word:eq('+num+')').css('text-decoration',"");
+                        $('.word:eq('+num+')').css('color',"black");
+                        for(let i = 0; i < this.misUnderstandWords.length; i++){
+                            if(this.misUnderstandWords[i] == this.words[num])
+                                this.misUnderstandWords.splice(i,1);
+                        }
+                        console.log(this.misUnderstandWords)
                     }
-                    else{
-                        $('.word:eq('+i+')').css('text-decoration',"underline");
-                        $('.word:eq('+i+')').css('color',"blue");
-                    }
+                else{
+                    $('.word:eq('+num+')').css('text-decoration',"underline");
+                    $('.word:eq('+num+')').css('color',"blue");
+                    this.misUnderstandWords.push(this.words[num]);
+                    console.log(this.misUnderstandWords)
                 }
             },
 
@@ -92,7 +96,7 @@
                             el.className = "word";
                             el.id = num.toString();
                             el.innerHTML = sentence[j];
-                            el.setAttribute("onclick", "catchMisunderstandWord(" + num + ")");
+                            el.setAttribute("onclick", "changeWordSelect(" + num + ")");
                             {#el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");#}
                             if (j == sentence.length - 1)
                                 el.innerHTML = sentence[j] + '.';
@@ -102,19 +106,13 @@
                     }
                 }
             },
-
-            catchMisunderstandWord: function (num) {
-                this.changeTextStyle (num, num+1);
-                this.misUnderstandWords.push(this.words[num]);
-                console.log(this.misUnderstandWords)
-            },
         },
         created () {
             this.getContent();
         },
         mounted () {
-            window["catchMisunderstandWord"] = (num) => {
-                this.catchMisunderstandWord(num);
+            window["changeWordSelect"] = (num) => {
+                this.changeWordSelect(num);
             }
         },
     })
