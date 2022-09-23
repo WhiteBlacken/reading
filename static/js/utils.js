@@ -34,6 +34,7 @@ function send_base64_gaze_2_remote(x,y,t) {
             type: 'POST',
             url: '/image/',
             data: formdata,
+            async: false,
             success: function () {
                 console.log("success");
             },

@@ -110,7 +110,7 @@
             },
 
             getWordTranslation: function (num) {
-                if(!this.isTranslated(num)){
+                if (!this.isTranslated(num)) {
                     {#if($('#trans').css('display') == "none")#}
                     {#    $('#trans').css('display','');#}
                     {#else if($('#trans').css('display') != "none" && this.currentTransWord == num)#}
@@ -123,13 +123,14 @@
                     el.innerHTML = this.translation[num].zh;
 
 
-                    el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2  - 13 + "px";
+                    el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
 
                     el.style.top = this.wordLocation.top - 10 + "px";
                     let e = document.getElementById('readArea');
                     e.appendChild(el);
                     this.currentTransBox.push(num);
                     this.currentTransWord = num;
+                    interventions.push(num);
                 }
 
             },
@@ -175,16 +176,16 @@
             },
 
             catchCurrentWord: function () {
-                let gaze_x = x[x.length-1];
-                let gaze_y = y[y.length-1];
+                let gaze_x = x[x.length - 1];
+                let gaze_y = y[y.length - 1];
                 let i = 0;
-                console.log(gaze_x,gaze_y)
-                for(; i < this.translation.length; i++){
+                console.log(gaze_x, gaze_y)
+                for (; i < this.translation.length; i++) {
                     let word = this.getWordLocation(i);
-                    if(word.top < gaze_y){
-                        if(word.bottom > gaze_y){
-                            if(word.left < gaze_x){
-                                if(word.right > gaze_x){
+                    if (word.top < gaze_y) {
+                        if (word.bottom > gaze_y) {
+                            if (word.left < gaze_x) {
+                                if (word.right > gaze_x) {
                                     return i;
                                 }
                             }
@@ -196,7 +197,7 @@
 
             autoRandomTranslation: function () {
                 let num = this.catchCurrentWord();
-                if(num < this.translation.length)
+                if (num < this.translation.length)
                     this.getWordTranslation(num);
             },
 
@@ -252,22 +253,22 @@
                         return false;
                     }
 
-                  // 获取选中
-                  const range = window.getSelection().getRangeAt(0);
-                  const comNode = range.commonAncestorContainer;
-                  const start = {
-                      node: range.startContainer,
-                      offset: range.startOffset
-                  };
-                  const end = {
-                      node: range.startContainer,
-                      offset: range.endOffset
-                  };
-              })
+                    // 获取选中
+                    const range = window.getSelection().getRangeAt(0);
+                    const comNode = range.commonAncestorContainer;
+                    const start = {
+                        node: range.startContainer,
+                        offset: range.startOffset
+                    };
+                    const end = {
+                        node: range.startContainer,
+                        offset: range.endOffset
+                    };
+                })
             },
 
 
-            auto: function (){
+            auto: function () {
                 setInterval(this.autoRandomTranslation, 3000);
             },
         },
@@ -316,13 +317,11 @@
         switch (event.keyCode) {
             case 32:
                 webgazer.pause();
-                console.log(x);
-                console.log(y);
-                console.log(t);
                 send_base64_gaze_2_remote(x, y, t);
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
+                collect_interventions();
                 setTimeout(window.location.href = 'http://127.0.0.1:8000/label', 5000);
         }
     });
@@ -331,6 +330,7 @@
     let x = [];
     let y = [];
     let t = [];
+    let interventions = [];
 
     function setCookie(cname, cvalue) {
         document.cookie = cname + "=" + cvalue + "; path=/";
@@ -339,13 +339,31 @@
     function getCookie(cname) {
         let name = cname + "=";
         let ca = document.cookie.split(';');
-        for(let i=0; i<ca.length; i++)
-        {
+        for (let i = 0; i < ca.length; i++) {
             let c = ca[i].trim();
-            if (c.indexOf(name)==0)
-                return c.substring(name.length,c.length);
+            if (c.indexOf(name) == 0)
+                return c.substring(name.length, c.length);
         }
         return "";
+    }
+
+    function collect_interventions() {
+        let formdata = new FormData();
+        formdata.append("interventions", interventions.toString());
+        $.ajax({
+            type: 'POST',
+            url: '/intervention/send/',
+            data: formdata,
+            async:false,
+            success: function () {
+                console.log("success");
+            },
+            error: function () {
+                console.log("error");
+            },
+            contentType: false,
+            processData: false,
+        })
     }
 
 </script>

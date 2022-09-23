@@ -6,7 +6,7 @@ from django.core.files.storage import default_storage
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
-from action.models import Text, Dictionary
+from action.models import Text, Dictionary, Dataset
 from onlineReading.utils import translate, get_fixations
 
 
@@ -63,7 +63,9 @@ def get_text(request):
                     Dictionary.objects.create(en=word.lower(), zh=zh)
                 cnt = cnt + 1
                 words_dict[cnt] = {"en": word, "zh": zh, "sentence_zh": sentence_zh}
-
+    # 将文本存入数据库
+    dataset = Dataset.objects.create(texts=text)
+    request.session["data_id"] = dataset.id
     return JsonResponse(words_dict, json_dumps_params={"ensure_ascii": False})
 
 
@@ -83,7 +85,7 @@ def get_image(request):
         coordinate = (
             int(float(list_x[i]) * 1920 / 1534),
             int(float(list_y[i]) * 1920 / 1534),
-            int(float(list_t[i]))
+            int(float(list_t[i])),
         )
         coordinates.append(coordinate)
 
@@ -108,7 +110,31 @@ def get_image(request):
     with open(path + filename, "wb") as f:
         f.write(image_data)
     paint_image(path + filename, fixations)
+
+    data_id = request.session.get("data_id", None)
+    print(data_id)
+    if data_id:
+        Dataset.objects.filter(id=data_id).update(gazes=str(coordinates))
+    print("gazes:%s"%coordinates)
     return HttpResponse("1")
+
+
+def get_labels(request):
+    labels = request.POST.get("labels")
+    data_id = request.session.get("data_id", None)
+    if data_id:
+        Dataset.objects.filter(id=data_id).update(labels=str(labels))
+    print("labels:%s" % str(labels))
+    return HttpResponse(1)
+
+
+def get_interventions(request):
+    interventions = request.POST.get("interventions")
+    data_id = request.session.get("data_id", None)
+    if data_id:
+        Dataset.objects.filter(id=data_id).update(interventions=str(interventions))
+    print("interventions:%s" % str(interventions))
+    return HttpResponse(1)
 
 
 def paint_image(path, coordinates):
@@ -118,8 +144,14 @@ def paint_image(path, coordinates):
     img = cv2.imread(path)
     cnt = 0
     for coordinate in coordinates:
-        cv2.circle(img, (coordinate[0], coordinate[1]), int(float(coordinate[2]/10)), (0, 0, 255), 1)
-        print(int(float(coordinate[2]/100)))
+        cv2.circle(
+            img,
+            (coordinate[0], coordinate[1]),
+            int(float(coordinate[2] / 10)),
+            (0, 0, 255),
+            1,
+        )
+        print(int(float(coordinate[2] / 100)))
         cnt = cnt + 1
     cv2.imwrite(path, img)
 
@@ -134,6 +166,7 @@ def reading(request):
 
 def test_dispersion(request):
     return render(request, "testDispersion.html")
+
 
 def label(request):
     return render(request, "label.html")
