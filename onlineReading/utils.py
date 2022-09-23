@@ -52,6 +52,7 @@ def get_fixations(coordinates):
     :return:
     """
     from collections import deque
+
     fixations = []
     min_duration = 100
     max_duration = 800
@@ -59,7 +60,7 @@ def get_fixations(coordinates):
     # 先进先出队列
     working_queue = deque()
     remaining_gaze = deque(coordinates)
-    print("gaze length:%d"%len(remaining_gaze))
+    print("gaze length:%d" % len(remaining_gaze))
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if (
@@ -88,8 +89,20 @@ def get_fixations(coordinates):
             working_queue.append(remaining_gaze.popleft())
     print("fixations")
     print(fixations)
-    print("fixation length:%d"%len(fixations))
+    print("fixation length:%d" % len(fixations))
     return fixations
+
+
+def data_scale(datas, a, b):
+    """将原本的数据缩放到【a，b】之间"""
+    new_data = []
+    max_data = max(datas)
+    min_data = min(datas)
+    # 计算缩放系数
+    k = (b - a) / (max_data - min_data)
+    for data in datas:
+        new_data.append(a + k * (data - min_data))
+    return new_data
 
 
 def from_gazes_to_fixation(gazes):

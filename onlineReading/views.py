@@ -118,7 +118,7 @@ def paint_image(path, coordinates):
     img = cv2.imread(path)
     cnt = 0
     for coordinate in coordinates:
-        cv2.circle(img, (coordinate[0], coordinate[1]), int(float(coordinate[2]/100)), (0, 0, 255), 1)
+        cv2.circle(img, (coordinate[0], coordinate[1]), int(float(coordinate[2]/10)), (0, 0, 255), 1)
         print(int(float(coordinate[2]/100)))
         cnt = cnt + 1
     cv2.imwrite(path, img)
