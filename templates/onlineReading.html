@@ -125,7 +125,6 @@
 
                     el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
 
-
                     el.style.top = this.wordLocation.top - 10 + "px";
                     let e = document.getElementById('readArea');
                     e.appendChild(el);
@@ -182,7 +181,6 @@
                 let i = 0;
 
                 for (; i < this.translation.length; i++) {
-
                     let word = this.getWordLocation(i);
                     if (word.top < gaze_y) {
                         if (word.bottom > gaze_y) {
@@ -272,6 +270,7 @@
                 if (stop === false) {
                     setInterval(this.autoRandomTranslation, 3000);
                 }
+
             },
         },
         created() {
@@ -342,15 +341,7 @@
     let interventions = [];
     //记录停止
     let stop = false;
-    //眼动数据监听
-    webgazer.setGazeListener(function (data,elapsedTime) {
-        if(data==null){
-            return;
-        }
-        x.push(data.x);
-        y.push(data.y);
-        t.push(elapsedTime);
-    }).begin();
+
 
     function setCookie(cname, cvalue) {
         document.cookie = cname + "=" + cvalue + "; path=/";
@@ -418,6 +409,5 @@
             })
         });
     }
-
 </script>
 </html>

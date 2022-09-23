@@ -5,6 +5,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+
 from action.models import Text, Dictionary, Dataset
 from onlineReading.utils import translate, get_fixations
 
@@ -110,6 +111,12 @@ def get_image(request):
     with open(path + filename, "wb") as f:
         f.write(image_data)
     paint_image(path + filename, fixations)
+
+    data_id = request.session.get("data_id", None)
+    print(data_id)
+    if data_id:
+        Dataset.objects.filter(id=data_id).update(gazes=str(coordinates))
+    print("gazes:%s"%coordinates)
     return HttpResponse("1")
 
 
@@ -141,6 +148,14 @@ def get_labels(request):
     if data_id:
         Dataset.objects.filter(id=data_id).update(labels=str(labels))
     print("labels:%s" % str(labels))
+
+
+def get_interventions(request):
+    interventions = request.POST.get("interventions")
+    data_id = request.session.get("data_id", None)
+    if data_id:
+        Dataset.objects.filter(id=data_id).update(interventions=str(interventions))
+    print("interventions:%s" % str(interventions))
     return HttpResponse(1)
 
 
