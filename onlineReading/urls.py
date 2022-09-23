@@ -28,4 +28,5 @@ urlpatterns = [
     path("image/", views.get_image),
     path("cal/", views.cal),
     path("reading/", views.reading),
+    path("label/", views.label),
 ]
