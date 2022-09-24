@@ -20,10 +20,14 @@ class Dictionary(models.Model):
 
 
 class Dataset(models.Model):
-    gazes = models.TextField()
+    gaze_x = models.TextField()
+    gaze_y = models.TextField()
+    gaze_t = models.TextField()
     texts = models.TextField()
     interventions = models.CharField(max_length=1000)
     labels = models.CharField(max_length=1000)
+    image = models.TextField()
+    user = models.CharField(max_length=200)
 
     class Meta:
         db_table = "dataset"
