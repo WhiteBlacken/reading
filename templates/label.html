@@ -69,7 +69,11 @@
                         if (this.misUnderstandWords[i] == this.words[num])
                             this.misUnderstandWords.splice(i, 1);
                     }
-                    console.log(this.misUnderstandWords)
+                    for(let i=0;i<this.misUnderstandWordsLabel.length;i++){
+                        if(num==this.misUnderstandWordsLabel[i]){
+                            this.misUnderstandWordsLabel.splice(i,1);
+                        }
+                    }
                 } else {
                     $('.word:eq(' + num + ')').css('text-decoration', "underline");
                     $('.word:eq(' + num + ')').css('color', "blue");
@@ -120,6 +124,7 @@
                     data: formdata,
                     success: function () {
                         console.log("success");
+                        alert("完成阅读");
                     },
                     error: function () {
                         console.log("error");
