@@ -71,6 +71,7 @@ def get_text(request):
 
 def get_image(request):
     """获取截图的图片+eye gaze，并生成眼动热点图"""
+    print("执行了")
     image_base64 = request.POST.get("image")  # base64类型
     x = request.POST.get("x")  # str类型
     y = request.POST.get("y")  # str类型
@@ -119,6 +120,28 @@ def get_image(request):
     return HttpResponse("1")
 
 
+def get_data(request):
+    image_base64 = request.POST.get("image")  # base64类型
+    x = request.POST.get("x")  # str类型
+    y = request.POST.get("y")  # str类型
+    t = request.POST.get("t")  # str类型
+    interventions = request.POST.get("interventions")
+
+    data_id = request.session.get("data_id", None)
+    print("data_id")
+    print(data_id)
+    if data_id:
+        Dataset.objects.filter(id=data_id).update(
+            gaze_x=str(x),
+            gaze_y=str(y),
+            gaze_t=str(t),
+            interventions=str(interventions),
+            user=request.session.get("username"),
+            image=image_base64
+        )
+    return HttpResponse(1)
+
+
 def get_labels(request):
     labels = request.POST.get("labels")
     data_id = request.session.get("data_id", None)
@@ -126,7 +149,6 @@ def get_labels(request):
         Dataset.objects.filter(id=data_id).update(labels=str(labels))
     print("labels:%s" % str(labels))
     return HttpResponse(1)
-
 
 def get_interventions(request):
     interventions = request.POST.get("interventions")
@@ -151,7 +173,7 @@ def paint_image(path, coordinates):
             (0, 0, 255),
             1,
         )
-        print(int(float(coordinate[2] / 100)))
+        print(int(float(coordinate[2] / 10)))
         cnt = cnt + 1
     cv2.imwrite(path, img)
 

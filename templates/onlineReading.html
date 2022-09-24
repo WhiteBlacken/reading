@@ -123,7 +123,6 @@
 
                     el.innerHTML = this.translation[num].zh;
 
-
                     el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
 
                     el.style.top = this.wordLocation.top - 10 + "px";
@@ -181,8 +180,7 @@
                 let gaze_y = y[y.length - 1];
                 let i = 0;
 
-                for(; i < this.translation.length; i++){
-
+                for (; i < this.translation.length; i++) {
                     let word = this.getWordLocation(i);
                     if (word.top < gaze_y) {
                         if (word.bottom > gaze_y) {
@@ -254,7 +252,6 @@
                     if (window.getSelection().rangeCount === 0 || this.showBox) {
                         return false;
                     }
-
                     // 获取选中
                     const range = window.getSelection().getRangeAt(0);
                     const comNode = range.commonAncestorContainer;
@@ -269,9 +266,11 @@
                 })
             },
 
-
             auto: function () {
-                setInterval(this.autoRandomTranslation, 3000);
+                if (stop === false) {
+                    setInterval(this.autoRandomTranslation, 3000);
+                }
+
             },
         },
         created() {
@@ -304,6 +303,13 @@
             x.push(data.x);
             y.push(data.y);
             t.push(elapsedTime);
+
+            let num = app.catchCurrentWord();
+            if (app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num) {
+                app._data.readSequel[app._data.readSequel.length - 1][1].push(new Array(data.x, data.y, elapsedTime))
+            } else {
+                app._data.readSequel.push(new Array(num, new Array(new Array(data.x, data.y, elapsedTime))));
+            }
         }).begin();
         //全屏
         full_screen();
@@ -318,39 +324,23 @@
 
         switch (event.keyCode) {
             case 32:
+                stop = true;
                 webgazer.pause();
-                send_base64_gaze_2_remote(x, y, t);
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
-                collect_interventions();
-                setTimeout("window.location.href = 'http://127.0.0.1:8000/label'", 5000);
-
+                console.log(app._data.readSequel);
+                get_base64_gaze_and_intervention();
         }
     });
 
     //记录过程中的眼动坐标
     let x = [];
     let y = [];
-
-    //眼动数据监听
-    webgazer.setGazeListener(function (data,elapsedTime) {
-        if(data==null){
-            return;
-        }
-        x.push(data.x);
-        y.push(data.y);
-
-        let num = app.catchCurrentWord();
-        if(app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num){
-            app._data.readSequel[app._data.readSequel.length - 1][1].push(new Array(data.x,data.y,elapsedTime))
-         }else{
-            app._data.readSequel.push(new Array(num, new Array(new Array(data.x,data.y,elapsedTime))));
-         }
-    }).begin();
-
     let t = [];
     let interventions = [];
+    //记录停止
+    let stop = false;
 
 
     function setCookie(cname, cvalue) {
@@ -368,24 +358,56 @@
         return "";
     }
 
-    function collect_interventions() {
-        let formdata = new FormData();
-        formdata.append("interventions", interventions.toString());
-        $.ajax({
-            type: 'POST',
-            url: '/intervention/send/',
-            data: formdata,
-            async:false,
-            success: function () {
-                console.log("success");
-            },
-            error: function () {
-                console.log("error");
-            },
-            contentType: false,
-            processData: false,
-        })
-    }
+    //截图
+    function get_base64_gaze_and_intervention() {
+        let opts = {
+            //scale: scale, // 添加的scale 参数
+            //canvas: canvas, //自定义 canvas
+            //logging: false, //日志开关，便于查看html2canvas的内部执行流程
+            //width: width, //dom 原始宽度
+            //height: height,
+            useCORS: true // 【重要】开启跨域配置
+        };
+        html2canvas($('body')[0], opts).then(canvas => {
+            //document.body.appendChild(canvas);
+            // canvas宽度
+            let canvasWidth = canvas.width;
+            // canvas高度
+            let canvasHeight = canvas.height;
+            console.log(canvasHeight, canvasWidth);
+            //sleep(2);
+            // 调用Canvas2Image插件
+            // let img = Canvas2Image.convertToImage(canvas, canvasWidth, canvasHeight);
+            // let image_data = $(img).attr('src');
 
+            let url = canvas.toDataURL();
+
+            // // 调用Canvas2Image插件
+            // Canvas2Image.saveAsImage(canvas, canvasWidth, canvasHeight, 'png', filename);
+
+            let formdata = new FormData();
+            formdata.append("image", url.toString());
+            formdata.append("x", x.toString());
+            formdata.append("y", y.toString());
+            formdata.append("t", t.toString());
+            formdata.append("interventions", interventions.toString());
+            $.ajax({
+                type: 'POST',
+                url: '/data/',
+                data: formdata,
+                async: false,
+                success: function () {
+                    console.log("success");
+                    window.location.href = 'http://127.0.0.1:8000/label';
+                },
+                error: function () {
+                    console.log("error");
+                },
+                processData: false,
+                contentType: false
+
+            })
+        });
+    }
 </script>
 </html>

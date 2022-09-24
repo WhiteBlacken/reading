@@ -20,14 +20,15 @@ import action.views
 from . import views
 
 urlpatterns = [
-    re_path(r'^$', views.login_page),
-    path('admin/', admin.site.urls),
+    re_path(r"^$", views.login_page),
+    path("admin/", admin.site.urls),
     path("login/", views.login, name="login"),
     path("text/", views.get_text),
     path("image/", views.get_image),
     path("cal/", views.cal),
     path("reading/", views.reading),
     path("label/", views.label),
-    path("label/send/",views.get_labels),
-    path("intervention/send/",views.get_interventions)
+    path("data/", views.get_data),
+    path("label/send/", views.get_labels),
+
 ]
