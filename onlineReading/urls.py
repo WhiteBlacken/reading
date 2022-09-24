@@ -28,6 +28,6 @@ urlpatterns = [
     path("cal/", views.cal),
     path("reading/", views.reading),
     path("label/", views.label),
+    path("data/", views.get_data),
     path("label/send/", views.get_labels),
-    path("intervention/send/", views.get_interventions),
 ]
