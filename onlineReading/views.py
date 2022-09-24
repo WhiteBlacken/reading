@@ -1,12 +1,13 @@
 import base64
 import os
 
+import simplejson
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
-from action.models import Text, Dictionary, Dataset
+from action.models import Text, Dictionary, Dataset, WordLevelData
 from onlineReading.utils import translate, get_fixations
 
 
@@ -69,54 +70,52 @@ def get_text(request):
     return JsonResponse(words_dict, json_dumps_params={"ensure_ascii": False})
 
 
-def get_image(request):
+def get_image(data_id, username):
     """获取截图的图片+eye gaze，并生成眼动热点图"""
-    print("执行了")
-    image_base64 = request.POST.get("image")  # base64类型
-    x = request.POST.get("x")  # str类型
-    y = request.POST.get("y")  # str类型
-    t = request.POST.get("t")  # str类型
-    # 1. 处理坐标
-    list_x = x.split(",")
-    list_y = y.split(",")
-    list_t = t.split(",")
-    print(list_t)
-    coordinates = []
-    for i, item in enumerate(list_x):
-        coordinate = (
-            int(float(list_x[i]) * 1920 / 1534),
-            int(float(list_y[i]) * 1920 / 1534),
-            int(float(list_t[i])),
-        )
-        coordinates.append(coordinate)
-
-    fixations = get_fixations(coordinates)
-
-    # 2. 处理图片
-    data = image_base64.split(",")[1]
-    # 将str解码为byte
-    image_data = base64.b64decode(data)
-    # 获取名称
-    import time
-
-    filename = time.strftime("%Y%m%d%H%M%S") + ".png"
-    print("filename:%s" % filename)
-    # 存储地址
-    print("session.username:%s" % request.session.get("username"))
-    path = "static/user/" + str(request.session.get("username")) + "/"
-    # 如果目录不存在，则创建目录
-    if not os.path.exists(path):
-        os.mkdir(path)
-
-    with open(path + filename, "wb") as f:
-        f.write(image_data)
-    paint_image(path + filename, fixations)
-
-    data_id = request.session.get("data_id", None)
     print(data_id)
     if data_id:
-        Dataset.objects.filter(id=data_id).update(gazes=str(coordinates))
-    print("gazes:%s"%coordinates)
+        dataset = Dataset.objects.get(id=data_id)
+        image_base64 = dataset.image
+        x = dataset.gaze_x
+        y = dataset.gaze_y
+        t = dataset.gaze_t
+
+        # 1. 处理坐标
+        list_x = x.split(",")
+        list_y = y.split(",")
+        list_t = t.split(",")
+
+        coordinates = []
+        for i, item in enumerate(list_x):
+            coordinate = (
+                int(float(list_x[i]) * 1920 / 1534),
+                int(float(list_y[i]) * 1920 / 1534),
+                int(float(list_t[i])),
+            )
+            coordinates.append(coordinate)
+
+        fixations = get_fixations(coordinates)
+
+        # 2. 处理图片
+        data = image_base64.split(",")[1]
+        # 将str解码为byte
+        image_data = base64.b64decode(data)
+        # 获取名称
+        import time
+
+        filename = time.strftime("%Y%m%d%H%M%S") + ".png"
+        print("filename:%s" % filename)
+        # 存储地址
+        print("session.username:%s" % username)
+        path = "static/user/" + str(username) + "/"
+        # 如果目录不存在，则创建目录
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+        with open(path + filename, "wb") as f:
+            f.write(image_data)
+        paint_image(path + filename, fixations)
+
     return HttpResponse("1")
 
 
@@ -148,15 +147,14 @@ def get_labels(request):
     if data_id:
         Dataset.objects.filter(id=data_id).update(labels=str(labels))
     print("labels:%s" % str(labels))
-    return HttpResponse(1)
-
-def get_interventions(request):
-    interventions = request.POST.get("interventions")
-    data_id = request.session.get("data_id", None)
+    labels = list(map(int, labels.split(",")))
+    WordLevelData.objects.filter(data_id=data_id).filter(word_index_in_text__in=labels).update(
+        is_understand=0
+    )
+    # 生成眼动图
     if data_id:
-        Dataset.objects.filter(id=data_id).update(interventions=str(interventions))
-    print("interventions:%s" % str(interventions))
-    return HttpResponse(1)
+        get_image(data_id, request.session.get("username"))
+    return render(request, "login.html")
 
 
 def paint_image(path, coordinates):
@@ -192,3 +190,34 @@ def test_dispersion(request):
 
 def label(request):
     return render(request, "label.html")
+
+
+def get_word_level_data(request):
+    gazes = simplejson.loads(request.body)  # list类型
+    data_id = request.session.get("data_id", None)
+
+    if data_id:
+        dataset = Dataset.objects.get(id=data_id)
+        interventions = dataset.interventions.split(',')
+        words = get_word_from_text(dataset.texts)
+        for gaze in gazes:
+            WordLevelData.objects.create(
+                data_id=data_id,
+                word_index_in_text=gaze[0],
+                gaze=gaze[1],
+                word=words[gaze[0]],
+                is_intervention=1 if str(gaze[0]) in interventions else 0,
+                is_understand=1
+            )
+    return HttpResponse(1)
+
+
+def get_word_from_text(text):
+    get_word = []
+    sentences = text.split(".")
+    for sentence in sentences:
+        words = sentence.split(" ")
+        for word in words:
+            word = word.strip().lower().replace(",", "")
+            get_word.append(word)
+    return get_word

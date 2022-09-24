@@ -70,7 +70,11 @@
                         if (this.misUnderstandWords[i] == this.words[num])
                             this.misUnderstandWords.splice(i, 1);
                     }
-                    console.log(this.misUnderstandWords)
+                    for(let i=0;i<this.misUnderstandWordsLabel.length;i++){
+                        if(num==this.misUnderstandWordsLabel[i]){
+                            this.misUnderstandWordsLabel.splice(i,1);
+                        }
+                    }
                 } else {
                     $('.word:eq(' + num + ')').css('text-decoration', "underline");
                     $('.word:eq(' + num + ')').css('color', "blue");
@@ -129,7 +133,7 @@
                     }
                 }
             },
-            //把labels发送给后端存储
+            //把labels发送给后端存储,并更新word_level_data
             collect_labels: function () {
                 let formdata = new FormData();
                 formdata.append("labels", this.misUnderstandWordsLabel.toString());
@@ -139,6 +143,7 @@
                     data: formdata,
                     success: function () {
                         console.log("success");
+                        alert("完成阅读");
                     },
                     error: function () {
                         console.log("error");

@@ -30,5 +30,6 @@ urlpatterns = [
     path("label/", views.label),
     path("data/", views.get_data),
     path("label/send/", views.get_labels),
+    path("word_level_data/",views.get_word_level_data)
 
 ]

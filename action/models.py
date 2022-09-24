@@ -31,3 +31,21 @@ class Dataset(models.Model):
 
     class Meta:
         db_table = "dataset"
+
+
+class WordLevelData(models.Model):
+    # 单词对应的记录
+    data_id = models.BigIntegerField()
+    # 单词在句中的位置
+    word_index_in_text = models.IntegerField()
+    # 单词本身的text
+    word = models.CharField(max_length=100)
+    # 单词对应的eye gaze点的集合
+    gaze = models.TextField()
+    # 单词是否给过干预
+    is_intervention = models.BooleanField()
+    # 单词是否不懂
+    is_understand = models.BooleanField()
+
+    class Meta:
+        db_table = "word_level_data"
