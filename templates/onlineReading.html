@@ -42,9 +42,9 @@
             <el-container>
                 <el-main style="padding: 0 !important;">
                     <div id="readArea">
-{#                        <div id="trans">#}
-{##}
-{#                        </div>#}
+                        {#                        <div id="trans">#}
+                        {##}
+                        {#                        </div>#}
                         <div id="para">
 
                         </div>
@@ -103,15 +103,15 @@
             },
 
             isTranslated: function (num) {
-                for(let i = 0 ; i < this.currentTransBox.length; i++){
-                    if(this.currentTransBox[i] == num)
+                for (let i = 0; i < this.currentTransBox.length; i++) {
+                    if (this.currentTransBox[i] == num)
                         return true;
                 }
                 return false;
             },
 
             getWordTranslation: function (num) {
-                if(!this.isTranslated(num)){
+                if (!this.isTranslated(num)) {
                     {#if($('#trans').css('display') == "none")#}
                     {#    $('#trans').css('display','');#}
                     {#else if($('#trans').css('display') != "none" && this.currentTransWord == num)#}
@@ -123,22 +123,24 @@
 
                     el.innerHTML = this.translation[num].zh;
 
-                    el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2  - 13 + "px";
+
+                    el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
 
                     el.style.top = this.wordLocation.top - 10 + "px";
                     let e = document.getElementById('readArea');
                     e.appendChild(el);
                     this.currentTransBox.push(num);
                     this.currentTransWord = num;
+                    interventions.push(num);
                 }
 
             },
 
             {#getSentenceTranslation: function (num) {#}
-                {#if($('#trans').css('display') == "none")#}
-                {#    $('#trans').css('display','');#}
-                {#else if($('#trans').css('display') == "none" && this.currentTransWord == num)#}
-                {#    $('#trans').css('display','none');#}
+            {#if($('#trans').css('display') == "none")#}
+            {#    $('#trans').css('display','');#}
+            {#else if($('#trans').css('display') == "none" && this.currentTransWord == num)#}
+            {#    $('#trans').css('display','none');#}
             {#    this.changeTextStyle(num,num+1);#}
             {#    this.getWordLocation(num);#}
             {#    var e = document.getElementById('trans');#}
@@ -164,27 +166,28 @@
                     document.getElementsByClassName('word')[i].style.color = "black";
                 }
                 for (let i = start; i < end; i++) {
-                    if($('.word:eq('+i+')').css('text-decoration') == 'underline solid rgb(0, 0, 255)'){
-                        $('.word:eq('+i+')').css('text-decoration',"");
-                        $('.word:eq('+i+')').css('color',"black");
-                    }
-                    else{
-                        $('.word:eq('+i+')').css('text-decoration',"underline");
-                        $('.word:eq('+i+')').css('color',"blue");
+                    if ($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)') {
+                        $('.word:eq(' + i + ')').css('text-decoration', "");
+                        $('.word:eq(' + i + ')').css('color', "black");
+                    } else {
+                        $('.word:eq(' + i + ')').css('text-decoration', "underline");
+                        $('.word:eq(' + i + ')').css('color', "blue");
                     }
                 }
             },
 
             catchCurrentWord: function () {
-                let gaze_x = x[x.length-1];
-                let gaze_y = y[y.length-1];
+                let gaze_x = x[x.length - 1];
+                let gaze_y = y[y.length - 1];
                 let i = 0;
+
                 for(; i < this.translation.length; i++){
+
                     let word = this.getWordLocation(i);
-                    if(word.top < gaze_y){
-                        if(word.bottom > gaze_y){
-                            if(word.left < gaze_x){
-                                if(word.right > gaze_x){
+                    if (word.top < gaze_y) {
+                        if (word.bottom > gaze_y) {
+                            if (word.left < gaze_x) {
+                                if (word.right > gaze_x) {
                                     return i;
                                 }
                             }
@@ -196,7 +199,7 @@
 
             autoRandomTranslation: function () {
                 let num = this.catchCurrentWord();
-                if(num < this.translation.length)
+                if (num < this.translation.length)
                     this.getWordTranslation(num);
             },
 
@@ -210,8 +213,12 @@
                 await axios.get("/text").then((response) => {
                     this.content = response.data[0];
                     let i = 1;
-                    while(response.data[i]){
-                        this.translation.push({en: response.data[i].en, zh: response.data[i].zh, sentence_zh: response.data[i].sentence_zh});
+                    while (response.data[i]) {
+                        this.translation.push({
+                            en: response.data[i].en,
+                            zh: response.data[i].zh,
+                            sentence_zh: response.data[i].sentence_zh
+                        });
                         i++;
                     }
                 });
@@ -243,26 +250,27 @@
             },
 
             listen: function () {
-              document.addEventListener("mouseup", function (e) {
-                  if (window.getSelection().rangeCount === 0 || this.showBox) {
-                      return false;
-                  }
+                document.addEventListener("mouseup", function (e) {
+                    if (window.getSelection().rangeCount === 0 || this.showBox) {
+                        return false;
+                    }
 
-                  // 获取选中
-                  const range = window.getSelection().getRangeAt(0);
-                  const comNode = range.commonAncestorContainer;
-                  const start = {
-                      node: range.startContainer,
-                      offset: range.startOffset
-                  };
-                  const end = {
-                      node: range.startContainer,
-                      offset: range.endOffset
-                  };
-              })
+                    // 获取选中
+                    const range = window.getSelection().getRangeAt(0);
+                    const comNode = range.commonAncestorContainer;
+                    const start = {
+                        node: range.startContainer,
+                        offset: range.startOffset
+                    };
+                    const end = {
+                        node: range.startContainer,
+                        offset: range.endOffset
+                    };
+                })
             },
 
-            auto: function (){
+
+            auto: function () {
                 setInterval(this.autoRandomTranslation, 3000);
             },
         },
@@ -287,6 +295,16 @@
 
     //开始使用
     function get_start() {
+        //开启webgazer
+        //眼动数据监听
+        webgazer.setGazeListener(function (data, elapsedTime) {
+            if (data == null) {
+                return;
+            }
+            x.push(data.x);
+            y.push(data.y);
+            t.push(elapsedTime);
+        }).begin();
         //全屏
         full_screen();
         //展示阅读内容
@@ -301,13 +319,11 @@
         switch (event.keyCode) {
             case 32:
                 webgazer.pause();
-                console.log(x);
-                console.log(y);
-                send_base64_gaze_2_remote(x,y);
+                send_base64_gaze_2_remote(x, y, t);
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
-                console.log(app._data.readSequel)
+                collect_interventions();
                 setTimeout(window.location.href = 'http://127.0.0.1:8000/label', 5000);
         }
     });
@@ -332,6 +348,10 @@
          }
     }).begin();
 
+    let t = [];
+    let interventions = [];
+
+
     function setCookie(cname, cvalue) {
         document.cookie = cname + "=" + cvalue + "; path=/";
     }
@@ -339,13 +359,31 @@
     function getCookie(cname) {
         let name = cname + "=";
         let ca = document.cookie.split(';');
-        for(let i=0; i<ca.length; i++)
-        {
+        for (let i = 0; i < ca.length; i++) {
             let c = ca[i].trim();
-            if (c.indexOf(name)==0)
-                return c.substring(name.length,c.length);
+            if (c.indexOf(name) == 0)
+                return c.substring(name.length, c.length);
         }
         return "";
+    }
+
+    function collect_interventions() {
+        let formdata = new FormData();
+        formdata.append("interventions", interventions.toString());
+        $.ajax({
+            type: 'POST',
+            url: '/intervention/send/',
+            data: formdata,
+            async:false,
+            success: function () {
+                console.log("success");
+            },
+            error: function () {
+                console.log("error");
+            },
+            contentType: false,
+            processData: false,
+        })
     }
 
 </script>

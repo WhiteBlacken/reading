@@ -17,3 +17,13 @@ class Dictionary(models.Model):
 
     class Meta:
         db_table = "dictionary"
+
+
+class Dataset(models.Model):
+    gazes = models.TextField()
+    texts = models.TextField()
+    interventions = models.CharField(max_length=1000)
+    labels = models.CharField(max_length=1000)
+
+    class Meta:
+        db_table = "dataset"
