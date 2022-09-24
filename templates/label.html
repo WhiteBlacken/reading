@@ -48,6 +48,7 @@
             page: 1,
             totalPage: 5,
             misUnderstandWords: [],
+            misUnderstandSentences: [],
             misUnderstandWordsLabel: [],
             wordLocation: 0,
         },
@@ -77,6 +78,24 @@
                     this.misUnderstandWordsLabel.push(num);
                     console.log(this.misUnderstandWordsLabel);
                     // console.log(this.misUnderstandWords)
+                }
+            },
+
+            changeSentenceSelect: function (start, end) {
+                for(let i = start; i < end; i++){
+                    if($('.word:eq(' + i + ')').css('text-decoration') != 'underline solid rgb(0, 0, 255)'){
+                        for(let j = start; j < end; j++) {
+                            $('.word:eq(' + j + ')').css('text-decoration', 'underline solid rgb(0, 0, 255)');
+                            $('.word:eq(' + j + ')').css('color', "blue");
+                        }
+                        this.misUnderstandSentences.push();
+                        return;
+                    }
+                }
+                for(let i = start; i < end; i++){
+                    $('.word:eq(' + i + ')').css('text-decoration', '');
+                    $('.word:eq(' + i + ')').css('color', "black");
+                    this.misUnderstandSentences.splice();
                 }
             },
 

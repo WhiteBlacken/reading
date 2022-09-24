@@ -76,7 +76,7 @@ body{
 /*}*/
 
 #pageBox{
-    height: 90px;
+    height: 70px;
     display:flex;
     justify-content:center;
     align-items:center;
