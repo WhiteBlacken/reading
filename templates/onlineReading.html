@@ -269,6 +269,23 @@
                 })
             },
 
+            clearPageWords: function () {
+                let e = document.getElementById('para');
+                while(e.hasChildNodes()){
+                    e.removeChild(e.children[0]);
+                }
+                e = document.getElementById('readArea');
+                while(e.children.length > 1){
+                    e.removeChild(e.children[1]);
+                }
+                this.content = "";
+                this.words = [];
+                this.translation = [];
+                this.rereading = [];
+                this.currentTransWord = -1;
+                this.currentTransBox = [];
+                this.readSequel = [];
+            },
 
             auto: function () {
                 setInterval(this.autoRandomTranslation, 3000);
