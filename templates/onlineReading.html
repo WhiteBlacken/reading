@@ -361,28 +361,6 @@
         return "";
     }
 
-    function collect_gazes_and_intervention() {
-        let formdata = new FormData();
-        formdata.append("x", x.toString());
-        formdata.append("y", y.toString());
-        formdata.append("t", x.toString());
-        formdata.append("interventions", interventions.toString());
-        $.ajax({
-            type: 'POST',
-            url: '/gaze_intervention/send/',
-            data: formdata,
-            async: false,
-            success: function () {
-                console.log("success");
-            },
-            error: function () {
-                console.log("error");
-            },
-            contentType: false,
-            processData: false,
-        })
-    }
-
     //截图
     function get_base64_gaze_and_intervention() {
         let opts = {
