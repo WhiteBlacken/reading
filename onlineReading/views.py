@@ -148,7 +148,7 @@ def get_labels(request):
     if data_id:
         Dataset.objects.filter(id=data_id).update(labels=str(labels))
     print("labels:%s" % str(labels))
-
+    return HttpResponse(1)
 
 def get_interventions(request):
     interventions = request.POST.get("interventions")
