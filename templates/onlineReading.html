@@ -89,6 +89,7 @@
             selectNode: null,
             currentTransWord: -1,
             currentTransBox: [],
+            readSequel: [],
         },
         methods: {
 
@@ -179,8 +180,9 @@
                 let gaze_x = x[x.length - 1];
                 let gaze_y = y[y.length - 1];
                 let i = 0;
-                console.log(gaze_x, gaze_y)
-                for (; i < this.translation.length; i++) {
+
+                for(; i < this.translation.length; i++){
+
                     let word = this.getWordLocation(i);
                     if (word.top < gaze_y) {
                         if (word.bottom > gaze_y) {
@@ -322,15 +324,34 @@
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
                 collect_interventions();
-                setTimeout(window.location.href = 'http://127.0.0.1:8000/label', 5000);
+                setTimeout("window.location.href = 'http://127.0.0.1:8000/label'", 5000);
+
         }
     });
 
     //记录过程中的眼动坐标
     let x = [];
     let y = [];
+
+    //眼动数据监听
+    webgazer.setGazeListener(function (data,elapsedTime) {
+        if(data==null){
+            return;
+        }
+        x.push(data.x);
+        y.push(data.y);
+
+        let num = app.catchCurrentWord();
+        if(app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num){
+            app._data.readSequel[app._data.readSequel.length - 1][1].push(new Array(data.x,data.y,elapsedTime))
+         }else{
+            app._data.readSequel.push(new Array(num, new Array(new Array(data.x,data.y,elapsedTime))));
+         }
+    }).begin();
+
     let t = [];
     let interventions = [];
+
 
     function setCookie(cname, cvalue) {
         document.cookie = cname + "=" + cvalue + "; path=/";
