@@ -89,6 +89,7 @@
             selectNode: null,
             currentTransWord: -1,
             currentTransBox: [],
+            readSequel: [],
         },
         methods: {
 
@@ -178,7 +179,6 @@
                 let gaze_x = x[x.length-1];
                 let gaze_y = y[y.length-1];
                 let i = 0;
-                console.log(gaze_x,gaze_y)
                 for(; i < this.translation.length; i++){
                     let word = this.getWordLocation(i);
                     if(word.top < gaze_y){
@@ -307,6 +307,7 @@
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
+                console.log(app._data.readSequel)
                 setTimeout(window.location.href = 'http://127.0.0.1:8000/label', 5000);
         }
     });
@@ -322,6 +323,13 @@
         }
         x.push(data.x);
         y.push(data.y);
+
+        let num = app.catchCurrentWord();
+        if(app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num){
+            app._data.readSequel[app._data.readSequel.length - 1][1].push(new Array(data.x,data.y,elapsedTime))
+         }else{
+            app._data.readSequel.push(new Array(num, new Array(new Array(data.x,data.y,elapsedTime))));
+         }
     }).begin();
 
     function setCookie(cname, cvalue) {
