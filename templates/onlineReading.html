@@ -130,7 +130,6 @@
                     e.appendChild(el);
                     this.currentTransBox.push(num);
                     this.currentTransWord = num;
-                    interventions.push(num);
                 }
 
             },
@@ -199,6 +198,7 @@
                 let num = this.catchCurrentWord();
                 if (num < this.translation.length)
                     this.getWordTranslation(num);
+                interventions.push(num);
             },
 
             getContent: async function () {
@@ -330,6 +330,7 @@
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
                 console.log(app._data.readSequel);
+                console.log(typeof app._data.readSequel);
                 get_base64_gaze_and_intervention();
         }
     });
@@ -356,6 +357,27 @@
                 return c.substring(name.length, c.length);
         }
         return "";
+    }
+
+    function get_word_level_gaze_data() {
+
+        $.ajax({
+            type: 'POST',
+            url: '/word_level_data/',
+            data: JSON.stringify(app._data.readSequel),
+            dataType:"JSON",
+            async: false,
+            success: function () {
+                console.log("success");
+                window.location.href = 'http://127.0.0.1:8000/label';
+            },
+            error: function () {
+                console.log("error");
+            },
+            processData: false,
+            contentType: false
+
+        })
     }
 
     //截图
@@ -397,8 +419,7 @@
                 data: formdata,
                 async: false,
                 success: function () {
-                    console.log("success");
-                    window.location.href = 'http://127.0.0.1:8000/label';
+                    get_word_level_gaze_data();
                 },
                 error: function () {
                     console.log("error");
