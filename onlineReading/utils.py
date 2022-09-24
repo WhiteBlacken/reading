@@ -54,9 +54,9 @@ def get_fixations(coordinates):
     from collections import deque
 
     fixations = []
-    min_duration = 100
-    max_duration = 800
-    max_distance = 40
+    min_duration = 200
+    max_duration = 1500
+    max_distance = 20
     # 先进先出队列
     working_queue = deque()
     remaining_gaze = deque(coordinates)
@@ -108,7 +108,13 @@ def from_gazes_to_fixation(gazes):
     gazes：tuple(x,y,t)
     """
     # fixation 三要素：x,y,r r表示时长/半径
-    return gazes[0][0], gazes[0][1], gazes[-1][2] - gazes[0][2]
+    sum_x = 0
+    sum_y = 0
+    for gaze in gazes:
+        sum_x = sum_x + gaze[0]
+        sum_y = sum_y + gaze[1]
+
+    return int(sum_x / len(gazes)), int(sum_y / len(gazes)), gazes[-1][2] - gazes[0][2]
 
 
 def with_distance(gaze1, gaze2, max_distance):

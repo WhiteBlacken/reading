@@ -146,7 +146,6 @@ def get_labels(request):
     data_id = request.session.get("data_id", None)
     if data_id:
         Dataset.objects.filter(id=data_id).update(labels=str(labels))
-    print("labels:%s" % str(labels))
     labels = list(map(int, labels.split(",")))
     WordLevelData.objects.filter(data_id=data_id).filter(word_index_in_text__in=labels).update(
         is_understand=0
@@ -167,12 +166,13 @@ def paint_image(path, coordinates):
         cv2.circle(
             img,
             (coordinate[0], coordinate[1]),
-            int(float(coordinate[2] / 10)),
+            int(float(coordinate[2] / 30)),
             (0, 0, 255),
             1,
         )
-        print(int(float(coordinate[2] / 10)))
         cnt = cnt + 1
+        cv2.putText(img, str(cnt), (coordinate[0], coordinate[1]),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
     cv2.imwrite(path, img)
 
 
