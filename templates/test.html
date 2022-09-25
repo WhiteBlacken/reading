@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+</body>
+<script>
+    function getContent () {
+        {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
+        {#).then((response) => {#}
+        {#    this.$nextTick(() => {#}
+        {#        this.setSheet();#}
+        {#    });});#}
+
+        this.content = getCookie('content');
+        let num = 0;
+        var e = document.getElementById('para');
+        var Content = this.content.split('.');
+        var cop = "";
+        for (let i = 0; i < Content.length; i++) {
+            var sentence = Content[i].split(' ');
+            for (let j = 0; j < sentence.length; j++) {
+                if (sentence[j] && sentence[j] !== "") {
+                    var el = document.createElement("button");
+                    el.className = "word";
+                    el.id = num.toString();
+                    el.innerHTML = sentence[j];
+                    el.setAttribute("onclick", "changeWordSelect(" + num + ")");
+                    {#el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");#}
+                    if (j == sentence.length - 1)
+                        el.innerHTML = sentence[j] + '.';
+                    e.appendChild(el);
+                    num += 1;
+                }
+            }
+            if(Math.round($('#para').height() / (parseFloat($('.word').height()) + 2 * parseFloat($('.word').css('padding-top')))) > 4){
+                while(e.children[num-=sentence.length]){
+                    e.removeChild(e.children[num])
+                }
+                i--;
+                continue;
+            }
+            else{
+                for(let j = 0; j < sentence.length; j++){
+                    this.words.push(sentence[j].split(',')[0]);
+                }
+                cop  = cop + sentence.join(" ")+ ".";
+            }
+
+            this.contentOfPages.push()
+        }
+    }
+</script>
+</html>

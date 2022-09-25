@@ -8,12 +8,27 @@
     <script src="/static/js/axios@0.18.0.min.js"></script>
     <script src="/static/plugins/element@vue2/index.js"></script>
     <link href="/static/plugins/element@vue2/index.css" type="text/css" rel="stylesheet" charset="utf-8">
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <title>Label</title>
 </head>
 <body>
 <div id="app">
-    <div id="instruction">
+    <div id="helpModal" class="modal fade" role="dialog">
+        <div class="modal-dialog">
 
+        <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-body">
+                    接下来，请在您刚才读完的文章中单击标注出阅读过程中不认识的单词，标注形式如下：
+                    <img src="/static/images/labeling.jpg" width="100%" height="100%" alt="labeling instructions"></img>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">明白了！</button>
+                </div>
+            </div>
+
+        </div>
     </div>
     <div id="labeling">
         <el-container>
@@ -39,8 +54,10 @@
 <script>
     var app = new Vue({
         el: "#app",
+        delimiters: ["[[", "]]"],
         data: {
             content: "",
+            contentOfPages: [],
             words: [],
             page: 1,
             totalPage: 1,
@@ -215,6 +232,10 @@
                 }
             }
         }
+    });
+
+    $(document).ready(function () {
+        $('#helpModal').modal('show');
     });
 
 </script>
