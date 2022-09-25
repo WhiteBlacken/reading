@@ -16,9 +16,10 @@ def login_page(request):
 
 
 def login(request):
-    username = request.POST.get("username")
+    username = request.POST.get("username",None)
     print("username:%s" % username)
-    request.session["username"] = username
+    if username:
+        request.session["username"] = username
     return render(request, "calibration.html")
 
 
@@ -181,6 +182,8 @@ def cal(request):
 
 
 def reading(request):
+    if not request.session.get('username',None):
+        return render(request,'login.html')
     return render(request, "onlineReading.html")
 
 
