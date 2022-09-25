@@ -14,7 +14,7 @@ body{
 #readArea{
     width: auto;
     height: 772px;
-    padding: 0px 190px;
+    padding: 0px 220px 0px 330px;
     display: table;
 }
 
@@ -51,8 +51,8 @@ body{
 }
 
 .word{
-    font-size: 18pt;
-    padding: 85px 7px;
+    font-size: 16pt;
+    padding: 98px 7px;
     width: auto;
     height: auto;
     border-width: 0;

@@ -123,7 +123,7 @@
 
                     el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
 
-                    el.style.top = this.wordLocation.top - 10 + "px";
+                    el.style.top = this.wordLocation.top - 20 + "px";
                     let e = document.getElementById('readArea');
                     e.appendChild(el);
                     this.currentTransBox.push(num);
@@ -241,6 +241,7 @@
                     }
                 }
                 setCookie('content', this.content);
+                console.log(Math.round($('#para').height() / (parseFloat($('.word').height()) + 2 * parseFloat($('.word').css('padding-top')))));
                 this.auto();
             },
 
@@ -293,7 +294,7 @@
         },
         created() {
             {#document.getElementById('trans').style.display = "none";#}
-            this.getContent();
+            {#this.getContent();#}
             {#this.listen();#}
             {#setInterval(()=>{#}
             {#    setTimeout(this.autoRandomTranslation, 0);#}
@@ -312,6 +313,8 @@
 
     //开始使用
     function get_start() {
+
+
         //开启webgazer
         //眼动数据监听
         webgazer.setGazeListener(function (data, elapsedTime) {
@@ -335,6 +338,8 @@
         document.getElementById("mainContent").style.display = "inline";
         //隐藏提示
         document.getElementById("tips_begin").style.display = "none";
+
+        app.getContent();
     }
 
     //监听空格事件

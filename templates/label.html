@@ -29,10 +29,7 @@
             </el-main>
             <el-footer>
                 <div id="pageBox">
-                    <el-pagination
-                            layout="prev, pager, next"
-                            :total="totalPage * 10">
-                    </el-pagination>
+                    [[ page ]]
                 </div>
             </el-footer>
         </el-container>
@@ -46,7 +43,7 @@
             content: "",
             words: [],
             page: 1,
-            totalPage: 5,
+            totalPage: 1,
             misUnderstandWords: [],
             misUnderstandSentences: [],
             misUnderstandWordsLabel: [],
@@ -153,6 +150,20 @@
                 })
             },
 
+            //清空当前页面word按钮和translation的div块，并初始化参数
+            clearPageWords: function () {
+                let e = document.getElementById('para');
+                while(e.hasChildNodes()){
+                    e.removeChild(e.children[0]);
+                }
+
+                this.content = "";
+                this.words = [];
+                this.misUnderstandWords = [];
+                this.misUnderstandSentences = [];
+                this.misUnderstandWordsLabel = [];
+            },
+
         },
         created() {
             this.getContent();
@@ -178,5 +189,33 @@
         }
         return "";
     }
+
+    $(document).keyup(function (event) {
+        switch (event.keyCode) {
+            case 37: {
+                if (app._data.page > 1) {
+                    app.clearPageWords();
+                    app.collect_labels();
+                    app.getContent();
+                    x = [];
+                    y = [];
+                    app._data.page = app._data.page - 1;
+                }
+                break;
+            }
+            case 39: {
+                if (app._data.page < app._data.totalPage) {
+                    app.clearPageWords();
+                    app.collect_labels();
+                    app.getContent();
+                    x = [];
+                    y = [];
+                    app._data.page = app._data.page + 1;
+                    break;
+                }
+            }
+        }
+    });
+
 </script>
 </html>
