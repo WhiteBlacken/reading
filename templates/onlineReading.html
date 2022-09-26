@@ -50,11 +50,11 @@
                         </div>
                     </div>
                 </el-main>
-                <el-footer>
-                    <div id="pageBox">
-                        [[ page ]]
-                    </div>
-                </el-footer>
+                {#                <el-footer>#}
+                {#                    <div id="pageBox">#}
+                {#                        [[ page ]]#}
+                {#                    </div>#}
+                {#                </el-footer>#}
             </el-container>
         </div>
     </div>
@@ -267,11 +267,11 @@
 
             clearPageWords: function () {
                 let e = document.getElementById('para');
-                while(e.hasChildNodes()){
+                while (e.hasChildNodes()) {
                     e.removeChild(e.children[0]);
                 }
                 e = document.getElementById('readArea');
-                while(e.children.length > 1){
+                while (e.children.length > 1) {
                     e.removeChild(e.children[1]);
                 }
                 this.content = "";
@@ -284,10 +284,9 @@
             },
 
 
-
             auto: function () {
                 if (stop === false) {
-                    setInterval(this.autoRandomTranslation, 3000);
+                    setInterval(this.autoRandomTranslation, 5000);
                 }
 
             },
@@ -347,7 +346,7 @@
 
         switch (event.keyCode) {
             case 37: {
-                if(app._data.page > 1){
+                if (app._data.page > 1) {
                     app.clearPageWords();
                     get_base64_gaze_and_intervention();
                     app.getContent();
@@ -358,7 +357,7 @@
                 break;
             }
             case 39: {
-                if(app._data.page < app._data.totalPage) {
+                if (app._data.page < app._data.totalPage) {
                     app.clearPageWords();
                     get_base64_gaze_and_intervention();
                     app.getContent();
@@ -413,7 +412,7 @@
             type: 'POST',
             url: '/word_level_data/',
             data: JSON.stringify(app._data.readSequel),
-            dataType:"JSON",
+            dataType: "JSON",
             async: false,
             success: function () {
                 console.log("success");
@@ -477,6 +476,14 @@
 
             })
         });
+    }
+
+    //禁用滚动条
+    function unScroll() {
+        var top = $(document).scrollTop();
+        $(document).on('scroll.unable', function (e) {
+            $(document).scrollTop(top);
+        })
     }
 </script>
 </html>
