@@ -100,6 +100,37 @@
                 };
             },
 
+            getWordTextLocation: function (num) {
+                return {
+                    left: document.getElementsByClassName('word')[num].getBoundingClientRect().left + 7,
+                    top: document.getElementsByClassName('word')[num].getBoundingClientRect().top + 98,
+                    right: document.getElementsByClassName('word')[num].getBoundingClientRect().right - 7,
+                    bottom: document.getElementsByClassName('word')[num].getBoundingClientRect().bottom - 98,
+                }
+            },
+
+            getTransLocation: function (num) {
+                if(this.isTranslated(num)){
+                    let i = this.getTransNum(num);
+                    return {
+                        left: document.getElementsByClassName('word')[i].getBoundingClientRect().left,
+                        top: document.getElementsByClassName('word')[num].getBoundingClientRect().top,
+                        right: document.getElementsByClassName('word')[num].getBoundingClientRect().right,
+                        bottom: document.getElementsByClassName('word')[num].getBoundingClientRect().bottom,
+                    }
+                }else{
+                    return null;
+                }
+            },
+
+            getTransNum: function (num) {
+                for (let i = 0; i < this.currentTransBox.length; i++) {
+                    if (this.currentTransBox[i] == num)
+                        return i;
+                }
+                return -1;
+            },
+
             isTranslated: function (num) {
                 for (let i = 0; i < this.currentTransBox.length; i++) {
                     if (this.currentTransBox[i] == num)
@@ -131,6 +162,9 @@
                 }
 
             },
+
+
+
 
             {#getSentenceTranslation: function (num) {#}
             {#if($('#trans').css('display') == "none")#}
@@ -178,7 +212,7 @@
                 let i = 0;
 
                 for (; i < this.translation.length; i++) {
-                    let word = this.getWordLocation(i);
+                    let word = this.getWordTextLocation(i);
                     if (word.top < gaze_y) {
                         if (word.bottom > gaze_y) {
                             if (word.left < gaze_x) {
@@ -187,6 +221,19 @@
                                 }
                             }
                         }
+                    }
+                }
+                return i;
+            },
+
+            catchCurrentTrans: function () {
+                let gaze_x = x[x.length - 1];
+                let gaze_y = y[y.length - 1];
+                let i = 0;
+                for(; i < this.currentTransBox.length; i++) {
+                    let trans = this.getTransLocation(i);
+                    if(trans && trans.top < gaze_y && trans.bottom > gaze_y && trans.left < gaze_x && trans.right > gaze_x){
+                        return i;
                     }
                 }
                 return i;
@@ -326,11 +373,17 @@
             t.push(elapsedTime);
 
             let num = app.catchCurrentWord();
-            if (app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num) {
+            if(num < app._data.words.length){
+                if (app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num) {
                 app._data.readSequel[app._data.readSequel.length - 1][1].push(new Array(data.x, data.y, elapsedTime))
-            } else {
-                app._data.readSequel.push(new Array(num, new Array(new Array(data.x, data.y, elapsedTime))));
+                } else {
+                    app._data.readSequel.push(new Array(num, app._data.words[num], new Array(new Array(data.x, data.y, elapsedTime))));
+                }
+            }else{
+                num = app.catchCurrentTrans();
+                if(num < this.currentTransBox)
             }
+
         }).begin();
         //全屏
         full_screen();
