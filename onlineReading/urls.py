@@ -33,4 +33,5 @@ urlpatterns = [
     path("word_level_data/",views.get_word_level_data),
     path("hotmap/<int:id>/",views.get_hot_map),
     path("test/",views.test_dispersion),
+    path("dispersion/",views.get_dispersion)
 ]

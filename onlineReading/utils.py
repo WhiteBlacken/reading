@@ -125,6 +125,10 @@ def with_distance(gaze1, gaze2, max_distance):
 
 def get_euclid_distance(x1, x2, y1, y2):
     """计算欧式距离"""
+    x1 = float(x1)
+    x2 = float(x2)
+    y1 = float(y1)
+    y2 = float(y2)
     return math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2))
 
 

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="/static/css/testDispersion.css" rel="stylesheet">
+    <script src="/static/plugins/jquery/jquery.min.js"></script>
+    <!--webgazer-->
+    <script src="/static/js/webgazer.js"></script>
+    <title>Test Dispersion</title>
+</head>
+<body onload="setCircle()">
+<div id="canvas">
+    <div class="circle" id="c1"></div>
+    <div class="circle" id="c2"></div>
+    <div class="circle" id="c3"></div>
+</div>
+</body>
+<script>
+    class Queue{
+      constructor(){
+        this.count = 0;//记录队列的数量
+        this.lowestCount = 0;//记录当前队列顶部的位置
+        this.items = [];//用来存储元素。
+      }
+      enqueue(element){
+        this.items[this.count] = element;
+        this.count++;
+      }
+      dequeue(){
+        if(this.isEmpty()){
+          return 'queue is null';
+        }
+        let result = this.items[this.lowestCount];
+        delete this.items[this.lowestCount];
+        this.lowestCount++;
+        return result;
+      }
+      peek(){
+        return this.items[this.lowestCount];
+      }
+      isEmpty(){
+        return this.count - this.lowestCount === 0;
+      }
+      size(){
+        return this.count - this.lowestCount;
+      }
+      clear(){
+        this.count = 0;
+        this.lowestCount = 0;
+        this.items = [];
+      }
+      toString(){
+        if(this.isEmpty())return "queue is null";
+        let objString = this.items[this.lowestCount];
+        for(let i = this.lowestCount+1; i < this.count;i++){
+          objString = `${objString},${this.items[i]}`;
+        }
+        return objString;
+      }
+    }
+
+
+
+
+    let gaze_data = [];
+
+
+    {#webgazer.setGazeListener(function (data,elapsedTime) {#}
+    {#    if(data==null){#}
+    {#        return;#}
+    {#    }#}
+    {#    x.push(data.x);#}
+    {#    y.push(data.y);#}
+    {# }).begin();#}
+
+    const MAX_DISPERSION = 140
+    let cmPerPix = 15.6 * 2.54 / Math.sqrt(Math.pow(16,2)+Math.pow(9,2)) * 16 / 1534;
+
+    var gaze_1 = [];
+    var gaze_2 = [];
+    var gaze_3 = [];
+
+    function setCircle(){
+        showCircle(1);
+        webgazer.setGazeListener(function (data,elapsedTime) {
+            if(data==null){
+                return;
+            }
+            gaze_data.push(new Array(data.x, data.y, elapsedTime));
+        }).begin();
+        setTimeout("showCircle(2)", "10000");
+        setTimeout("showCircle(3)", "20000");
+        setTimeout("showCircle(4)", "30000");
+    }
+    function showCircle(num){
+        $('#c1').css('display', 'none');
+        $('#c2').css('display', 'none');
+        $('#c3').css('display', 'none');
+        switch(num){
+            case 1: {
+                $('#c1').css('display', 'block');
+                break;
+            }
+            case 2: {
+                $('#c2').css('display', 'block');
+                gaze_1 = gaze_data;
+                gaze_data = [];
+                break;
+            }
+            case 3: {
+                $('#c3').css('display', 'block');
+                gaze_2 = gaze_data;
+                gaze_data = [];
+                break;
+            }
+            default: {
+                $('#c1').css('display', 'block');
+                $('#c2').css('display', 'block');
+                $('#c3').css('display', 'block');
+                gaze_3 = gaze_data;
+                gaze_data = [];
+                webgazer.pause();
+                testDispersion();
+                break;
+            }
+        }
+    }
+    function testDispersion () {
+        let distance = 0;
+        let dispersion = 0;
+        let target_x;
+        let target_y;
+        let max = 0;
+        let offset = 0;
+        let start = 0;
+        let end = gaze_1.length - 1;
+        target_x = $('.circle:eq(0)').offset().left + $('.circle:eq(0)').width() / 2;
+        target_y = $('.circle:eq(0)').offset().top + $('.circle:eq(0)').height() / 2;
+
+        start = 0;
+        end = gaze_1.length - 1;
+        console.log(gaze_1)
+        for(; start < gaze_1.length; start++){
+            if(gaze_1[start][2] - gaze_1[0][2] > 500)
+                break;
+        }
+        for(; end >= 0; end--){
+            if(gaze_1[gaze_1.length - 1][2] - gaze_1[end][2] > 500){
+                break;
+            }
+        }
+        end += 1;
+        if(end >= start){
+            gaze_1.splice(end, gaze_1.length - end);
+            gaze_1.splice(0,start);
+        }else{
+            gaze_1 = [];
+        }
+        console.log(start, end)
+        console.log(gaze_1)
+
+        max = 0;
+        offset = 0;
+        for(let i = 0 ; i < gaze_1.length; i++){
+            //计算当前点到中心点的距离 累加
+            offset += Math.sqrt(Math.pow((gaze_1[i][0] - target_x),2) + Math.pow((gaze_1[i][1]-target_y),2));
+            //计算两点之间的距离，若超出最大，则更新
+            for(let j = i+1; j < gaze_1.length; j++){
+                let dis = Math.sqrt(Math.pow((gaze_1[i][0] - gaze_1[j][0]),2) + Math.pow((gaze_1[i][1]-gaze_1[j][1]),2));
+                if(dis > max){
+                    max = dis;
+                }
+            }
+         }
+        dispersion += max;
+        distance += (offset / gaze_1.length);
+
+
+
+        target_x = $('.circle:eq(1)').offset().left + $('.circle:eq(1)').width() / 2;
+        target_y = $('.circle:eq(1)').offset().top + $('.circle:eq(1)').height() / 2;
+
+        start = 0;
+        end = gaze_2.length - 1;
+        for(; start < gaze_2.length; start++){
+            if(gaze_2[start][2] - gaze_2[0][2] > 500)
+                break;
+        }
+        for(; end >= 0; end--){
+            if(gaze_2[gaze_2.length - 1][2] - gaze_2[end][2] > 500){
+                break;
+            }
+        }
+        end += 1;
+        if(end >= start){
+            gaze_2.splice(end, gaze_2.length - end);
+            gaze_2.splice(0,start);
+        }else{
+            gaze_2 = [];
+        }
+
+        max = 0;
+        offset = 0;
+        for(let i = 0 ; i < gaze_2.length; i++){
+            offset += Math.sqrt(Math.pow((gaze_2[i][0] - target_x),2) + Math.pow((gaze_2[i][1]-target_y),2));
+            console.log(offset)
+            for(let j = i+1; j < gaze_2.length; j++){
+                let dis = Math.sqrt(Math.pow((gaze_2[i][0] - gaze_2[j][0]),2) + Math.pow((gaze_2[i][1]-gaze_2[j][1]),2));
+                if(dis > max){
+                    max = dis;
+                }
+            }
+         }
+        dispersion += max;
+        distance += (offset / gaze_2.length);
+
+        target_x = $('.circle:eq(2)').offset().left + $('.circle:eq(2)').width() / 2;
+        target_y = $('.circle:eq(2)').offset().top + $('.circle:eq(2)').height() / 2;
+
+        start = 0;
+        end = gaze_3.length - 1;
+        for(; start < gaze_3.length; start++){
+            if(gaze_3[start][2] - gaze_3[0][2] > 500)
+                break;
+        }
+        for(; end >= 0; end--){
+            if(gaze_3[gaze_3.length - 1][2] - gaze_3[end][2] > 500){
+                break;
+            }
+        }
+        end += 1;
+        if(end >= start){
+            gaze_3.splice(end, gaze_3.length - end);
+            gaze_3.splice(0,start);
+        }else{
+            gaze_3 = [];
+        }
+
+        {#max = 0;#}
+        {#offset = 0;#}
+        {#for(let i = 0 ; i < gaze_3.length; i++){#}
+        {#    offset += Math.sqrt(Math.pow((gaze_3[i][0] - target_x),2) + Math.pow((gaze_3[i][1]-target_y),2));#}
+        {#    for(let j = i+1; j < gaze_3.length; j++){#}
+        {#        let dis = Math.sqrt(Math.pow((gaze_3[i][0] - gaze_3[j][0]),2) + Math.pow((gaze_3[i][1]-gaze_3[j][1]),2));#}
+        {#        if(dis > max){#}
+        {#            max = dis;#}
+        {#        }#}
+        {#    }#}
+        {# }#}
+        {#dispersion += max;#}
+        {#distance += (offset / gaze_3.length);#}
+
+        {#dispersion /= 3;#}
+        {#distance /= 3;#}
+
+        console.log("offset: "+ Math.atan(distance * cmPerPix / 60) * 180 / Math.PI)
+        console.log("dispersion: "+ Math.atan(dispersion * cmPerPix / 60) * 180 / Math.PI)
+
+
+        let formData = new FormData();
+        formData.append("targets", [[$('.circle:eq(0)').offset().left + $('.circle:eq(0)').width() / 2, $('.circle:eq(0)').offset().top + $('.circle:eq(0)').height() / 2],
+                [$('.circle:eq(1)').offset().left + $('.circle:eq(1)').width() / 2, $('.circle:eq(1)').offset().top + $('.circle:eq(1)').height() / 2],
+                [$('.circle:eq(2)').offset().left + $('.circle:eq(2)').width() / 2, $('.circle:eq(2)').offset().top + $('.circle:eq(2)').height() / 2]]);
+
+        formData.append("gazes", [gaze_1, gaze_2, gaze_3]);
+        $.ajax({
+                    type: 'POST',
+                    url: '/dispersion',
+                    data: formData,
+                    success: function () {
+                        console.log("success");
+                    },
+                    error: function () {
+                        console.log("error");
+                    },
+                    contentType: false,
+                    processData: false,
+                })
+    }
+
+</script>
+</html>

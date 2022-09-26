@@ -1,4 +1,5 @@
 import base64
+import math
 import os
 
 import simplejson
@@ -8,7 +9,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
 from action.models import Text, Dictionary, Dataset, WordLevelData
-from onlineReading.utils import translate, get_fixations
+from onlineReading.utils import translate, get_fixations, get_euclid_distance
 
 
 def login_page(request):
@@ -306,3 +307,152 @@ def get_hot_map(request, id):
     # plt.show()
 
     return JsonResponse(words)
+
+
+def get_dispersion(request):
+    # 三个圆的坐标点
+    target1 = request.POST.get("target1")
+    print("target1,格式（x,y）:%s" % target1)
+    target2 = request.POST.get("target2")
+    print("target1,格式（x,y）:%s" % target2)
+    target3 = request.POST.get("target3")
+    print("target1,格式（x,y）:%s" % target3)
+    # 三个圆对应的gaze点
+    gaze_1_x = request.POST.get("gaze_1_x")
+    print("gaze_1_x:%s" % gaze_1_x)
+    gaze_1_y = request.POST.get("gaze_1_y")
+    print("gaze_1_y:%s" % gaze_1_y)
+    gaze_1_t = request.POST.get("gaze_1_t")
+    print("gaze_1_t:%s" % gaze_1_t)
+
+    gaze_2_x = request.POST.get("gaze_2_x")
+    print("gaze_2_x:%s" % gaze_2_x)
+    gaze_2_y = request.POST.get("gaze_2_y")
+    print("gaze_2_y:%s" % gaze_2_y)
+    gaze_2_t = request.POST.get("gaze_2_t")
+    print("gaze_2_t:%s" % gaze_2_t)
+
+    gaze_3_x = request.POST.get("gaze_3_x")
+    print("gaze_3_x:%s" % gaze_3_x)
+    gaze_3_y = request.POST.get("gaze_3_y")
+    print("gaze_3_y:%s" % gaze_3_y)
+    gaze_3_t = request.POST.get("gaze_3_t")
+    print("gaze_3_t:%s" % gaze_3_t)
+
+    # 三个圆同样计算后，算均值
+    # 以2为例
+    offset2, dispersion2 = get_offset_and_dispersion(gaze_2_x, gaze_2_y, gaze_2_t, target2)
+    print("offset2:%s" % offset2)
+    print("dispersion2:%s" % dispersion2)
+    return HttpResponse(1)
+
+
+def get_offset_and_dispersion(gaze_x, gaze_y, gaze_t, target):
+    dispersion = 0
+    offset = 0
+    gaze_x = gaze_x.split(",")
+    gaze_y = gaze_y.split(",")
+    gaze_t = list(map(float, gaze_t.split(',')))
+    # 1. 去除异常值
+    # 根据时间，删减开头结尾的gaze
+    begin = 0
+    for i in range(len(gaze_t)):
+        if gaze_t[i] - gaze_t[0] > 500:
+            begin = i
+            break
+    end = len(gaze_t)
+    for i in range(len(gaze_t) - 1, -1, -1):
+        if gaze_t[len(gaze_t) - 1] - gaze_t[i] > 500:
+            end = i
+            break
+    print("begin:%d" % begin)
+    print("end:%d" % end)
+    gaze_x = gaze_x[begin:end]
+    gaze_y = gaze_y[begin:end]
+    # 计算distance数组
+    distance = []
+    for i in range(len(gaze_x)):
+        distance.append(get_euclid_distance(gaze_x[i], target[0], gaze_y[i], target[1]))
+    tmp_x = []
+    tmp_y = []
+    # outliners = get_outliers_by_z_score(distance)
+    outliners = get_outliers_by_iqr(distance)
+    print("outliers:%s" % outliners)
+    for i in range(len(gaze_x)):
+        if i not in outliners:
+            tmp_x.append(gaze_x[i])
+            tmp_y.append(gaze_y[i])
+    gaze_x = tmp_x
+    gaze_y = tmp_y
+
+    # 2. 计算
+    for i in range(len(gaze_x)):
+        offset = offset + get_euclid_distance(gaze_x[i], target[0], gaze_y[i], target[1])
+        for j in range(i + 1, len(gaze_x)):
+            dis = get_euclid_distance(gaze_x[i], gaze_x[j], gaze_y[i], gaze_y[j])
+            if dis > dispersion:
+                dispersion = dis
+    return pixel_2_deg(offset / len(gaze_x)), pixel_2_deg(dispersion)
+
+
+def get_outliers_by_z_score(data):
+    # 返回非离群点的索引
+    # 远离标准差3倍距离以上的数据点视为离群点
+    import numpy as np
+    mean_d = np.mean(data)
+    std_d = np.std(data)
+    outliers = []
+
+    for i in range(len(data)):
+        z_score = (data[i] - mean_d) / std_d
+        if np.abs(z_score) > 3:
+            outliers.append(i)
+    return outliers
+
+
+def get_outliers_by_iqr(data):
+    from pandas import Series
+    data = Series(data)
+    # 四分位点内距
+    q1 = data.quantile(0.25)
+    q3 = data.quantile(0.75)
+    iqr = q3 - q1  # Interquartile range
+    fence_low = q1 - 1.5 * iqr
+    fence_high = q3 + 1.5 * iqr
+    outliers = []
+    for i in range(len(data)):
+        if data[i] < fence_low or data[i] > fence_high:
+            outliers.append(i)
+    return outliers
+
+
+def get_outlier_by_knn(data):
+
+    # array = []
+    # for i in range(len(data)):
+    #     tmp = []
+    #     tmp.append(data)
+    #     array.append(tmp)
+    # print("array:%s" % array)
+    # # 引入knn分类器
+    # from pyod.models
+    # # 训练一个kNN检测器
+    # clf_name = 'kNN'
+    # # 初始化检测器clf
+    # clf = KNN(method='mean', n_neighbors=3, )
+    # clf.fit(array)
+    #
+    # # 返回训练数据X_train上的异常标签和异常分值
+    # # 返回训练数据上的分类标签 (0: 正常值, 1: 异常值)
+    # y_train_pred = clf.labels_
+    outliers = []
+    # for i,label in enumerate(y_train_pred):
+    #     if int(label) == 1:
+    #         outliers.append(i)
+    return outliers
+
+
+def pixel_2_deg(pixel):
+    """像素点到度数的转换"""
+    cmPerPix = 15.6 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
+    return math.atan(pixel * cmPerPix / 60) * 180 / math.pi
