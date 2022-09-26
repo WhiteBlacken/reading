@@ -16,7 +16,7 @@ def login_page(request):
 
 
 def login(request):
-    username = request.POST.get("username",None)
+    username = request.POST.get("username", None)
     print("username:%s" % username)
     if username:
         request.session["username"] = username
@@ -30,7 +30,7 @@ def index(request):
 
 def get_text(request):
     words_dict = {}
-    text = Text.objects.first()
+    text = Text.objects.get(id=2)
     # 去除前后的空格
     text = text.content.strip()
     # 切成句子
@@ -137,7 +137,7 @@ def get_data(request):
             gaze_t=str(t),
             interventions=str(interventions),
             user=request.session.get("username"),
-            image=image_base64
+            image=image_base64,
         )
     return HttpResponse(1)
 
@@ -148,9 +148,9 @@ def get_labels(request):
     if data_id:
         Dataset.objects.filter(id=data_id).update(labels=str(labels))
     labels = list(map(int, labels.split(",")))
-    WordLevelData.objects.filter(data_id=data_id).filter(word_index_in_text__in=labels).update(
-        is_understand=0
-    )
+    WordLevelData.objects.filter(data_id=data_id).filter(
+        word_index_in_text__in=labels
+    ).update(is_understand=0)
     # 生成眼动图
     if data_id:
         get_image(data_id, request.session.get("username"))
@@ -163,6 +163,7 @@ def paint_image(path, coordinates):
 
     img = cv2.imread(path)
     cnt = 0
+    pre_coordinate = (0, 0, 0)
     for coordinate in coordinates:
         cv2.circle(
             img,
@@ -171,9 +172,26 @@ def paint_image(path, coordinates):
             (0, 0, 255),
             1,
         )
+        if cnt > 0:
+            cv2.line(
+                img,
+                (pre_coordinate[0], pre_coordinate[1]),
+                (coordinate[0], coordinate[1]),
+                (0, 0, 255),
+                2,
+            )
         cnt = cnt + 1
-        cv2.putText(img, str(cnt), (coordinate[0], coordinate[1]),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        # 标序号
+        cv2.putText(
+            img,
+            str(cnt),
+            (coordinate[0], coordinate[1]),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 255, 0),
+            2,
+        )
+        pre_coordinate = coordinate
     cv2.imwrite(path, img)
 
 
@@ -182,8 +200,8 @@ def cal(request):
 
 
 def reading(request):
-    if not request.session.get('username',None):
-        return render(request,'login.html')
+    if not request.session.get("username", None):
+        return render(request, "login.html")
     return render(request, "onlineReading.html")
 
 
@@ -201,7 +219,7 @@ def get_word_level_data(request):
 
     if data_id:
         dataset = Dataset.objects.get(id=data_id)
-        interventions = dataset.interventions.split(',')
+        interventions = dataset.interventions.split(",")
         words = get_word_from_text(dataset.texts)
         for gaze in gazes:
             WordLevelData.objects.create(
@@ -210,7 +228,7 @@ def get_word_level_data(request):
                 gaze=gaze[1],
                 word=words[gaze[0]],
                 is_intervention=1 if str(gaze[0]) in interventions else 0,
-                is_understand=1
+                is_understand=1,
             )
     return HttpResponse(1)
 
@@ -219,8 +237,72 @@ def get_word_from_text(text):
     get_word = []
     sentences = text.split(".")
     for sentence in sentences:
+        sentence = sentence.strip()
         words = sentence.split(" ")
         for word in words:
             word = word.strip().lower().replace(",", "")
             get_word.append(word)
+    print(get_word[19])
+    print(get_word[20])
+    print(get_word[21])
     return get_word
+
+
+def get_hot_map(request, id):
+    datas = WordLevelData.objects.filter(data_id=id)
+    words = {}
+    dataset = Dataset.objects.get(id=id)
+    get_word = get_word_from_text(dataset.texts)
+    for data in datas:
+        # [[1210.9457590013656, 159.23231147793268, 9945], [1217.6909072718718, 159.41882110020455, 9990.800000011921], [1230.8749738465856, 168.33542300501568, 10017.700000017881]]
+        if words.get(get_word[data.word_index_in_text], -1) == -1:
+            tmp = []
+            # [[499.97320585558384, 500.07984655036023, 21.5]]
+            # [[499.97320585558384, 500.07984655036023, 21.5]]
+        else:
+            tmp = words[get_word[data.word_index_in_text]]
+        gaze = data.gaze[2:-2]
+        gazes = gaze.split("], [")
+        t = []
+        for gaze in gazes:
+            coordinate = gaze.split(", ")
+            t.append(int(float(coordinate[2])))
+        if t[-1] - t[0] > 30:
+            tmp.append(t[-1] - t[0])
+        if len(tmp) > 0:
+            words[get_word[data.word_index_in_text]] = tmp
+    # 补0画图
+    max_length = 0
+    words_name = []
+    for key in words:
+        if len(words[key]) > max_length:
+            max_length = len(words[key])
+        words_name.append(key)
+    print(max_length)
+    pic_data = []
+    for key in words:
+        if len(words[key]) < max_length:
+            i = max_length - len(words[key])
+            tmp = words[key]
+            while i > 0:
+                tmp.append(0)
+                i = i - 1
+            words[key] = tmp
+        pic_data.append(words[key])
+    print(pic_data)
+
+    print(words_name)
+    # import matplotlib.pyplot as plt
+    # import numpy as np
+    #
+    # harvest = np.array(pic_data)
+    #
+    # plt.yticks(np.arange(len(words_name)), labels=words_name)
+    # print(words_name)
+    # plt.title("Harvest of local farmers (in tons/year)")
+    #
+    # plt.imshow(harvest)
+    # plt.tight_layout()
+    # plt.show()
+
+    return JsonResponse(words)
