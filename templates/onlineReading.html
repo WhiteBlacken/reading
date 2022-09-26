@@ -379,8 +379,8 @@
                     app._data.readSequel.push(new Array(num, app._data.words[num], new Array(new Array(data.x, data.y, elapsedTime))));
                 }
             }else{
-                num = app.catchCurrentTrans();
-                if(num < this.currentTransBox)
+                {#num = app.catchCurrentTrans();#}
+                {#if(num < this.currentTransBox);#}
             }
 
         }).begin();
