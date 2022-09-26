@@ -10,6 +10,7 @@ from django.shortcuts import render
 # Create your views here.
 from loguru import logger
 
+from action.models import WordLevelData
 from onlineReading import settings
 
 
@@ -30,9 +31,9 @@ def translate(content):
         sign = Encry.hexdigest()
         # 3. 发送请求
         url = (
-            "http://api.fanyi.baidu.com/api/trans/vip/translate?"
-            + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
-            % (content, appid, salt, sign)
+                "http://api.fanyi.baidu.com/api/trans/vip/translate?"
+                + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
+                % (content, appid, salt, sign)
         )
         # 4. 解析结果
         response = requests.get(url)
@@ -54,9 +55,9 @@ def get_fixations(coordinates):
     from collections import deque
 
     fixations = []
-    min_duration = 200
-    max_duration = 1500
-    max_distance = 20
+    min_duration = 100
+    max_duration = 1200
+    max_distance = 60
     # 先进先出队列
     working_queue = deque()
     remaining_gaze = deque(coordinates)
@@ -64,8 +65,8 @@ def get_fixations(coordinates):
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if (
-            len(working_queue) < 2
-            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
+                len(working_queue) < 2
+                or (working_queue[-1][2] - working_queue[0][2]) < min_duration
         ):
             # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
             datum = remaining_gaze.popleft()
@@ -81,7 +82,7 @@ def get_fixations(coordinates):
         while remaining_gaze:
             datum = remaining_gaze[0]
             if datum[2] > working_queue[0][2] + max_duration or with_distance(
-                working_queue[0], datum, max_distance
+                    working_queue[0], datum, max_distance
             ):
                 fixations.append(from_gazes_to_fixation(list(working_queue)))
                 working_queue.clear()
