@@ -79,6 +79,7 @@
             content: [],
             paras: "",
             contentPerPage: [],
+            transPerPage: [],
             words: [],
             page: 1,
             totalPage: 1,
@@ -257,6 +258,7 @@
                 await axios.get("/para").then((response) => {
 
                     paraNum = response.data.length;
+                    this.content = response.data;
                     for (let i = 0; i < paraNum; i++) {
                         this.paras.push(response.data[i][0]);
                         {#for(let j = 1; j < response.data[i].length; j++){#}
@@ -269,6 +271,7 @@
                      }
                 });
                 var e = document.getElementById('para');
+                console.log(this.content)
                 // 遍历每个段落
                 for(let i = 0 ; i < paraNum; i++) {
                     let num = 0;
@@ -276,33 +279,43 @@
                     var sentences = this.paras[i].split('.');
                     let sentenceNum = 0;
                     let conPerPage = [];
-                    for(; sentenceNum < sentences.length; sentenceNum++){
-                        var words = sentences[sentenceNum].split(' ');
-                        for(let k = 0; k < words.length; k++) {
-                            var el = document.createElement("button");
-                            el.className = "word";
-                            el.id = num.toString();
-                            el.innerHTML = words[k];
-                            el.setAttribute("onclick", "getWordTranslation(" + num + ")");
-                            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
-                            if (k == words.length - 1)
-                                el.innerHTML = words[k] + '.';
-                            e.appendChild(el);
-                        }
-                        let paraHeight = $('#para').height();
-                        let buttonHeight = $('.word').height();
-                        if(Math.trunc(paraHeight / buttonHeight) > 3) {
-                            while(e.children[num]){
-                                e.removeChild(e.children[num]);
+                    let transPerPage = [];
+                    while(sentenceNum < sentences.length) {
+                        for(; sentenceNum < sentences.length; sentenceNum++){
+                            var words = sentences[sentenceNum].split(' ');
+                            for(let k = 0; k < words.length; k++) {
+                                var el = document.createElement("button");
+                                el.className = "word";
+                                el.id = num.toString();
+                                el.innerHTML = words[k];
+                                el.setAttribute("onclick", "getWordTranslation(" + (num+k) + ")");
+                                el.setAttribute("ondblclick", "getSentenceTranslation(" + (num+k) + ")");
+                                if (k == words.length - 1)
+                                    el.innerHTML = words[k] + '.';
+                                e.appendChild(el);
                             }
-                            break;
-                        }else{
-                            conPerPage.push(sentences[sentenceNum]);
-                            num += words.length;
+                            let paraHeight = $('#para').height();
+                            let buttonHeight = $('.word').height();
+                            if(Math.trunc(paraHeight / buttonHeight) > 3) {
+                                while(e.children[num]){
+                                    e.removeChild(e.children[num]);
+                                }
+                                break;
+                            }else{
+                                conPerPage.push(sentences[sentenceNum]);
+                                for(let k = num+1; k <= num + words.length; k++){
+                                    transPerPage.push(this.content[i][k])
+                                }
+                                num += words.length;
+                            }
                         }
+                        this.transPerPage.push(transPerPage);
+                        this.contentPerPage.push(conPerPage.join('.'));
                     }
-                    this.contentPerPage.push(conPerPage.join('.'));
+
                 }
+                console.log(this.contentPerPage)
+                console.log(this.transPerPage)
                 {#let num = 0;#}
                 {#var e = document.getElementById('para');#}
                 {#var Content = this.content.split('.');#}
