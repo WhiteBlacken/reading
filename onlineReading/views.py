@@ -426,7 +426,7 @@ def get_offset_and_dispersion(gaze_x, gaze_y, gaze_t, target, outlier):
             gaze_y[gaze2_index],
         )
     )
-    return offset / len(gaze_x), dispersion
+    return pixel_2_cm(offset / len(gaze_x)), pixel_2_deg(dispersion)
 
 
 def get_outliers_by_z_score(data):
@@ -496,3 +496,8 @@ def pixel_2_deg(pixel):
     """像素点到度数的转换"""
     cmPerPix = 15.6 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
     return math.atan(pixel * cmPerPix / 60) * 180 / math.pi
+
+def pixel_2_cm(pixel):
+    """像素点到度数的转换"""
+    cmPerPix = 15.6 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
+    return pixel * cmPerPix
