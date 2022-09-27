@@ -5,6 +5,8 @@ from django.db import models
 
 
 class Text(models.Model):
+    article_id = models.BigIntegerField()
+    para_id = models.BigIntegerField()
     content = models.TextField()
 
     class Meta:
