@@ -110,7 +110,7 @@
             },
 
             getTransLocation: function (num) {
-                if(this.isTranslated(num)){
+                if (this.isTranslated(num)) {
                     let i = this.getTransNum(num);
                     return {
                         left: document.getElementsByClassName('word')[i].getBoundingClientRect().left,
@@ -118,7 +118,7 @@
                         right: document.getElementsByClassName('word')[num].getBoundingClientRect().right,
                         bottom: document.getElementsByClassName('word')[num].getBoundingClientRect().bottom,
                     }
-                }else{
+                } else {
                     return null;
                 }
             },
@@ -162,8 +162,6 @@
                 }
 
             },
-
-
 
 
             {#getSentenceTranslation: function (num) {#}
@@ -230,9 +228,9 @@
                 let gaze_x = x[x.length - 1];
                 let gaze_y = y[y.length - 1];
                 let i = 0;
-                for(; i < this.currentTransBox.length; i++) {
+                for (; i < this.currentTransBox.length; i++) {
                     let trans = this.getTransLocation(i);
-                    if(trans && trans.top < gaze_y && trans.bottom > gaze_y && trans.left < gaze_x && trans.right > gaze_x){
+                    if (trans && trans.top < gaze_y && trans.bottom > gaze_y && trans.left < gaze_x && trans.right > gaze_x) {
                         return i;
                     }
                 }
@@ -360,7 +358,6 @@
     //开始使用
     function get_start() {
 
-
         //开启webgazer
         //眼动数据监听
         webgazer.setGazeListener(function (data, elapsedTime) {
@@ -372,13 +369,13 @@
             t.push(elapsedTime);
 
             let num = app.catchCurrentWord();
-            if(num < app._data.words.length){
+            if (num < app._data.words.length) {
                 if (app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num) {
-                app._data.readSequel[app._data.readSequel.length - 1][1].push(new Array(data.x, data.y, elapsedTime))
+                    app._data.readSequel[app._data.readSequel.length - 1][1].push(new Array(data.x, data.y, elapsedTime));
                 } else {
                     app._data.readSequel.push(new Array(num, app._data.words[num], new Array(new Array(data.x, data.y, elapsedTime))));
                 }
-            }else{
+            } else {
                 {#num = app.catchCurrentTrans();#}
                 {#if(num < this.currentTransBox);#}
             }

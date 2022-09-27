@@ -9,7 +9,14 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
 from action.models import Text, Dictionary, Dataset, WordLevelData
-from onlineReading.utils import translate, get_fixations, get_euclid_distance
+from onlineReading.utils import (
+    translate,
+    get_fixations,
+    get_euclid_distance,
+    pixel_2_cm,
+    pixel_2_deg,
+    cm_2_pixel,
+)
 
 
 def login_page(request):
@@ -365,7 +372,6 @@ def get_offset_and_dispersion(gaze_x, gaze_y, gaze_t, target, outlier):
     print("len_y:%d" % len(gaze_y))
     print("len_t:%d" % len(gaze_t))
 
-
     begin = 0
     for i in range(len(gaze_t)):
         if gaze_t[i] - gaze_t[0] > 500:
@@ -492,12 +498,5 @@ def get_outlier_by_knn(data):
     return outliers
 
 
-def pixel_2_deg(pixel):
-    """像素点到度数的转换"""
-    cmPerPix = 15.6 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
-    return math.atan(pixel * cmPerPix / 60) * 180 / math.pi
-
-def pixel_2_cm(pixel):
-    """像素点到度数的转换"""
-    cmPerPix = 15.6 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
-    return pixel * cmPerPix
+def cm_2_pixel_test(request, k):
+    return HttpResponse(cm_2_pixel(k))

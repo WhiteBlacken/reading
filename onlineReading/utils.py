@@ -31,9 +31,9 @@ def translate(content):
         sign = Encry.hexdigest()
         # 3. 发送请求
         url = (
-                "http://api.fanyi.baidu.com/api/trans/vip/translate?"
-                + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
-                % (content, appid, salt, sign)
+            "http://api.fanyi.baidu.com/api/trans/vip/translate?"
+            + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
+            % (content, appid, salt, sign)
         )
         # 4. 解析结果
         response = requests.get(url)
@@ -57,7 +57,7 @@ def get_fixations(coordinates):
     fixations = []
     min_duration = 100
     max_duration = 1200
-    max_distance = 60
+    max_distance = 150
     # 先进先出队列
     working_queue = deque()
     remaining_gaze = deque(coordinates)
@@ -65,8 +65,8 @@ def get_fixations(coordinates):
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if (
-                len(working_queue) < 2
-                or (working_queue[-1][2] - working_queue[0][2]) < min_duration
+            len(working_queue) < 2
+            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
         ):
             # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
             datum = remaining_gaze.popleft()
@@ -82,7 +82,7 @@ def get_fixations(coordinates):
         while remaining_gaze:
             datum = remaining_gaze[0]
             if datum[2] > working_queue[0][2] + max_duration or with_distance(
-                    working_queue[0], datum, max_distance
+                working_queue[0], datum, max_distance
             ):
                 fixations.append(from_gazes_to_fixation(list(working_queue)))
                 working_queue.clear()
@@ -132,5 +132,24 @@ def get_euclid_distance(x1, x2, y1, y2):
     return math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2))
 
 
+def pixel_2_deg(pixel):
+    """像素点到度数的转换"""
+    cmPerPix = 15.6 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
+    return math.atan(pixel * cmPerPix / 60) * 180 / math.pi
+
+
+def pixel_2_cm(pixel):
+    """像素点到距离的转换"""
+    cmPerPix = 15.6 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
+    return pixel * cmPerPix
+
+
+def cm_2_pixel(cm):
+    """距离到像素点的转换"""
+    cmPerPix = 15.6 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
+    return cm / cmPerPix
+
+
 if __name__ == "__main__":
+    print(cm_2_pixel(3))
     pass
