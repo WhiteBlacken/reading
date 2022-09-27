@@ -415,9 +415,9 @@ def get_offset_and_dispersion(gaze_x, gaze_y, gaze_t, target, outlier):
     tmp_y = []
     if outlier == 1:
         # 表示去除异常点
-        # outliners = get_outliers_by_z_score(distance)
+        outliners = get_outliers_by_z_score(distance)
         # outliners = get_outliers_by_iqr(distance)
-        outliners = get_outlier_by_knn(distance)
+        # outliners = get_outlier_by_knn(distance)
         print("outliers:%s" % outliners)
         for i in range(len(gaze_x)):
             if i not in outliners:
@@ -465,7 +465,7 @@ def get_outliers_by_z_score(data):
 
     for i in range(len(data)):
         z_score = (data[i] - mean_d) / std_d
-        if np.abs(z_score) > 3:
+        if np.abs(z_score) > 2:
             outliers.append(i)
     return outliers
 
