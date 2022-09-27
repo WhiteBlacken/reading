@@ -51,3 +51,20 @@ class WordLevelData(models.Model):
 
     class Meta:
         db_table = "word_level_data"
+
+
+class Dispersion(models.Model):
+    gaze_1_x = models.TextField()
+    gaze_1_y = models.TextField()
+    gaze_1_t = models.TextField()
+    gaze_2_x = models.TextField()
+    gaze_2_y = models.TextField()
+    gaze_2_t = models.TextField()
+    gaze_3_x = models.TextField()
+    gaze_3_y = models.TextField()
+    gaze_3_t = models.TextField()
+
+    user = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "dispersion"

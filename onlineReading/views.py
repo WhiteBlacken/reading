@@ -8,7 +8,7 @@ from django.core.files.storage import default_storage
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
-from action.models import Text, Dictionary, Dataset, WordLevelData
+from action.models import Text, Dictionary, Dataset, WordLevelData, Dispersion
 from onlineReading.utils import (
     translate,
     get_fixations,
@@ -342,24 +342,46 @@ def get_dispersion(request):
     print("gaze_3_y:%s" % gaze_3_y)
     gaze_3_t = request.POST.get("gaze_3_t")
     print("gaze_3_t:%s" % gaze_3_t)
-
+    # 把data記下來
+    Dispersion.objects.create(
+        gaze_1_x=gaze_1_x,
+        gaze_1_y=gaze_1_y,
+        gaze_1_t=gaze_1_t,
+        gaze_2_x=gaze_2_x,
+        gaze_2_y=gaze_2_y,
+        gaze_2_t=gaze_2_t,
+        gaze_3_x=gaze_3_x,
+        gaze_3_y=gaze_3_y,
+        gaze_3_t=gaze_3_t,
+        user=request.session.get('username')
+    )
     # 三个圆同样计算后，算均值
     # 以2为例
+    offset1, dispersion1 = get_offset_and_dispersion(
+        gaze_1_x, gaze_1_y, gaze_1_t, target1, 1
+    )
+    print("-----------output-----------------")
+    print("-----------target 1-----------------")
+    print("offset1:%s" % offset1)
+    print("dispersion1:%s" % dispersion1)
 
     offset2, dispersion2 = get_offset_and_dispersion(
         gaze_2_x, gaze_2_y, gaze_2_t, target2, 1
     )
+    print("-----------target 2-----------------")
     print("offset2:%s" % offset2)
     print("dispersion2:%s" % dispersion2)
 
     offset3, dispersion3 = get_offset_and_dispersion(
         gaze_3_x, gaze_3_y, gaze_3_t, target3, 1
     )
+    print("-----------target 3-----------------")
     print("offset3:%s" % offset3)
     print("dispersion3:%s" % dispersion3)
 
-    print("mean offset:%s" % (offset2 + offset3) / 2)
-    print("mean dispersion:%s" % (dispersion2 + dispersion3) / 2)
+    print("-----------mean-----------------")
+    print("mean offset:%s" % ((offset1+offset2 +offset3) / 3))
+    print("mean dispersion:%s" % ((dispersion1+dispersion2 + dispersion3) / 3))
     return HttpResponse(1)
 
 
