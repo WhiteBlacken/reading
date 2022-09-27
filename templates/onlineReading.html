@@ -77,11 +77,9 @@
         delimiters: ["[[", "]]"],
         data: {
             content: [],
-            contentCurPage: "",
-            paras: [],
+            paras: "",
             contentPerPage: [],
             transPerPage: [],
-
             words: [],
             page: 1,
             totalPage: 1,
@@ -155,11 +153,11 @@
                     let el = document.createElement('div');
                     el.className = "trans";
 
-                    el.innerHTML = this.transPerPage[this.page-1][num].zh;
+                    el.innerHTML = this.translation[num].zh;
 
                     el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
 
-                    el.style.top = this.wordLocation.top - 35 + "px";
+                    el.style.top = this.wordLocation.top - 20 + "px";
                     let e = document.getElementById('readArea');
                     e.appendChild(el);
                     this.currentTransBox.push(num);
@@ -259,9 +257,10 @@
 
                 await axios.get("/para").then((response) => {
 
+                    paraNum = response.data.length;
                     this.content = response.data;
-
-
+                    for (let i = 0; i < paraNum; i++) {
+                        this.paras.push(response.data[i][0]);
                         {#for(let j = 1; j < response.data[i].length; j++){#}
                         {#    this.translation.push({#}
                         {#        en: response.data[i].en,#}
@@ -283,60 +282,42 @@
                     let sentenceNum = 0;
                     let conPerPage = [];
                     let transPerPage = [];
-                    let wordLength = 0;
-
                     while(sentenceNum < sentences.length) {
-                        num = 0;
-                        conPerPage = [];
-                        transPerPage = [];
                         for(; sentenceNum < sentences.length; sentenceNum++){
                             var words = sentences[sentenceNum].split(' ');
                             for(let k = 0; k < words.length; k++) {
                                 var el = document.createElement("button");
                                 el.className = "word";
-                                el.id = (num+k).toString();
+                                el.id = num.toString();
                                 el.innerHTML = words[k];
+                                el.setAttribute("onclick", "getWordTranslation(" + (num+k) + ")");
+                                el.setAttribute("ondblclick", "getSentenceTranslation(" + (num+k) + ")");
                                 if (k == words.length - 1)
                                     el.innerHTML = words[k] + '.';
                                 e.appendChild(el);
                             }
-                            let paraTop = document.getElementById('para').getBoundingClientRect().top;
-                            let buttonTop = document.getElementById((num+words.length-1).toString()).getBoundingClientRect().top;
-                            let buttonHeight = document.getElementById((num+words.length-1).toString()).getBoundingClientRect().bottom - document.getElementById((num+words.length-1).toString()).getBoundingClientRect().top;
-                            if(Math.trunc((buttonTop - paraTop) / buttonHeight) >= 3) {
-                                while(e.children[0]){
-                                    e.removeChild(e.children[0]);
+                            let paraHeight = $('#para').height();
+                            let buttonHeight = $('.word').height();
+                            if(Math.trunc(paraHeight / buttonHeight) > 3) {
+                                while(e.children[num]){
+                                    e.removeChild(e.children[num]);
                                 }
                                 break;
                             }else{
                                 conPerPage.push(sentences[sentenceNum]);
-                                for(let k = wordLength+1; k <= wordLength + words.length; k++){
-                                    if(this.content[i][k])
-                                        transPerPage.push(this.content[i][k])
+                                for(let k = num+1; k <= num + words.length; k++){
+                                    transPerPage.push(this.content[i][k])
                                 }
                                 num += words.length;
-                                wordLength += words.length;
                             }
-
                         }
                         this.transPerPage.push(transPerPage);
-                        this.contentPerPage.push(conPerPage.join('.')+".");
+                        this.contentPerPage.push(conPerPage.join('.'));
                     }
-                    this.contentPerPage.push(conPerPage.join('.'));
+
                 }
-
-                while(e.children[0])
-                    e.removeChild(e.children[0])
-                for(let i = 0; i < this.contentPerPage.length; i++){
-                    if(this.contentPerPage[i] == ".")
-                        this.contentPerPage.splice(i,1);
-                    if(this.transPerPage[i].length == 0)
-                        this.transPerPage.splice(i,1);
-                }
-                this.totalPage = this.contentPerPage.length;
-
-                {#console.log(this.transPerPage)#}
-
+                console.log(this.contentPerPage)
+                console.log(this.transPerPage)
                 {#let num = 0;#}
                 {#var e = document.getElementById('para');#}
                 {#var Content = this.content.split('.');#}
