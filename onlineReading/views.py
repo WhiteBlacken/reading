@@ -360,19 +360,19 @@ def get_offset_and_dispersion(gaze_x, gaze_y, gaze_t, target, outlier):
 
     # 绘图
     path = "static/user/qxy/" + "20220925112748.png"
-    import cv2
-
-    img = cv2.imread(path)
-    for i in range(len(gaze_x)):
-        cv2.circle(
-            img,
-            (int(float(gaze_x[i])), int(float(gaze_y[i]))),
-            5,
-            (0, 0, 255),
-            1,
-        )
-
-    cv2.imwrite(path, img)
+    # import cv2
+    #
+    # img = cv2.imread(path)
+    # for i in range(len(gaze_x)):
+    #     cv2.circle(
+    #         img,
+    #         (int(float(gaze_x[i])), int(float(gaze_y[i]))),
+    #         5,
+    #         (0, 0, 255),
+    #         1,
+    #     )
+    #
+    # cv2.imwrite(path, img)
     # 1. 去除异常值
     # 根据时间，删减开头结尾的gaze
     begin = 0
