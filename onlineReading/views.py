@@ -345,16 +345,21 @@ def get_dispersion(request):
 
     # 三个圆同样计算后，算均值
     # 以2为例
+
     offset2, dispersion2 = get_offset_and_dispersion(
-        gaze_2_x, gaze_2_y, gaze_2_t, target2, 0
+        gaze_2_x, gaze_2_y, gaze_2_t, target2, 1
     )
     print("offset2:%s" % offset2)
     print("dispersion2:%s" % dispersion2)
-    offset2withoutOutlier, dispersion2withoutOutlier = get_offset_and_dispersion(
-        gaze_2_x, gaze_2_y, gaze_2_t, target2, 1
+
+    offset3, dispersion3 = get_offset_and_dispersion(
+        gaze_3_x, gaze_3_y, gaze_3_t, target3, 1
     )
-    print("offset2withoutOutlier:%s" % offset2withoutOutlier)
-    print("dispersion2withoutOutlier:%s" % dispersion2withoutOutlier)
+    print("offset3:%s" % offset3)
+    print("dispersion3:%s" % dispersion3)
+
+    print("mean offset:%s" % (offset2 + offset3) / 2)
+    print("mean dispersion:%s" % (dispersion2 + dispersion3) / 2)
     return HttpResponse(1)
 
 
@@ -366,10 +371,6 @@ def get_offset_and_dispersion(gaze_x, gaze_y, gaze_t, target, outlier):
 
     gaze_t = list(map(float, gaze_t.split(",")))
     target = list(map(float, target.split(",")))
-
-    print("len_x:%d" % len(gaze_x))
-    print("len_y:%d" % len(gaze_y))
-    print("len_t:%d" % len(gaze_t))
 
     begin = 0
     for i in range(len(gaze_t)):
@@ -406,12 +407,6 @@ def get_offset_and_dispersion(gaze_x, gaze_y, gaze_t, target, outlier):
     gaze2_index = 0
     # 2. 计算
     for i in range(len(gaze_x)):
-        print("gaze:(%s,%s)" % (str(gaze_x[i]), str(gaze_y[i])))
-        print("target:(%s,%s)" % (str(target[0]), str(target[1])))
-        print(
-            "offset:%s"
-            % get_euclid_distance(gaze_x[i], target[0], gaze_y[i], target[1])
-        )
         offset = offset + get_euclid_distance(
             gaze_x[i], target[0], gaze_y[i], target[1]
         )
@@ -431,7 +426,10 @@ def get_offset_and_dispersion(gaze_x, gaze_y, gaze_t, target, outlier):
             gaze_y[gaze2_index],
         )
     )
-    return pixel_2_cm(offset / len(gaze_x)), pixel_2_deg(dispersion)
+    offset_x = (float(gaze_x[gaze1_index]) + float(gaze_x[gaze2_index])) / 2
+    offset_y = (float(gaze_y[gaze1_index]) + float(gaze_y[gaze2_index])) / 2
+    offset = get_euclid_distance(offset_x, target[0], offset_y, target[1])
+    return pixel_2_cm(offset), pixel_2_deg(dispersion)
 
 
 def get_outliers_by_z_score(data):
