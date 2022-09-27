@@ -272,11 +272,13 @@
                 });
                 var e = document.getElementById('para');
                 console.log(this.content)
+                console.log(this.paras)
                 // 遍历每个段落
                 for(let i = 0 ; i < paraNum; i++) {
                     let num = 0;
                     //分割出该段落的所有句子
                     var sentences = this.paras[i].split('.');
+                    console.log("sentences:" + sentences)
                     let sentenceNum = 0;
                     let conPerPage = [];
                     let transPerPage = [];
