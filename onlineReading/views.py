@@ -74,7 +74,6 @@ def get_text(request):
 
 def get_image(data_id, username):
     """获取截图的图片+eye gaze，并生成眼动热点图"""
-    print(data_id)
     if data_id:
         dataset = Dataset.objects.get(id=data_id)
         image_base64 = dataset.image
@@ -129,8 +128,7 @@ def get_data(request):
     interventions = request.POST.get("interventions")
 
     data_id = request.session.get("data_id", None)
-    print("data_id")
-    print(data_id)
+
     if data_id:
         Dataset.objects.filter(id=data_id).update(
             gaze_x=str(x),
@@ -341,11 +339,14 @@ def get_dispersion(request):
 
     # 三个圆同样计算后，算均值
     # 以2为例
-    offset2, dispersion2 = get_offset_and_dispersion(gaze_2_x, gaze_2_y, gaze_2_t, target2, 0)
+    offset2, dispersion2 = get_offset_and_dispersion(
+        gaze_2_x, gaze_2_y, gaze_2_t, target2, 0
+    )
     print("offset2:%s" % offset2)
     print("dispersion2:%s" % dispersion2)
-    offset2withoutOutlier, dispersion2withoutOutlier = get_offset_and_dispersion(gaze_2_x, gaze_2_y, gaze_2_t, target2,
-                                                                                 1)
+    offset2withoutOutlier, dispersion2withoutOutlier = get_offset_and_dispersion(
+        gaze_2_x, gaze_2_y, gaze_2_t, target2, 1
+    )
     print("offset2withoutOutlier:%s" % offset2withoutOutlier)
     print("dispersion2withoutOutlier:%s" % dispersion2withoutOutlier)
     return HttpResponse(1)
@@ -356,23 +357,28 @@ def get_offset_and_dispersion(gaze_x, gaze_y, gaze_t, target, outlier):
     offset = 0
     gaze_x = gaze_x.split(",")
     gaze_y = gaze_y.split(",")
-    gaze_t = list(map(float, gaze_t.split(',')))
+    gaze_t = list(map(float, gaze_t.split(",")))
+    target = list(map(float, target.split(",")))
 
-    # 绘图
-    path = "static/user/qxy/" + "20220925112748.png"
-    import cv2
+    print("len_x:%d" % len(gaze_x))
+    print("len_y:%d" % len(gaze_y))
+    print("len_t:%d" % len(gaze_t))
 
-    img = cv2.imread(path)
-    for i in range(len(gaze_x)):
-        cv2.circle(
-            img,
-            (int(float(gaze_x[i])), int(float(gaze_y[i]))),
-            5,
-            (0, 0, 255),
-            1,
-        )
-
-    cv2.imwrite(path, img)
+    # # 绘图
+    # path = "static/user/qxy/" + "20220925112748.png"
+    # import cv2
+    #
+    # img = cv2.imread(path)
+    # for i in range(len(gaze_x)):
+    #     cv2.circle(
+    #         img,
+    #         (int(float(gaze_x[i])), int(float(gaze_y[i]))),
+    #         5,
+    #         (0, 0, 255),
+    #         1,
+    #     )
+    #
+    # cv2.imwrite(path, img)
     # 1. 去除异常值
     # 根据时间，删减开头结尾的gaze
     begin = 0
@@ -385,8 +391,7 @@ def get_offset_and_dispersion(gaze_x, gaze_y, gaze_t, target, outlier):
         if gaze_t[len(gaze_t) - 1] - gaze_t[i] > 500:
             end = i
             break
-    print("begin:%d" % begin)
-    print("end:%d" % end)
+
     gaze_x = gaze_x[begin:end]
     gaze_y = gaze_y[begin:end]
     # 计算distance数组
@@ -411,15 +416,31 @@ def get_offset_and_dispersion(gaze_x, gaze_y, gaze_t, target, outlier):
     gaze2_index = 0
     # 2. 计算
     for i in range(len(gaze_x)):
-        offset = offset + get_euclid_distance(gaze_x[i], target[0], gaze_y[i], target[1])
+        print("gaze:(%s,%s)" % (str(gaze_x[i]), str(gaze_y[i])))
+        print("target:(%s,%s)" % (str(target[0]), str(target[1])))
+        print(
+            "offset:%s"
+            % get_euclid_distance(gaze_x[i], target[0], gaze_y[i], target[1])
+        )
+        offset = offset + get_euclid_distance(
+            gaze_x[i], target[0], gaze_y[i], target[1]
+        )
+
         for j in range(i + 1, len(gaze_x)):
             dis = get_euclid_distance(gaze_x[i], gaze_x[j], gaze_y[i], gaze_y[j])
             if dis > dispersion:
                 dispersion = dis
                 gaze1_index = i
                 gaze2_index = j
-    print("dispersion的两点:(%s,%s),(%s,%s)" % (
-    gaze_x[gaze1_index], gaze_y[gaze1_index], gaze_x[gaze2_index], gaze_y[gaze2_index]))
+    print(
+        "dispersion的两点:(%s,%s),(%s,%s)"
+        % (
+            gaze_x[gaze1_index],
+            gaze_y[gaze1_index],
+            gaze_x[gaze2_index],
+            gaze_y[gaze2_index],
+        )
+    )
     return offset / len(gaze_x), dispersion
 
 
@@ -427,6 +448,7 @@ def get_outliers_by_z_score(data):
     # 返回非离群点的索引
     # 远离标准差3倍距离以上的数据点视为离群点
     import numpy as np
+
     mean_d = np.mean(data)
     std_d = np.std(data)
     outliers = []
@@ -440,6 +462,7 @@ def get_outliers_by_z_score(data):
 
 def get_outliers_by_iqr(data):
     from pandas import Series
+
     data = Series(data)
     # 四分位点内距
     q1 = data.quantile(0.25)
@@ -461,14 +484,16 @@ def get_outlier_by_knn(data):
         tmp = []
         tmp.append(data[i])
         array.append(tmp)
-    print("array:%s" % array)
 
     # import kNN分类器
     from pyod.models.knn import KNN
 
     # 训练一个kNN检测器
     # 初始化检测器clf
-    clf = KNN(method='mean', n_neighbors=50, )
+    clf = KNN(
+        method="mean",
+        n_neighbors=50,
+    )
     clf.fit(array)
 
     # 返回训练数据X_train上的异常标签和异常分值
