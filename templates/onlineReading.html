@@ -371,7 +371,7 @@
             let num = app.catchCurrentWord();
             if (num < app._data.words.length) {
                 if (app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num) {
-                    app._data.readSequel[app._data.readSequel.length - 1][1].push(new Array(data.x, data.y, elapsedTime));
+                    app._data.readSequel[app._data.readSequel.length - 1][2].push(new Array(data.x, data.y, elapsedTime));
                 } else {
                     app._data.readSequel.push(new Array(num, app._data.words[num], new Array(new Array(data.x, data.y, elapsedTime))));
                 }
