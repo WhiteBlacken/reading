@@ -5,7 +5,7 @@ from django.db import models
 
 
 class Text(models.Model):
-    content = models.CharField(max_length=1600)
+    content = models.TextField()
 
     class Meta:
         db_table = "text"

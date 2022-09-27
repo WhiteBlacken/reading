@@ -38,7 +38,8 @@ def index(request):
 
 def get_text(request):
     words_dict = {}
-    text = Text.objects.get(id=2)
+    text = Text.objects.last()
+    print(text.content)
     # 去除前后的空格
     text = text.content.strip()
     # 切成句子
@@ -246,11 +247,9 @@ def get_word_from_text(text):
         sentence = sentence.strip()
         words = sentence.split(" ")
         for word in words:
-            word = word.strip().lower().replace(",", "")
-            get_word.append(word)
-    print(get_word[19])
-    print(get_word[20])
-    print(get_word[21])
+            if len(word) > 0:
+                word = word.strip().lower().replace(",", "")
+                get_word.append(word)
     return get_word
 
 
