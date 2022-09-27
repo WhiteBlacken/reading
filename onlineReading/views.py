@@ -499,3 +499,11 @@ def get_outlier_by_knn(data):
 
 def cm_2_pixel_test(request, k):
     return HttpResponse(cm_2_pixel(k))
+
+def get_content_from_txt(request):
+    words_dict = {}
+    f = open('static/texts/1.txt', 'rb')
+    content = f.readlines()
+    print(content)
+    words_dict[0] = content
+    return JsonResponse(words_dict, json_dumps_params={"ensure_ascii": False})

@@ -76,7 +76,8 @@
         el: '#app',
         delimiters: ["[[", "]]"],
         data: {
-            content: "",
+            content: [],
+            paras: "",
             contentPerPage: [],
             words: [],
             page: 1,
@@ -251,44 +252,65 @@
                 {#    this.$nextTick(() => {#}
                 {#        this.setSheet();#}
                 {#    });});#}
-
+                let paraNum = 0;
                 await axios.get("/text").then((response) => {
-                    this.content = response.data[0];
-                    let i = 1;
-                    while (response.data[i]) {
-                        this.translation.push({
-                            en: response.data[i].en,
-                            zh: response.data[i].zh,
-                            sentence_zh: response.data[i].sentence_zh
-                        });
-                        i++;
-                    }
+                    paraNum = response.data.length;
+                    for (let i = 0; i < paraNum; i++) {
+                        this.paras.push(response.data[i][0]);
+                        {#for(let j = 1; j < response.data[i].length; j++){#}
+                        {#    this.translation.push({#}
+                        {#        en: response.data[i].en,#}
+                        {#        zh: response.data[i].zh,#}
+                        {#        sentence_zh: response.data[i].sentence_zh#}
+                        {#    });#}
+                        {# }#}
+                     }
                 });
-                let num = 0;
                 var e = document.getElementById('para');
-                var Content = this.content.split('.');
-                for (let i = 0; i < Content.length; i++) {
-                    var sentence = Content[i].split(' ');
-
-                    for (let j = 0; j < sentence.length; j++) {
-                        if (sentence[j] && sentence[j] !== "") {
-                            this.words.push(sentence[j].split(',')[0]);
+                for(let i = 0 ; i < paraNum; i++) {
+                    let num = 0;
+                    var sentences = this.paras[i].split('.');
+                    for(let j = 0; j < sentences.length; j++){
+                        var words = sentences[j].split(' ');
+                        for(let k = 0; k < words.length; k++) {
                             var el = document.createElement("button");
                             el.className = "word";
                             el.id = num.toString();
-                            el.innerHTML = sentence[j];
+                            el.innerHTML = words[k];
                             el.setAttribute("onclick", "getWordTranslation(" + num + ")");
                             el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
-                            if (j == sentence.length - 1)
-                                el.innerHTML = sentence[j] + '.';
+                            if (k == words.length - 1)
+                                el.innerHTML = words[k] + '.';
                             e.appendChild(el);
                             num += 1;
                         }
                     }
                 }
-                setCookie('content', this.content);
-
-                this.auto();
+                {#let num = 0;#}
+                {#var e = document.getElementById('para');#}
+                {#var Content = this.content.split('.');#}
+                {#for (let i = 0; i < Content.length; i++) {#}
+                {#    var sentence = Content[i].split(' ');#}
+                {##}
+                {#    for (let j = 0; j < sentence.length; j++) {#}
+                {#        if (sentence[j] && sentence[j] !== "") {#}
+                {#            this.words.push(sentence[j].split(',')[0]);#}
+                {#            var el = document.createElement("button");#}
+                {#            el.className = "word";#}
+                {#            el.id = num.toString();#}
+                {#            el.innerHTML = sentence[j];#}
+                {#            el.setAttribute("onclick", "getWordTranslation(" + num + ")");#}
+                {#            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");#}
+                {#            if (j == sentence.length - 1)#}
+                {#                el.innerHTML = sentence[j] + '.';#}
+                {#            e.appendChild(el);#}
+                {#            num += 1;#}
+                {#        }#}
+                {#    }#}
+                {# }#}
+                {#setCookie('content', this.content);#}
+                {##}
+                {#this.auto();#}
             },
 
             listen: function () {

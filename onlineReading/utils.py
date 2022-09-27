@@ -134,19 +134,19 @@ def get_euclid_distance(x1, x2, y1, y2):
 
 def pixel_2_deg(pixel):
     """像素点到度数的转换"""
-    cmPerPix = 15.6 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
+    cmPerPix = 23.8 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
     return math.atan(pixel * cmPerPix / 60) * 180 / math.pi
 
 
 def pixel_2_cm(pixel):
     """像素点到距离的转换"""
-    cmPerPix = 15.6 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
+    cmPerPix = 23.8 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
     return pixel * cmPerPix
 
 
 def cm_2_pixel(cm):
     """距离到像素点的转换"""
-    cmPerPix = 15.6 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
+    cmPerPix = 23.8 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
     return cm / cmPerPix
 
 
