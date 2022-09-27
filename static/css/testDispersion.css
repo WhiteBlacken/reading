@@ -17,8 +17,13 @@ body{
 .circle{
     border-radius: 50%;
     background-color: black;
+<<<<<<< HEAD
     width: 8px;
     height: 8px;
+=======
+    width: 10px;
+    height: 10px;
+>>>>>>> 415703b90ca016dbbebe3f2d435d72f8afe49ae1
 }
 
 #c1{
