@@ -345,6 +345,11 @@ def get_dispersion(request):
 
     # 三个圆同样计算后，算均值
     # 以2为例
+    offset1, dispersion1 = get_offset_and_dispersion(
+        gaze_1_x, gaze_1_y, gaze_1_t, target1, 1
+    )
+    print("offset1:%s" % offset1)
+    print("dispersion1:%s" % dispersion1)
 
     offset2, dispersion2 = get_offset_and_dispersion(
         gaze_2_x, gaze_2_y, gaze_2_t, target2, 1
@@ -358,8 +363,8 @@ def get_dispersion(request):
     print("offset3:%s" % offset3)
     print("dispersion3:%s" % dispersion3)
 
-    print("mean offset:%s" % (offset2 + offset3) / 2)
-    print("mean dispersion:%s" % (dispersion2 + dispersion3) / 2)
+    print("mean offset:%s" % ((offset1+offset2 +offset3) / 2))
+    print("mean dispersion:%s" % ((dispersion1+dispersion2 + dispersion3) / 2))
     return HttpResponse(1)
 
 
