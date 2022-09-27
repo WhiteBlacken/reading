@@ -269,13 +269,8 @@
                         {#        sentence_zh: response.data[i].sentence_zh#}
                         {#    });#}
                         {# }#}
+                     }
                 });
-
-
-                this.content = Object.values(this.content);
-                paraNum = this.content.length;
-                for(let i = 0 ; i < paraNum; i++)
-                    this.paras.push(this.content[i][0]);
                 var e = document.getElementById('para');
 
                 // 遍历每个段落
@@ -367,35 +362,6 @@
                 {#setCookie('content', this.content);#}
                 {##}
                 {#this.auto();#}
-
-            },
-
-            getPage: function () {
-                let num = 0;
-                var e = document.getElementById('para');
-                var Content = this.contentPerPage[this.page-1];
-                this.contentCurPage = Content;
-                let sentences = Content.split('.');
-                sentences.splice(sentences.length-1, 1);
-                for(let i = 0; i < sentences.length; i++){
-                     var words = sentences[i].split(' ');
-                     console.log(sentences[i])
-                     for(let j = 0; j < words.length; j++) {
-                         if(words[j] != ""){
-                             var el = document.createElement("button");
-                             el.className = "word";
-                             el.id = num.toString();
-                             el.innerHTML = words[j];
-                             el.setAttribute("onclick", "getWordTranslation(" + num + ")");
-                             el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
-                             if (j == words.length - 1)
-                                 el.innerHTML = words[j] + '.';
-                             e.appendChild(el);
-                             num += 1;
-                         }
-                     }
-                }
-
             },
 
             listen: function () {
@@ -464,7 +430,7 @@
     })
 
     //开始使用
-    async function get_start() {
+    function get_start() {
 
         //开启webgazer
         //眼动数据监听
@@ -491,13 +457,12 @@
         }).begin();
         //全屏
         full_screen();
-
+        //展示阅读内容
+        document.getElementById("mainContent").style.display = "inline";
         //隐藏提示
         document.getElementById("tips_begin").style.display = "none";
 
-        await app.getContent();
-
-        app.getPage();
+        app.getContent();
     }
 
     //监听空格事件
@@ -508,24 +473,21 @@
                 if (app._data.page > 1) {
                     app.clearPageWords();
                     get_base64_gaze_and_intervention();
+                    app.getContent();
                     x = [];
                     y = [];
                     app._data.page = app._data.page - 1;
-                    app.getPage();
                 }
                 break;
             }
             case 39: {
-                console.log(app._data.totalPage)
-                console.log(app._data.page)
                 if (app._data.page < app._data.totalPage) {
                     app.clearPageWords();
                     get_base64_gaze_and_intervention();
+                    app.getContent();
                     x = [];
                     y = [];
                     app._data.page = app._data.page + 1;
-                    console.log(app._data.page)
-                    app.getPage();
                     break;
                 }
             }
@@ -568,28 +530,26 @@
         return "";
     }
 
-    //待修改
-    {#function get_word_level_gaze_data() {#}
-    {##}
-    {#    $.ajax({#}
-    {#        type: 'POST',#}
-    {#        url: '/word_level_data/',#}
-    {#        data: JSON.stringify(app._data.readSequel),#}
-    {#        dataType: "JSON",#}
-    {#        async: false,#}
-    {#        success: function () {#}
-    {#            console.log("success");#}
-    {#            if(app._data.page == app._data.totalPage)#}
-    {#                window.location.href = 'http://127.0.0.1:8000/label';#}
-    {#        },#}
-    {#        error: function () {#}
-    {#            console.log("error");#}
-    {#        },#}
-    {#        processData: false,#}
-    {#        contentType: false#}
-    {##}
-    {#    })#}
+    function get_word_level_gaze_data() {
 
+        $.ajax({
+            type: 'POST',
+            url: '/word_level_data/',
+            data: JSON.stringify(app._data.readSequel),
+            dataType: "JSON",
+            async: false,
+            success: function () {
+                console.log("success");
+                window.location.href = 'http://127.0.0.1:8000/label';
+            },
+            error: function () {
+                console.log("error");
+            },
+            processData: false,
+            contentType: false
+
+        })
+    }
 
     //截图
     function get_base64_gaze_and_intervention() {
@@ -624,16 +584,13 @@
             formdata.append("y", y.toString());
             formdata.append("t", t.toString());
             formdata.append("interventions", interventions.toString());
-            formdata.append("page",app._data.page.toString());
-            formdata.append("text",app._data.contentCurPage);
             $.ajax({
                 type: 'POST',
                 url: '/data/',
                 data: formdata,
                 async: false,
                 success: function () {
-                    if(app._data.page == app._data.totalPage)
-                    window.location.href = 'http://127.0.0.1:8000/label';
+                    get_word_level_gaze_data();
                 },
                 error: function () {
                     console.log("error");
