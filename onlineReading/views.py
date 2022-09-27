@@ -39,6 +39,7 @@ def index(request):
 def get_text(request):
 
     texts = Text.objects.filter(article_id=2)
+    print(len(texts))
     para_dict = {}
     para = 0
     for text in texts:
@@ -76,6 +77,7 @@ def get_text(request):
                     cnt = cnt + 1
                     words_dict[cnt] = {"en": word, "zh": zh, "sentence_zh": sentence_zh}
         para_dict[para] = words_dict
+        para = para + 1
     # 将文本存入数据库
     dataset = Dataset.objects.create(texts="test")
     request.session["data_id"] = dataset.id
@@ -355,7 +357,7 @@ def get_dispersion(request):
         gaze_3_x=gaze_3_x,
         gaze_3_y=gaze_3_y,
         gaze_3_t=gaze_3_t,
-        user=request.session.get('username')
+        user=request.session.get("username"),
     )
     # 三个圆同样计算后，算均值
     # 以2为例
@@ -382,8 +384,8 @@ def get_dispersion(request):
     print("dispersion3:%s" % dispersion3)
 
     print("-----------mean-----------------")
-    print("mean offset:%s" % ((offset1+offset2 +offset3) / 3))
-    print("mean dispersion:%s" % ((dispersion1+dispersion2 + dispersion3) / 3))
+    print("mean offset:%s" % ((offset1 + offset2 + offset3) / 3))
+    print("mean dispersion:%s" % ((dispersion1 + dispersion2 + dispersion3) / 3))
     return HttpResponse(1)
 
 
