@@ -76,21 +76,20 @@
                 if ($('.word:eq(' + num + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)') {
                     $('.word:eq(' + num + ')').css('text-decoration', "");
                     $('.word:eq(' + num + ')').css('color', "black");
-                    for (let i = 0; i < this.misUnderstandWords.length; i++) {
-                        if (this.misUnderstandWords[i] == this.words[num])
-                            this.misUnderstandWords.splice(i, 1);
+                    for (let i = 0; i < this.misUnderstandWords[this.page-1][1].length; i++) {
+                        if (this.misUnderstandWords[this.page-1][1][i] == this.words[num])
+                            this.misUnderstandWords[this.page-1][1].splice(i, 1);
                     }
-                    for(let i=0;i<this.misUnderstandWordsLabel.length;i++){
-                        if(num==this.misUnderstandWordsLabel[i]){
-                            this.misUnderstandWordsLabel.splice(i,1);
+                    for(let i=0;i<this.misUnderstandWordsLabel[this.page-1][1].length;i++){
+                        if(num==this.misUnderstandWordsLabel[this.page-1][1][i]){
+                            this.misUnderstandWordsLabel[this.page-1][1].splice(i,1);
                         }
                     }
                 } else {
                     $('.word:eq(' + num + ')').css('text-decoration', "underline");
                     $('.word:eq(' + num + ')').css('color', "blue");
-                    this.misUnderstandWords.push(this.words[num]);
-                    this.misUnderstandWordsLabel.push(num);
-                    console.log(this.misUnderstandWordsLabel);
+                    this.misUnderstandWords[this.page-1][1].push(this.words[num]);
+                    this.misUnderstandWordsLabel[this.page-1][1].push(num);
 
                 }
             },
@@ -138,6 +137,10 @@
                         }
                     }
                 }
+                if(!this.misUnderstandWords[this.page-1]){
+                    this.misUnderstandWords.push([this.page, new Array()]);
+                    this.misUnderstandWordsLabel.push([this.page, new Array()]);
+                }
             },
 
             //把labels发送给后端存储,并更新word_level_data
@@ -160,6 +163,7 @@
                 })
             },
 
+
             //清空当前页面word按钮和translation的div块，并初始化参数
             clearPageWords: function () {
                 let e = document.getElementById('para');
@@ -167,12 +171,7 @@
                     e.removeChild(e.children[0]);
                 }
                 this.words = [];
-                this.misUnderstandWords = [];
-                this.misUnderstandSentences = [];
-                this.misUnderstandWordsLabel = [];
             },
-
-
 
         },
         created() {
@@ -207,7 +206,6 @@
             case 37: {
                 if (app._data.page > 1) {
                     app.clearPageWords();
-                    app.collect_labels();
                     x = [];
                     y = [];
                     app._data.page = app._data.page - 1;
@@ -218,7 +216,7 @@
             case 39: {
                 if (app._data.page < app._data.totalPage) {
                     app.clearPageWords();
-                    app.collect_labels();
+                    console.log(app._data.misUnderstandWordsLabel)
                     x = [];
                     y = [];
                     app._data.page = app._data.page + 1;
