@@ -125,13 +125,21 @@
                 {#    });});#}
 
                 this.content = getCookie('content');
+                this.totalPage = this.content.length;
+                console.log(this.content);
+
+
+            },
+
+            getPage: function () {
                 let num = 0;
                 var e = document.getElementById('para');
-                var Content = this.content.split('.');
+                var Content = this.content[this.page-1].split('.');
+                Content.splice(Content.length-1, 1);
                 for (let i = 0; i < Content.length; i++) {
                     var sentence = Content[i].split(' ');
                     for (let j = 0; j < sentence.length; j++) {
-                        if (sentence[j] && sentence[j] !== "") {
+                        if (sentence[j] != "") {
                             this.words.push(sentence[j].split(',')[0]);
                             var el = document.createElement("button");
                             el.className = "word";
@@ -147,6 +155,7 @@
                     }
                 }
             },
+
             //把labels发送给后端存储,并更新word_level_data
             collect_labels: function () {
                 let formdata = new FormData();
@@ -182,8 +191,9 @@
             },
 
         },
-        created() {
-            this.getContent();
+        async created() {
+            await this.getContent();
+            this.getPage();
         },
         mounted() {
             window["changeWordSelect"] = (num) => {
@@ -213,10 +223,10 @@
                 if (app._data.page > 1) {
                     app.clearPageWords();
                     app.collect_labels();
-                    app.getContent();
                     x = [];
                     y = [];
                     app._data.page = app._data.page - 1;
+                    app.getPage();
                 }
                 break;
             }
@@ -224,10 +234,10 @@
                 if (app._data.page < app._data.totalPage) {
                     app.clearPageWords();
                     app.collect_labels();
-                    app.getContent();
                     x = [];
                     y = [];
                     app._data.page = app._data.page + 1;
+                    app.getPage();
                     break;
                 }
             }
