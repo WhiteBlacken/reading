@@ -54,7 +54,6 @@ function full_screen() {
         document.documentElement.RequestFullScreen();
     }
     //兼容火狐
-    console.log(document.documentElement.mozRequestFullScreen)
     if (document.documentElement.mozRequestFullScreen) {
         document.documentElement.mozRequestFullScreen();
     }

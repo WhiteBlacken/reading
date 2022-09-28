@@ -37,7 +37,7 @@
             </div>
         </div>
     </div>
-    <div id="mainContent" style="display: none">
+    <div id="mainContent">
         <div id="reading">
             <el-container>
                 <el-main style="padding: 0 !important;">
@@ -76,7 +76,10 @@
         el: '#app',
         delimiters: ["[[", "]]"],
         data: {
-            content: "",
+            content: [],
+            paras: [],
+            contentPerPage: [],
+            transPerPage: [],
             words: [],
             page: 1,
             totalPage: 1,
@@ -150,11 +153,11 @@
                     let el = document.createElement('div');
                     el.className = "trans";
 
-                    el.innerHTML = this.translation[num].zh;
+                    el.innerHTML = this.transPerPage[this.page-1][num].zh;
 
                     el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
 
-                    el.style.top = this.wordLocation.top - 20 + "px";
+                    el.style.top = this.wordLocation.top - 35 + "px";
                     let e = document.getElementById('readArea');
                     e.appendChild(el);
                     this.currentTransBox.push(num);
@@ -250,44 +253,129 @@
                 {#    this.$nextTick(() => {#}
                 {#        this.setSheet();#}
                 {#    });});#}
+                let paraNum = 0;
 
-                await axios.get("/text").then((response) => {
-                    this.content = response.data[0];
-                    let i = 1;
-                    while (response.data[i]) {
-                        this.translation.push({
-                            en: response.data[i].en,
-                            zh: response.data[i].zh,
-                            sentence_zh: response.data[i].sentence_zh
-                        });
-                        i++;
-                    }
+                await axios.get("/para").then((response) => {
+                    this.content = response.data;
                 });
-                let num = 0;
-                var e = document.getElementById('para');
-                var Content = this.content.split('.');
-                for (let i = 0; i < Content.length; i++) {
-                    var sentence = Content[i].split(' ');
 
-                    for (let j = 0; j < sentence.length; j++) {
-                        if (sentence[j] && sentence[j] !== "") {
-                            this.words.push(sentence[j].split(',')[0]);
-                            var el = document.createElement("button");
-                            el.className = "word";
-                            el.id = num.toString();
-                            el.innerHTML = sentence[j];
-                            el.setAttribute("onclick", "getWordTranslation(" + num + ")");
-                            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
-                            if (j == sentence.length - 1)
-                                el.innerHTML = sentence[j] + '.';
-                            e.appendChild(el);
-                            num += 1;
+                this.content = Object.values(this.content);
+                paraNum = this.content.length;
+                for(let i = 0 ; i < paraNum; i++)
+                    this.paras.push(this.content[i][0]);
+                var e = document.getElementById('para');
+
+                // 遍历每个段落
+                for(let i = 0 ; i < paraNum; i++) {
+                    let num = 0;
+                    //分割出该段落的所有句子
+                    var sentences = this.paras[i].split('.');
+                    sentences.splice(sentences.length-1, 1);
+
+                    let sentenceNum = 0;
+                    let conPerPage = [];
+                    let transPerPage = [];
+                    let wordLength = 0;
+
+                    while(sentenceNum < sentences.length) {
+                        num = 0;
+                        conPerPage = [];
+                        transPerPage = [];
+                        for(; sentenceNum < sentences.length; sentenceNum++){
+                            var words = sentences[sentenceNum].split(' ');
+                            for(let k = 0; k < words.length; k++) {
+                                var el = document.createElement("button");
+                                el.className = "word";
+                                el.id = (num+k).toString();
+                                el.innerHTML = words[k];
+                                if (k == words.length - 1)
+                                    el.innerHTML = words[k] + '.';
+                                e.appendChild(el);
+                            }
+                            let paraTop = document.getElementById('para').getBoundingClientRect().top;
+                            let buttonTop = document.getElementById((num+words.length-1).toString()).getBoundingClientRect().top;
+                            let buttonHeight = document.getElementById((num+words.length-1).toString()).getBoundingClientRect().bottom - document.getElementById((num+words.length-1).toString()).getBoundingClientRect().top;
+                            if(Math.trunc((buttonTop - paraTop) / buttonHeight) >= 3) {
+                                while(e.children[0]){
+                                    e.removeChild(e.children[0]);
+                                }
+                                break;
+                            }else{
+                                conPerPage.push(sentences[sentenceNum]);
+                                for(let k = wordLength+1; k <= wordLength + words.length; k++){
+                                    if(this.content[i][k])
+                                        transPerPage.push(this.content[i][k])
+                                }
+                                num += words.length;
+                                wordLength += words.length;
+                            }
                         }
+                        this.transPerPage.push(transPerPage);
+                        this.contentPerPage.push(conPerPage.join('.')+".");
                     }
                 }
-                setCookie('content', this.content);
+                while(e.children[0])
+                    e.removeChild(e.children[0])
+                for(let i = 0; i < this.contentPerPage.length; i++){
+                    if(this.contentPerPage[i] == ".")
+                        this.contentPerPage.splice(i,1);
+                    if(this.transPerPage[i].length == 0)
+                        this.transPerPage.splice(i,1);
+                }
+                this.totalPage = this.contentPerPage.length;
 
-                this.auto();
+                {#console.log(this.transPerPage)#}
+                {#let num = 0;#}
+                {#var e = document.getElementById('para');#}
+                {#var Content = this.content.split('.');#}
+                {#for (let i = 0; i < Content.length; i++) {#}
+                {#    var sentence = Content[i].split(' ');#}
+                {##}
+                {#    for (let j = 0; j < sentence.length; j++) {#}
+                {#        if (sentence[j] && sentence[j] !== "") {#}
+                {#            this.words.push(sentence[j].split(',')[0]);#}
+                {#            var el = document.createElement("button");#}
+                {#            el.className = "word";#}
+                {#            el.id = num.toString();#}
+                {#            el.innerHTML = sentence[j];#}
+                {#            el.setAttribute("onclick", "getWordTranslation(" + num + ")");#}
+                {#            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");#}
+                {#            if (j == sentence.length - 1)#}
+                {#                el.innerHTML = sentence[j] + '.';#}
+                {#            e.appendChild(el);#}
+                {#            num += 1;#}
+                {#        }#}
+                {#    }#}
+                {# }#}
+                {#setCookie('content', this.content);#}
+                {##}
+                {#this.auto();#}
+            },
+
+            getPage: function () {
+                let num = 0;
+                var e = document.getElementById('para');
+                var Content = this.contentPerPage[this.page-1];
+                let sentences = Content.split('.');
+                sentences.splice(sentences.length-1, 1);
+                for(let i = 0; i < sentences.length; i++){
+                     var words = sentences[i].split(' ');
+                     console.log(sentences[i])
+                     for(let j = 0; j < words.length; j++) {
+                         if(words[j] != ""){
+                             var el = document.createElement("button");
+                             el.className = "word";
+                             el.id = num.toString();
+                             el.innerHTML = words[j];
+                             el.setAttribute("onclick", "getWordTranslation(" + num + ")");
+                             el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
+                             if (j == words.length - 1)
+                                 el.innerHTML = words[j] + '.';
+                             e.appendChild(el);
+                             num += 1;
+                         }
+                     }
+                }
             },
 
             listen: function () {
@@ -356,7 +444,7 @@
     })
 
     //开始使用
-    function get_start() {
+    async function get_start() {
 
         //开启webgazer
         //眼动数据监听
@@ -383,12 +471,13 @@
         }).begin();
         //全屏
         full_screen();
-        //展示阅读内容
-        document.getElementById("mainContent").style.display = "inline";
+
         //隐藏提示
         document.getElementById("tips_begin").style.display = "none";
 
-        app.getContent();
+        await app.getContent();
+
+        app.getPage();
     }
 
     //监听空格事件
@@ -398,22 +487,25 @@
             case 37: {
                 if (app._data.page > 1) {
                     app.clearPageWords();
-                    get_base64_gaze_and_intervention();
-                    app.getContent();
+                    {#get_base64_gaze_and_intervention();#}
                     x = [];
                     y = [];
                     app._data.page = app._data.page - 1;
+                    app.getPage();
                 }
                 break;
             }
             case 39: {
+                console.log(app._data.totalPage)
+                console.log(app._data.page)
                 if (app._data.page < app._data.totalPage) {
                     app.clearPageWords();
-                    get_base64_gaze_and_intervention();
-                    app.getContent();
+                    {#get_base64_gaze_and_intervention();#}
                     x = [];
                     y = [];
                     app._data.page = app._data.page + 1;
+                    console.log(app._data.page)
+                    app.getPage();
                     break;
                 }
             }
@@ -466,7 +558,8 @@
             async: false,
             success: function () {
                 console.log("success");
-                window.location.href = 'http://127.0.0.1:8000/label';
+                if(app._data.page == app._data.totalPage)
+                    window.location.href = 'http://127.0.0.1:8000/label';
             },
             error: function () {
                 console.log("error");
