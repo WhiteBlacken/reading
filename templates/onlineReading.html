@@ -81,7 +81,8 @@
             paras: [],
             contentPerPage: [],
             transPerPage: [],
-
+            buttonLocPerPage: [],
+            buttonCurLoc: [],
             words: [],
             page: 1,
             totalPage: 1,
@@ -276,14 +277,20 @@
                     let sentenceNum = 0;
                     let conPerPage = [];
                     let transPerPage = [];
+                    let locPerPage = [];
                     let wordLength = 0;
 
                     while(sentenceNum < sentences.length) {
                         num = 0;
                         conPerPage = [];
                         transPerPage = [];
+                        locPerPage = [];
                         for(; sentenceNum < sentences.length; sentenceNum++){
                             var words = sentences[sentenceNum].split(' ');
+                            for(let p = 0; p < words.length; p++){
+                                if(words[p] == '')
+                                    words.splice(p,1);
+                            }
                             for(let k = 0; k < words.length; k++) {
                                 var el = document.createElement("button");
                                 el.className = "word";
@@ -304,16 +311,26 @@
                             }else{
                                 conPerPage.push(sentences[sentenceNum]);
                                 for(let k = wordLength+1; k <= wordLength + words.length; k++){
-                                    if(this.content[i][k])
-                                        transPerPage.push(this.content[i][k])
+                                    if(this.content[i][k]) {
+                                        transPerPage.push(this.content[i][k]);
+                                    }
                                 }
+                                for(let k = num; k < num + words.length; k++){
+                                    locPerPage.push(this.getWordLocation(k));
+
+                                }
+
                                 num += words.length;
+
                                 wordLength += words.length;
+
                             }
 
                         }
+                        this.buttonLocPerPage.push(locPerPage);
                         this.transPerPage.push(transPerPage);
                         this.contentPerPage.push(conPerPage.join('.')+".");
+
                     }
                 }
 
@@ -325,6 +342,7 @@
                     if(this.transPerPage[i].length == 0)
                         this.transPerPage.splice(i,1);
                 }
+                console.log(this.buttonLocPerPage)
                 this.totalPage = this.contentPerPage.length;
                 let tmp = this.contentPerPage;
                 let tmp_ = tmp.join('-.');
@@ -365,6 +383,7 @@
                 var e = document.getElementById('para');
                 var Content = this.contentPerPage[this.page-1];
                 this.contentCurPage = Content;
+                this.buttonCurLoc = this.buttonLocPerPage[this.page-1];
                 let sentences = Content.split('.');
                 sentences.splice(sentences.length-1, 1);
                 for(let i = 0; i < sentences.length; i++){
@@ -617,6 +636,7 @@
             formdata.append("interventions", interventions.toString());
             formdata.append("page", app._data.page);
             formdata.append("text", app._data.contentCurPage);
+            formdata.append("location", app._data.buttonCurLoc);
             $.ajax({
                 type: 'POST',
                 url: '/data/',
