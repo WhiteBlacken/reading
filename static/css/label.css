@@ -13,21 +13,18 @@ body{
 
 #labelArea{
     width: auto;
-    height: 772px;
-    padding: 0px 190px;
-    display: table;
+    height: auto;
+    padding: 95px 135px 0px 330px;
 }
 
 #para{
     width: 100%;
     height: auto;
-    display: table-cell;
-    vertical-align: middle;
 }
 
 .word{
-    font-size: 18pt;
-    padding: 85px 7px;
+    font-size: 16pt;
+    padding: 100px 7px;
     width: auto;
     height: auto;
     border-width: 0;
@@ -38,7 +35,7 @@ body{
 }
 
 #pageBox{
-    height: 90px;
+    height: 70px;
     display:flex;
     justify-content:center;
     align-items:center;

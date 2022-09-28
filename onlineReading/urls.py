@@ -25,7 +25,7 @@ urlpatterns = [
     path("login/", views.login, name="login"),
     path("text/", views.get_all_text_available),
     path("para/", views.get_paragraph_and_translation),
-    path("image/", views.get_image),
+
 
     path("cal/", views.cal),
     path("reading/", views.reading),

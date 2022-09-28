@@ -37,16 +37,12 @@
                     <div id="para">
 
                     </div>
-                    <el-button type="primary" style="position: fixed;bottom: 5rem;right: 2rem;"
+                    <el-button type="primary" style="position: fixed;bottom: 5rem;right: 5rem;"
                                v-on:click="collect_labels">标注完成
                     </el-button>
                 </div>
             </el-main>
-            <el-footer>
-                <div id="pageBox">
-                    [[ page ]]
-                </div>
-            </el-footer>
+
         </el-container>
     </div>
 </div>
@@ -117,23 +113,11 @@
                 }
             },
 
-            getContent: function () {
-                {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
-                {#).then((response) => {#}
-                {#    this.$nextTick(() => {#}
-                {#        this.setSheet();#}
-                {#    });});#}
-
-                this.content = getCookie('content');
-                this.totalPage = this.content.length;
-                console.log(this.content);
-
-
-            },
-
             getPage: function () {
                 let num = 0;
                 var e = document.getElementById('para');
+                console.log(this.content)
+                console.log(this.page)
                 var Content = this.content[this.page-1].split('.');
                 Content.splice(Content.length-1, 1);
                 for (let i = 0; i < Content.length; i++) {
@@ -166,7 +150,7 @@
                     data: formdata,
                     success: function () {
                         console.log("success");
-                        alert("完成阅读");
+
                     },
                     error: function () {
                         console.log("error");
@@ -182,8 +166,6 @@
                 while(e.hasChildNodes()){
                     e.removeChild(e.children[0]);
                 }
-
-                this.content = "";
                 this.words = [];
                 this.misUnderstandWords = [];
                 this.misUnderstandSentences = [];
@@ -191,8 +173,9 @@
             },
 
         },
-        async created() {
-            await this.getContent();
+        created() {
+            this.content = getCookie('contentPerPage').split('-.');
+            this.totalPage = this.content.length;
             this.getPage();
         },
         mounted() {

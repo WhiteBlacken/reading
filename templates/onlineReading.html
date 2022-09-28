@@ -326,8 +326,9 @@
                         this.transPerPage.splice(i,1);
                 }
                 this.totalPage = this.contentPerPage.length;
-
-                setCookie('contentPerPage', this.contentPerPage);
+                let tmp = this.contentPerPage;
+                let tmp_ = tmp.join('-.');
+                setCookie('contentPerPage', tmp_);
 
                 {#console.log(this.transPerPage)#}
 
