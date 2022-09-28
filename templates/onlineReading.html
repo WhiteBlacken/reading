@@ -253,7 +253,7 @@
                 {#        this.setSheet();#}
                 {#    });});#}
                 let paraNum = 0;
-                await axios.get("/text").then((response) => {
+                await axios.get("/para").then((response) => {
                     paraNum = response.data.length;
                     for (let i = 0; i < paraNum; i++) {
                         this.paras.push(response.data[i][0]);
