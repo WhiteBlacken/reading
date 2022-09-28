@@ -15,7 +15,8 @@ from action.models import (
     PageData,
     WordLevelData,
     Dispersion,
-    Paragraph, Experiment,
+    Paragraph,
+    Experiment,
 )
 from onlineReading.utils import (
     translate,
@@ -99,10 +100,9 @@ def get_paragraph_and_translation(request):
         para = para + 1
     # 创建一次实验
     experiment = Experiment.objects.create(
-        article_id=article_id,
-        user=request.session.get('username')
+        article_id=article_id, user=request.session.get("username")
     )
-    request.session['experiment_id'] = experiment.id
+    request.session["experiment_id"] = experiment.id
     return JsonResponse(para_dict, json_dumps_params={"ensure_ascii": False})
 
 
@@ -161,29 +161,33 @@ def get_page_data(request):
     y = request.POST.get("y")  # str类型
     t = request.POST.get("t")  # str类型
     interventions = request.POST.get("interventions")
-    text=request.POST.get("text")
-    page = request.POST.get('page')
+    texts = request.POST.get("text")
+    page = request.POST.get("page")
 
+    print("interventions:%s"%interventions)
     experiment_id = request.session.get("experiment_id", None)
     if experiment_id:
         PageData.objects.create(
             gaze_x=str(x),
             gaze_y=str(y),
             gaze_t=str(t),
-            text=text,# todo 前端发送过来
+            texts=texts,  # todo 前端发送过来
             interventions=str(interventions),
             image=image_base64,
-            page=page # todo 前端发送过来
+            page=page,  # todo 前端发送过来
+            experiment_id=experiment_id
         )
     return HttpResponse(1)
 
 
 def get_labels(request):
     labels = request.POST.get("labels")
-    page = request.POST.get('page')
+    page = request.POST.get("page")
     experiment_id = request.session.get("experiment_id", None)
     if experiment_id:
-        PageData.objects.filter(experiment_id=experiment_id).filter(page=page).update(labels=str(labels))
+        PageData.objects.filter(experiment_id=experiment_id).filter(page=page).update(
+            labels=str(labels)
+        )
     # todo wordlevel的存储 眼动图
     # labels = list(map(int, labels.split(",")))
     # WordLevelData.objects.filter(data_id=data_id).filter(
@@ -251,24 +255,24 @@ def label(request):
     return render(request, "label.html")
 
 
-def get_word_level_data(request):
-    gazes = simplejson.loads(request.body)  # list类型
-    data_id = request.session.get("data_id", None)
-
-    if data_id:
-        dataset = Dataset.objects.get(id=data_id)
-        interventions = dataset.interventions.split(",")
-        words = get_word_from_text(dataset.texts)
-        for gaze in gazes:
-            WordLevelData.objects.create(
-                data_id=data_id,
-                word_index_in_text=gaze[0],
-                gaze=gaze[1],
-                word=words[gaze[0]],
-                is_intervention=1 if str(gaze[0]) in interventions else 0,
-                is_understand=1,
-            )
-    return HttpResponse(1)
+# def get_word_level_data(request):
+#     gazes = simplejson.loads(request.body)  # list类型
+#     data_id = request.session.get("data_id", None)
+#
+#     if data_id:
+#         dataset = Dataset.objects.get(id=data_id)
+#         interventions = dataset.interventions.split(",")
+#         words = get_word_from_text(dataset.texts)
+#         for gaze in gazes:
+#             WordLevelData.objects.create(
+#                 data_id=data_id,
+#                 word_index_in_text=gaze[0],
+#                 gaze=gaze[1],
+#                 word=words[gaze[0]],
+#                 is_intervention=1 if str(gaze[0]) in interventions else 0,
+#                 is_understand=1,
+#             )
+#     return HttpResponse(1)
 
 
 def get_word_from_text(text):
@@ -284,64 +288,64 @@ def get_word_from_text(text):
     return get_word
 
 
-def get_hot_map(request, id):
-    datas = WordLevelData.objects.filter(data_id=id)
-    words = {}
-    dataset = Dataset.objects.get(id=id)
-    get_word = get_word_from_text(dataset.texts)
-    for data in datas:
-        # [[1210.9457590013656, 159.23231147793268, 9945], [1217.6909072718718, 159.41882110020455, 9990.800000011921], [1230.8749738465856, 168.33542300501568, 10017.700000017881]]
-        if words.get(get_word[data.word_index_in_text], -1) == -1:
-            tmp = []
-            # [[499.97320585558384, 500.07984655036023, 21.5]]
-            # [[499.97320585558384, 500.07984655036023, 21.5]]
-        else:
-            tmp = words[get_word[data.word_index_in_text]]
-        gaze = data.gaze[2:-2]
-        gazes = gaze.split("], [")
-        t = []
-        for gaze in gazes:
-            coordinate = gaze.split(", ")
-            t.append(int(float(coordinate[2])))
-        if t[-1] - t[0] > 30:
-            tmp.append(t[-1] - t[0])
-        if len(tmp) > 0:
-            words[get_word[data.word_index_in_text]] = tmp
-    # 补0画图
-    max_length = 0
-    words_name = []
-    for key in words:
-        if len(words[key]) > max_length:
-            max_length = len(words[key])
-        words_name.append(key)
-    print(max_length)
-    pic_data = []
-    for key in words:
-        if len(words[key]) < max_length:
-            i = max_length - len(words[key])
-            tmp = words[key]
-            while i > 0:
-                tmp.append(0)
-                i = i - 1
-            words[key] = tmp
-        pic_data.append(words[key])
-    print(pic_data)
-
-    print(words_name)
-    # import matplotlib.pyplot as plt
-    # import numpy as np
-    #
-    # harvest = np.array(pic_data)
-    #
-    # plt.yticks(np.arange(len(words_name)), labels=words_name)
-    # print(words_name)
-    # plt.title("Harvest of local farmers (in tons/year)")
-    #
-    # plt.imshow(harvest)
-    # plt.tight_layout()
-    # plt.show()
-
-    return JsonResponse(words)
+# def get_hot_map(request, id):
+#     datas = WordLevelData.objects.filter(data_id=id)
+#     words = {}
+#     dataset = Dataset.objects.get(id=id)
+#     get_word = get_word_from_text(dataset.texts)
+#     for data in datas:
+#         # [[1210.9457590013656, 159.23231147793268, 9945], [1217.6909072718718, 159.41882110020455, 9990.800000011921], [1230.8749738465856, 168.33542300501568, 10017.700000017881]]
+#         if words.get(get_word[data.word_index_in_text], -1) == -1:
+#             tmp = []
+#             # [[499.97320585558384, 500.07984655036023, 21.5]]
+#             # [[499.97320585558384, 500.07984655036023, 21.5]]
+#         else:
+#             tmp = words[get_word[data.word_index_in_text]]
+#         gaze = data.gaze[2:-2]
+#         gazes = gaze.split("], [")
+#         t = []
+#         for gaze in gazes:
+#             coordinate = gaze.split(", ")
+#             t.append(int(float(coordinate[2])))
+#         if t[-1] - t[0] > 30:
+#             tmp.append(t[-1] - t[0])
+#         if len(tmp) > 0:
+#             words[get_word[data.word_index_in_text]] = tmp
+#     # 补0画图
+#     max_length = 0
+#     words_name = []
+#     for key in words:
+#         if len(words[key]) > max_length:
+#             max_length = len(words[key])
+#         words_name.append(key)
+#     print(max_length)
+#     pic_data = []
+#     for key in words:
+#         if len(words[key]) < max_length:
+#             i = max_length - len(words[key])
+#             tmp = words[key]
+#             while i > 0:
+#                 tmp.append(0)
+#                 i = i - 1
+#             words[key] = tmp
+#         pic_data.append(words[key])
+#     print(pic_data)
+#
+#     print(words_name)
+#     # import matplotlib.pyplot as plt
+#     # import numpy as np
+#     #
+#     # harvest = np.array(pic_data)
+#     #
+#     # plt.yticks(np.arange(len(words_name)), labels=words_name)
+#     # print(words_name)
+#     # plt.title("Harvest of local farmers (in tons/year)")
+#     #
+#     # plt.imshow(harvest)
+#     # plt.tight_layout()
+#     # plt.show()
+#
+#     return JsonResponse(words)
 
 
 def get_dispersion(request):
@@ -557,7 +561,7 @@ def cm_2_pixel_test(request, k):
 >>>>>>> 7d4ceaa841b674eeb5adb3fd2065a9009a8f0140
 def get_content_from_txt(request):
     words_dict = {}
-    f = open('static/texts/1.txt', 'rb')
+    f = open("static/texts/1.txt", "rb")
     content = f.readlines()
     print(content)
     words_dict[0] = content
