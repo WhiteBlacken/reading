@@ -47,50 +47,6 @@ def translate(content):
         return {"status": 500, "zh": None}
 
 
-def get_fixations(coordinates):
-    """
-    根据gaze data(x,y,t1)计算fixation(x,y,r,t2) t2远小于t1
-    :return:
-    """
-    from collections import deque
-
-    fixations = []
-    min_duration = 100
-    max_duration = 1200
-    max_distance = 150
-    # 先进先出队列
-    working_queue = deque()
-    remaining_gaze = deque(coordinates)
-    print("gaze length:%d" % len(remaining_gaze))
-    while remaining_gaze:
-        # 逐个处理所有的gaze data
-        if (
-            len(working_queue) < 2
-            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
-        ):
-            # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
-            datum = remaining_gaze.popleft()
-            working_queue.append(datum)
-            continue
-        # 如果队列中两点距离超过max_distance，则不是一个fixation
-        if with_distance(working_queue[-1], working_queue[0], max_distance):
-            # not a fixation,move forward
-            working_queue.popleft()
-            continue
-
-        # minimal fixation found,collect maximal data
-        while remaining_gaze:
-            datum = remaining_gaze[0]
-            if datum[2] > working_queue[0][2] + max_duration or with_distance(
-                working_queue[0], datum, max_distance
-            ):
-                fixations.append(from_gazes_to_fixation(list(working_queue)))
-                working_queue.clear()
-                break  # maximum data found
-            working_queue.append(remaining_gaze.popleft())
-    return fixations
-
-
 def data_scale(datas, a, b):
     """将原本的数据缩放到【a，b】之间"""
     new_data = []

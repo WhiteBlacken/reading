@@ -20,11 +20,16 @@ from action.models import (
 )
 from onlineReading.utils import (
     translate,
-    get_fixations,
     get_euclid_distance,
     pixel_2_cm,
     pixel_2_deg,
     cm_2_pixel,
+)
+from utils import (
+    x_y_t_2_coordinate,
+    get_fixations,
+    add_fixations_to_word,
+    fixation_image,
 )
 
 
@@ -106,54 +111,6 @@ def get_paragraph_and_translation(request):
     return JsonResponse(para_dict, json_dumps_params={"ensure_ascii": False})
 
 
-# def get_image(data_id, username):
-#     """获取截图的图片+eye gaze，并生成眼动热点图"""
-#     if data_id:
-#         dataset = Dataset.objects.get(id=data_id)
-#         image_base64 = dataset.image
-#         x = dataset.gaze_x
-#         y = dataset.gaze_y
-#         t = dataset.gaze_t
-#
-#         # 1. 处理坐标
-#         list_x = x.split(",")
-#         list_y = y.split(",")
-#         list_t = t.split(",")
-#
-#         coordinates = []
-#         for i, item in enumerate(list_x):
-#             coordinate = (
-#                 int(float(list_x[i]) * 1920 / 1534),
-#                 int(float(list_y[i]) * 1920 / 1534),
-#                 int(float(list_t[i])),
-#             )
-#             coordinates.append(coordinate)
-#
-#         fixations = get_fixations(coordinates)
-#
-#         # 2. 处理图片
-#         data = image_base64.split(",")[1]
-#         # 将str解码为byte
-#         image_data = base64.b64decode(data)
-#         # 获取名称
-#         import time
-#
-#         filename = time.strftime("%Y%m%d%H%M%S") + ".png"
-#         print("filename:%s" % filename)
-#         # 存储地址
-#         print("session.username:%s" % username)
-#         path = "static/user/" + str(username) + "/"
-#         # 如果目录不存在，则创建目录
-#         if not os.path.exists(path):
-#             os.mkdir(path)
-#
-#         with open(path + filename, "wb") as f:
-#             f.write(image_data)
-#         paint_image(path + filename, fixations)
-#
-#     return HttpResponse("1")
-
-
 def get_page_data(request):
     """存储每页的数据"""
     image_base64 = request.POST.get("image")  # base64类型
@@ -163,6 +120,8 @@ def get_page_data(request):
     interventions = request.POST.get("interventions")
     texts = request.POST.get("text")
     page = request.POST.get("page")
+
+    location = request.POST.get("location")
 
     print("interventions:%s" % interventions)
     experiment_id = request.session.get("experiment_id", None)
@@ -176,6 +135,7 @@ def get_page_data(request):
             image=image_base64,
             page=page,  # todo 前端发送过来
             experiment_id=experiment_id,
+            location=location,
         )
     return HttpResponse(1)
 
@@ -188,53 +148,7 @@ def get_labels(request):
         PageData.objects.filter(experiment_id=experiment_id).filter(page=page).update(
             labels=str(labels)
         )
-    # todo wordlevel的存储 眼动图
-    # labels = list(map(int, labels.split(",")))
-    # WordLevelData.objects.filter(data_id=data_id).filter(
-    #     word_index_in_text__in=labels
-    # ).update(is_understand=0)
-    # # 生成眼动图
-    # if data_id:
-    #     get_image(data_id, request.session.get("username"))
     return render(request, "login.html")
-
-
-def paint_image(path, coordinates):
-    """在指定图片上绘图"""
-    import cv2
-
-    img = cv2.imread(path)
-    cnt = 0
-    pre_coordinate = (0, 0, 0)
-    for coordinate in coordinates:
-        cv2.circle(
-            img,
-            (coordinate[0], coordinate[1]),
-            int(float(coordinate[2] / 30)),
-            (0, 0, 255),
-            1,
-        )
-        if cnt > 0:
-            cv2.line(
-                img,
-                (pre_coordinate[0], pre_coordinate[1]),
-                (coordinate[0], coordinate[1]),
-                (0, 0, 255),
-                2,
-            )
-        cnt = cnt + 1
-        # 标序号
-        cv2.putText(
-            img,
-            str(cnt),
-            (coordinate[0], coordinate[1]),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (0, 255, 0),
-            2,
-        )
-        pre_coordinate = coordinate
-    cv2.imwrite(path, img)
 
 
 def cal(request):
@@ -563,3 +477,18 @@ def get_content_from_txt(request):
     print(content)
     words_dict[0] = content
     return JsonResponse(words_dict, json_dumps_params={"ensure_ascii": False})
+
+
+def get_utils_test(request):
+    page_data_id = request.GET.get("id")
+    pagedata = PageData.objects.get(id=page_data_id)
+    gaze_coordinates = x_y_t_2_coordinate(
+        pagedata.gaze_x, pagedata.gaze_y, pagedata.gaze_t
+    )
+    print("len(gaze):%d" % (len(gaze_coordinates)))
+    fixations = get_fixations(gaze_coordinates)
+    print("fixations:%s" % fixations)
+    result = add_fixations_to_word(fixations, pagedata.location)
+    username = Experiment.objects.get(id=pagedata.experiment_id).user
+    fixation_image(pagedata.image, username, fixations, page_data_id)
+    return HttpResponse(result)

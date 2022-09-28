@@ -13,7 +13,15 @@ class Text(models.Model):
 
     def toJson(self):
         import json
-        return json.dumps(dict([(attr, getattr(self, attr)) for attr in [f.name for f in self._meta.fields]]))
+
+        return json.dumps(
+            dict(
+                [
+                    (attr, getattr(self, attr))
+                    for attr in [f.name for f in self._meta.fields]
+                ]
+            )
+        )
 
 
 class Paragraph(models.Model):
@@ -53,6 +61,8 @@ class PageData(models.Model):
     experiment_id = models.BigIntegerField()
     page = models.IntegerField()
     created_time = models.DateTimeField(default=timezone.now)
+    location = models.TextField()
+
     class Meta:
         db_table = "data_page"
 

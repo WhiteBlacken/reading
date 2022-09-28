@@ -37,4 +37,5 @@ urlpatterns = [
     path("test/", views.test_dispersion),
     path("dispersion/", views.get_dispersion),
     path("cm/<int:k>/", views.cm_2_pixel_test),
+    path("utils/",views.get_utils_test)
 ]
