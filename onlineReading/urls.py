@@ -27,11 +27,11 @@ urlpatterns = [
     path("text/", views.get_all_text_available),
     path("para/", views.get_paragraph_and_translation),
 
-    path("image/", views.get_image),
+    # path("image/", views.get_image),
     path("cal/", views.cal),
     path("reading/", views.reading),
     path("label/", views.label),
-    path("data/", views.get_data),
+    path("data/", views.get_page_data),
     path("label/send/", views.get_labels),
     path("word_level_data/",views.get_word_level_data),
     path("hotmap/<int:id>/",views.get_hot_map),

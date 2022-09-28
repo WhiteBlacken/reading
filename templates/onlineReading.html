@@ -487,7 +487,7 @@
             case 37: {
                 if (app._data.page > 1) {
                     app.clearPageWords();
-                    {#get_base64_gaze_and_intervention();#}
+                    get_base64_gaze_and_intervention();
                     x = [];
                     y = [];
                     app._data.page = app._data.page - 1;
@@ -500,7 +500,7 @@
                 console.log(app._data.page)
                 if (app._data.page < app._data.totalPage) {
                     app.clearPageWords();
-                    {#get_base64_gaze_and_intervention();#}
+                    get_base64_gaze_and_intervention();
                     x = [];
                     y = [];
                     app._data.page = app._data.page + 1;
@@ -548,27 +548,28 @@
         return "";
     }
 
-    function get_word_level_gaze_data() {
+    //待修改
+    {#function get_word_level_gaze_data() {#}
+    {##}
+    {#    $.ajax({#}
+    {#        type: 'POST',#}
+    {#        url: '/word_level_data/',#}
+    {#        data: JSON.stringify(app._data.readSequel),#}
+    {#        dataType: "JSON",#}
+    {#        async: false,#}
+    {#        success: function () {#}
+    {#            console.log("success");#}
+    {#            if(app._data.page == app._data.totalPage)#}
+    {#                window.location.href = 'http://127.0.0.1:8000/label';#}
+    {#        },#}
+    {#        error: function () {#}
+    {#            console.log("error");#}
+    {#        },#}
+    {#        processData: false,#}
+    {#        contentType: false#}
+    {##}
+    {#    })#}
 
-        $.ajax({
-            type: 'POST',
-            url: '/word_level_data/',
-            data: JSON.stringify(app._data.readSequel),
-            dataType: "JSON",
-            async: false,
-            success: function () {
-                console.log("success");
-                if(app._data.page == app._data.totalPage)
-                    window.location.href = 'http://127.0.0.1:8000/label';
-            },
-            error: function () {
-                console.log("error");
-            },
-            processData: false,
-            contentType: false
-
-        })
-    }
 
     //截图
     function get_base64_gaze_and_intervention() {
@@ -603,13 +604,16 @@
             formdata.append("y", y.toString());
             formdata.append("t", t.toString());
             formdata.append("interventions", interventions.toString());
+            formdata.append("page",app._data.page.toString());
+            formdata.append("text","tttt");
             $.ajax({
                 type: 'POST',
                 url: '/data/',
                 data: formdata,
                 async: false,
                 success: function () {
-                    get_word_level_gaze_data();
+                    if(app._data.page == app._data.totalPage)
+                    window.location.href = 'http://127.0.0.1:8000/label';
                 },
                 error: function () {
                     console.log("error");

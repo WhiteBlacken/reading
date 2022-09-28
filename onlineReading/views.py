@@ -12,10 +12,10 @@ from django.shortcuts import render
 from action.models import (
     Text,
     Dictionary,
-    Dataset,
+    PageData,
     WordLevelData,
     Dispersion,
-    Paragraph,
+    Paragraph, Experiment,
 )
 from onlineReading.utils import (
     translate,
@@ -56,7 +56,7 @@ def get_all_text_available(request):
 def get_paragraph_and_translation(request):
     """根据文章id获取整篇文章的分段以及翻译"""
     # 获取整篇文章的内容和翻译
-    article_id = request.GET.get("article_id",1)
+    article_id = request.GET.get("article_id", 1)
     paragraphs = Paragraph.objects.filter(article_id=article_id)
     print(len(paragraphs))
     para_dict = {}
@@ -97,93 +97,101 @@ def get_paragraph_and_translation(request):
                     words_dict[cnt] = {"en": word, "zh": zh, "sentence_zh": sentence_zh}
         para_dict[para] = words_dict
         para = para + 1
-    # 将文本存入数据库
-    dataset = Dataset.objects.create(texts="test")
-    request.session["data_id"] = dataset.id
+    # 创建一次实验
+    experiment = Experiment.objects.create(
+        article_id=article_id,
+        user=request.session.get('username')
+    )
+    request.session['experiment_id'] = experiment.id
     return JsonResponse(para_dict, json_dumps_params={"ensure_ascii": False})
 
 
-def get_image(data_id, username):
-    """获取截图的图片+eye gaze，并生成眼动热点图"""
-    if data_id:
-        dataset = Dataset.objects.get(id=data_id)
-        image_base64 = dataset.image
-        x = dataset.gaze_x
-        y = dataset.gaze_y
-        t = dataset.gaze_t
+# def get_image(data_id, username):
+#     """获取截图的图片+eye gaze，并生成眼动热点图"""
+#     if data_id:
+#         dataset = Dataset.objects.get(id=data_id)
+#         image_base64 = dataset.image
+#         x = dataset.gaze_x
+#         y = dataset.gaze_y
+#         t = dataset.gaze_t
+#
+#         # 1. 处理坐标
+#         list_x = x.split(",")
+#         list_y = y.split(",")
+#         list_t = t.split(",")
+#
+#         coordinates = []
+#         for i, item in enumerate(list_x):
+#             coordinate = (
+#                 int(float(list_x[i]) * 1920 / 1534),
+#                 int(float(list_y[i]) * 1920 / 1534),
+#                 int(float(list_t[i])),
+#             )
+#             coordinates.append(coordinate)
+#
+#         fixations = get_fixations(coordinates)
+#
+#         # 2. 处理图片
+#         data = image_base64.split(",")[1]
+#         # 将str解码为byte
+#         image_data = base64.b64decode(data)
+#         # 获取名称
+#         import time
+#
+#         filename = time.strftime("%Y%m%d%H%M%S") + ".png"
+#         print("filename:%s" % filename)
+#         # 存储地址
+#         print("session.username:%s" % username)
+#         path = "static/user/" + str(username) + "/"
+#         # 如果目录不存在，则创建目录
+#         if not os.path.exists(path):
+#             os.mkdir(path)
+#
+#         with open(path + filename, "wb") as f:
+#             f.write(image_data)
+#         paint_image(path + filename, fixations)
+#
+#     return HttpResponse("1")
 
-        # 1. 处理坐标
-        list_x = x.split(",")
-        list_y = y.split(",")
-        list_t = t.split(",")
 
-        coordinates = []
-        for i, item in enumerate(list_x):
-            coordinate = (
-                int(float(list_x[i]) * 1920 / 1534),
-                int(float(list_y[i]) * 1920 / 1534),
-                int(float(list_t[i])),
-            )
-            coordinates.append(coordinate)
-
-        fixations = get_fixations(coordinates)
-
-        # 2. 处理图片
-        data = image_base64.split(",")[1]
-        # 将str解码为byte
-        image_data = base64.b64decode(data)
-        # 获取名称
-        import time
-
-        filename = time.strftime("%Y%m%d%H%M%S") + ".png"
-        print("filename:%s" % filename)
-        # 存储地址
-        print("session.username:%s" % username)
-        path = "static/user/" + str(username) + "/"
-        # 如果目录不存在，则创建目录
-        if not os.path.exists(path):
-            os.mkdir(path)
-
-        with open(path + filename, "wb") as f:
-            f.write(image_data)
-        paint_image(path + filename, fixations)
-
-    return HttpResponse("1")
-
-
-def get_data(request):
+def get_page_data(request):
+    """存储每页的数据"""
     image_base64 = request.POST.get("image")  # base64类型
     x = request.POST.get("x")  # str类型
     y = request.POST.get("y")  # str类型
     t = request.POST.get("t")  # str类型
     interventions = request.POST.get("interventions")
+    text=request.POST.get("text")
+    page = request.POST.get('page')
 
-    data_id = request.session.get("data_id", None)
-
-    if data_id:
-        Dataset.objects.filter(id=data_id).update(
+    experiment_id = request.session.get("experiment_id", None)
+    if experiment_id:
+        PageData.objects.create(
             gaze_x=str(x),
             gaze_y=str(y),
             gaze_t=str(t),
+            text=text,# todo 前端发送过来
             interventions=str(interventions),
-            user=request.session.get("username"),
             image=image_base64,
+            page=page # todo 前端发送过来
         )
     return HttpResponse(1)
 
 
 def get_labels(request):
     labels = request.POST.get("labels")
-    data_id = request.session.get("data_id", None)
-    if data_id:
-        Dataset.objects.filter(id=data_id).update(labels=str(labels))
-    labels = list(map(int, labels.split(",")))
-    WordLevelData.objects.filter(data_id=data_id).filter(
-        word_index_in_text__in=labels
-    ).update(is_understand=0)
-    # 生成眼动图
-    if data_id:
-        get_image(data_id, request.session.get("username"))
+    page = request.POST.get('page')
+    experiment_id = request.session.get("experiment_id", None)
+    if experiment_id:
+        PageData.objects.filter(experiment_id=experiment_id).filter(page=page).update(labels=str(labels))
+    # todo wordlevel的存储 眼动图
+    # labels = list(map(int, labels.split(",")))
+    # WordLevelData.objects.filter(data_id=data_id).filter(
+    #     word_index_in_text__in=labels
+    # ).update(is_understand=0)
+    # # 生成眼动图
+    # if data_id:
+    #     get_image(data_id, request.session.get("username"))
     return render(request, "login.html")
 
 
@@ -542,6 +550,7 @@ def get_outlier_by_knn(data):
 
 def cm_2_pixel_test(request, k):
     return HttpResponse(cm_2_pixel(k))
+
 
 def get_content_from_txt(request):
     words_dict = {}
