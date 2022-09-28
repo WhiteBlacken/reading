@@ -253,7 +253,9 @@
                 {#        this.setSheet();#}
                 {#    });});#}
                 let paraNum = 0;
+
                 await axios.get("/para").then((response) => {
+
                     paraNum = response.data.length;
                     for (let i = 0; i < paraNum; i++) {
                         this.paras.push(response.data[i][0]);
@@ -267,11 +269,15 @@
                      }
                 });
                 var e = document.getElementById('para');
+                // 遍历每个段落
                 for(let i = 0 ; i < paraNum; i++) {
                     let num = 0;
+                    //分割出该段落的所有句子
                     var sentences = this.paras[i].split('.');
-                    for(let j = 0; j < sentences.length; j++){
-                        var words = sentences[j].split(' ');
+                    let sentenceNum = 0;
+                    let conPerPage = [];
+                    for(; sentenceNum < sentences.length; sentenceNum++){
+                        var words = sentences[sentenceNum].split(' ');
                         for(let k = 0; k < words.length; k++) {
                             var el = document.createElement("button");
                             el.className = "word";
@@ -282,9 +288,20 @@
                             if (k == words.length - 1)
                                 el.innerHTML = words[k] + '.';
                             e.appendChild(el);
-                            num += 1;
+                        }
+                        let paraHeight = $('#para').height();
+                        let buttonHeight = $('.word').height();
+                        if(Math.trunc(paraHeight / buttonHeight) > 3) {
+                            while(e.children[num]){
+                                e.removeChild(e.children[num]);
+                            }
+                            break;
+                        }else{
+                            conPerPage.push(sentences[sentenceNum]);
+                            num += words.length;
                         }
                     }
+                    this.contentPerPage.push(conPerPage.join('.'));
                 }
                 {#let num = 0;#}
                 {#var e = document.getElementById('para');#}
