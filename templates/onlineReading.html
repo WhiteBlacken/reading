@@ -77,6 +77,7 @@
         delimiters: ["[[", "]]"],
         data: {
             content: [],
+            contentCurPage: "",
             paras: [],
             contentPerPage: [],
             transPerPage: [],
@@ -255,9 +256,21 @@
                 {#        this.setSheet();#}
                 {#    });});#}
                 let paraNum = 0;
+
                 await axios.get("/para").then((response) => {
+
                     this.content = response.data;
+
+
+                        {#for(let j = 1; j < response.data[i].length; j++){#}
+                        {#    this.translation.push({#}
+                        {#        en: response.data[i].en,#}
+                        {#        zh: response.data[i].zh,#}
+                        {#        sentence_zh: response.data[i].sentence_zh#}
+                        {#    });#}
+                        {# }#}
                 });
+
 
                 this.content = Object.values(this.content);
                 paraNum = this.content.length;
@@ -314,6 +327,7 @@
                         this.transPerPage.push(transPerPage);
                         this.contentPerPage.push(conPerPage.join('.')+".");
                     }
+                    this.contentPerPage.push(conPerPage.join('.'));
                 }
 
                 while(e.children[0])
@@ -360,6 +374,7 @@
                 let num = 0;
                 var e = document.getElementById('para');
                 var Content = this.contentPerPage[this.page-1];
+                this.contentCurPage = Content;
                 let sentences = Content.split('.');
                 sentences.splice(sentences.length-1, 1);
                 for(let i = 0; i < sentences.length; i++){
@@ -610,7 +625,7 @@
             formdata.append("t", t.toString());
             formdata.append("interventions", interventions.toString());
             formdata.append("page",app._data.page.toString());
-            formdata.append("text","tttt");
+            formdata.append("text",app._data.contentCurPage);
             $.ajax({
                 type: 'POST',
                 url: '/data/',
