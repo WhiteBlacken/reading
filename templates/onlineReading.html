@@ -607,7 +607,7 @@
             formdata.append("y", y.toString());
             formdata.append("t", t.toString());
             formdata.append("interventions", interventions.toString());
-            formdata.append("text", app._data.contentCurPage)
+            formdata.append("text", app._data.contentCurPage);
             $.ajax({
                 type: 'POST',
                 url: '/data/',
