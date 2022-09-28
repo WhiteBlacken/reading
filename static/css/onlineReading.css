@@ -13,9 +13,8 @@ body{
 
 #readArea{
     width: auto;
-    height: 772px;
-    padding: 0px 220px 0px 330px;
-    display: table;
+    height: auto;
+    padding: 95px 135px 0px 330px;
 }
 
 /*#trans{*/
@@ -45,14 +44,11 @@ body{
 #para{
     width: 100%;
     height: auto;
-    display: table-cell;
-    vertical-align: middle;
-
 }
 
 .word{
     font-size: 16pt;
-    padding: 98px 7px;
+    padding: 100px 8px;
     width: auto;
     height: auto;
     border-width: 0;

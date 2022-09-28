@@ -27,15 +27,19 @@ urlpatterns = [
     path("text/", views.get_all_text_available),
     path("para/", views.get_paragraph_and_translation),
 
+<<<<<<< HEAD
     path("image/", views.get_image),
+=======
+    # path("image/", views.get_image),
+>>>>>>> 7d4ceaa841b674eeb5adb3fd2065a9009a8f0140
     path("cal/", views.cal),
     path("reading/", views.reading),
     path("label/", views.label),
-    path("data/", views.get_data),
+    path("data/", views.get_page_data),
     path("label/send/", views.get_labels),
-    path("word_level_data/", views.get_word_level_data),
-    path("hotmap/<int:id>/", views.get_hot_map),
-    path("test/", views.test_dispersion),
-    path("dispersion/", views.get_dispersion),
-    path("cm/<int:k>/", views.cm_2_pixel_test),
+    path("word_level_data/",views.get_word_level_data),
+    path("hotmap/<int:id>/",views.get_hot_map),
+    path("test/",views.test_dispersion),
+    path("dispersion/",views.get_dispersion),
+    path('cm/<int:k>/',views.cm_2_pixel_test)
 ]

@@ -33,7 +33,16 @@ class Dictionary(models.Model):
         db_table = "dictionary"
 
 
-class Dataset(models.Model):
+class Experiment(models.Model):
+    # 一人次是一个实验
+    article_id = models.BigIntegerField()
+    user = models.CharField(max_length=200)
+
+    class Meta:
+        db_table = "data_experiment"
+
+
+class PageData(models.Model):
     gaze_x = models.TextField()
     gaze_y = models.TextField()
     gaze_t = models.TextField()
@@ -41,10 +50,11 @@ class Dataset(models.Model):
     interventions = models.CharField(max_length=1000)
     labels = models.CharField(max_length=1000)
     image = models.TextField()
-    user = models.CharField(max_length=200)
+    experiment_id = models.BigIntegerField()
+    page = models.IntegerField()
 
     class Meta:
-        db_table = "dataset"
+        db_table = "data_page"
 
 
 class WordLevelData(models.Model):
