@@ -164,7 +164,7 @@ def get_page_data(request):
     texts = request.POST.get("text")
     page = request.POST.get("page")
 
-    print("interventions:%s"%interventions)
+    print("interventions:%s" % interventions)
     experiment_id = request.session.get("experiment_id", None)
     if experiment_id:
         PageData.objects.create(
@@ -175,7 +175,7 @@ def get_page_data(request):
             interventions=str(interventions),
             image=image_base64,
             page=page,  # todo 前端发送过来
-            experiment_id=experiment_id
+            experiment_id=experiment_id,
         )
     return HttpResponse(1)
 
@@ -555,10 +555,7 @@ def get_outlier_by_knn(data):
 def cm_2_pixel_test(request, k):
     return HttpResponse(cm_2_pixel(k))
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 7d4ceaa841b674eeb5adb3fd2065a9009a8f0140
 def get_content_from_txt(request):
     words_dict = {}
     f = open("static/texts/1.txt", "rb")
