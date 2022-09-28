@@ -1,5 +1,5 @@
 from django.db import models
-
+import django.utils.timezone as timezone
 
 # Create your models here.
 
@@ -52,7 +52,7 @@ class PageData(models.Model):
     image = models.TextField()
     experiment_id = models.BigIntegerField()
     page = models.IntegerField()
-
+    created_time = models.DateTimeField(default=timezone.now)
     class Meta:
         db_table = "data_page"
 
