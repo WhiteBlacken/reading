@@ -27,7 +27,11 @@ urlpatterns = [
     path("text/", views.get_all_text_available),
     path("para/", views.get_paragraph_and_translation),
 
+<<<<<<< HEAD
+    path("image/", views.get_image),
+=======
     # path("image/", views.get_image),
+>>>>>>> 7d4ceaa841b674eeb5adb3fd2065a9009a8f0140
     path("cal/", views.cal),
     path("reading/", views.reading),
     path("label/", views.label),

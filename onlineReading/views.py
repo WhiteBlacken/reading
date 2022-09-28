@@ -551,7 +551,10 @@ def get_outlier_by_knn(data):
 def cm_2_pixel_test(request, k):
     return HttpResponse(cm_2_pixel(k))
 
+<<<<<<< HEAD
+=======
 
+>>>>>>> 7d4ceaa841b674eeb5adb3fd2065a9009a8f0140
 def get_content_from_txt(request):
     words_dict = {}
     f = open('static/texts/1.txt', 'rb')
