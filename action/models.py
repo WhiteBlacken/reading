@@ -5,12 +5,24 @@ from django.db import models
 
 
 class Text(models.Model):
+    title = models.CharField(max_length=200)
+    is_show = models.BooleanField()
+
+    class Meta:
+        db_table = "material_text"
+
+    def toJson(self):
+        import json
+        return json.dumps(dict([(attr, getattr(self, attr)) for attr in [f.name for f in self._meta.fields]]))
+
+
+class Paragraph(models.Model):
     article_id = models.BigIntegerField()
-    para_id = models.BigIntegerField()
+    para_id = models.IntegerField()
     content = models.TextField()
 
     class Meta:
-        db_table = "text"
+        db_table = "material_paragraph"
 
 
 class Dictionary(models.Model):
