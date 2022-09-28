@@ -3,12 +3,20 @@ import math
 import os
 
 import simplejson
+from django.core import serializers
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
-from action.models import Text, Dictionary, Dataset, WordLevelData, Dispersion
+from action.models import (
+    Text,
+    Dictionary,
+    Dataset,
+    WordLevelData,
+    Dispersion,
+    Paragraph,
+)
 from onlineReading.utils import (
     translate,
     get_fixations,
@@ -36,18 +44,29 @@ def index(request):
     return render(request, "onlineReading.html")
 
 
-def get_text(request):
+def get_all_text_available(request):
+    """获取所有可以展示的文章列表"""
+    texts = Text.objects.filter(is_show=True)
+    texts_json = serializers.serialize("json", texts)
+    return JsonResponse(
+        texts_json, json_dumps_params={"ensure_ascii": False}, safe=False
+    )
 
-    texts = Text.objects.filter(article_id=2)
-    print(len(texts))
+
+def get_paragraph_and_translation(request):
+    """根据文章id获取整篇文章的分段以及翻译"""
+    # 获取整篇文章的内容和翻译
+    article_id = request.GET.get("article_id",1)
+    paragraphs = Paragraph.objects.filter(article_id=article_id)
+    print(len(paragraphs))
     para_dict = {}
     para = 0
-    for text in texts:
+    for paragraph in paragraphs:
         words_dict = {}
         # 切成句子
-        sentences = text.content.split(".")
+        sentences = paragraph.content.split(".")
         cnt = 0
-        words_dict[0] = text.content
+        words_dict[0] = paragraph.content
         for sentence in sentences:
             # 去除句子前后空格
             sentence = sentence.strip()
