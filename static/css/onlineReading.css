@@ -15,7 +15,6 @@ body{
     width: auto;
     height: 772px;
     padding: 0px 220px 0px 330px;
-    display: table;
 }
 
 /*#trans{*/
@@ -45,9 +44,6 @@ body{
 #para{
     width: 100%;
     height: auto;
-    display: table-cell;
-    vertical-align: middle;
-
 }
 
 .word{
