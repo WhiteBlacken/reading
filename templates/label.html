@@ -20,8 +20,15 @@
         <!-- Modal content-->
             <div class="modal-content">
                 <div class="modal-body">
-                    接下来，请在您刚才读完的文章中单击标注出阅读过程中不认识的单词，标注形式如下：
-                    <img src="/static/images/labeling.jpg" width="100%" height="100%" alt="labeling instructions"></img>
+                    接下来，请在您刚才读完的文章中进行标注，具体如下。
+                    1. 若在阅读过程中有不懂的单词，请<strong>单击该单词</strong>，标注形式如下：
+                    <img src="/static/images/wordLabel.jpg" width="100%" height="100%" alt="labeling instructions"></img>
+                    2. 若在阅读过程中有不懂的句子，请<strong>双击句子中任意一个单词</strong>，标注形式如下：
+                    <img src="/static/images/sentenceLabel.jpg" width="100%" height="100%" alt="labeling instructions"></img>
+                    3. 若在阅读过程中出现走神，请<strong>单击对应句子末尾右上方的圆形按钮</strong>，标注形式如下：
+                    <img src="/static/images/wanderLabel.jpg" width="100%" height="100%" alt="labeling instructions"></img>
+                    <br />
+                    <strong>注意：</strong>句子不懂的标注会覆盖该句子中不懂单词的标注，走神句子的标注会覆盖该句子中句子不懂和单词不懂的标注！
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" data-dismiss="modal">明白了！</button>
@@ -55,8 +62,10 @@
             content: "",
             contentOfPages: [],
             words: [],
+            sentences: [],
             page: 1,
             totalPage: 1,
+            labels: [],
             misUnderstandWords: [],
             misUnderstandSentences: [],
             misUnderstandWordsLabel: [],
@@ -73,52 +82,148 @@
             },
 
             changeWordSelect: function (num) {
-                if ($('.word:eq(' + num + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)') {
+                if ($('.word:eq(' + num + ')').css('text-decoration') == 'underline solid rgb(255, 0, 0)' ||
+                    $('.word:eq(' + num + ')').css('text-decoration') == 'underline solid rgb(128, 0, 128)') {
+                    return;
+                }else if ($('.word:eq(' + num + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)') {
                     $('.word:eq(' + num + ')').css('text-decoration', "");
                     $('.word:eq(' + num + ')').css('color', "black");
-                    for (let i = 0; i < this.misUnderstandWords[this.page-1][1].length; i++) {
-                        if (this.misUnderstandWords[this.page-1][1][i] == this.words[num])
-                            this.misUnderstandWords[this.page-1][1].splice(i, 1);
+                    for (let i = 0; i < this.labels[this.page-1].wordLabels.length; i++) {
+                        if (this.labels[this.page-1].wordLabels[i] == num)
+                            this.labels[this.page-1].wordLabels.splice(i, 1);
                     }
-                    for(let i=0;i<this.misUnderstandWordsLabel[this.page-1][1].length;i++){
-                        if(num==this.misUnderstandWordsLabel[this.page-1][1][i]){
-                            this.misUnderstandWordsLabel[this.page-1][1].splice(i,1);
-                        }
-                    }
+
                 } else {
                     $('.word:eq(' + num + ')').css('text-decoration', "underline");
                     $('.word:eq(' + num + ')').css('color', "blue");
-                    this.misUnderstandWords[this.page-1][1].push(this.words[num]);
-                    this.misUnderstandWordsLabel[this.page-1][1].push(num);
+                    this.labels[this.page-1].wordLabels.push(num);
 
                 }
+                console.log(this.labels);
             },
 
-            changeSentenceSelect: function (start, end) {
-                for(let i = start; i < end; i++){
-                    if($('.word:eq(' + i + ')').css('text-decoration') != 'underline solid rgb(0, 0, 255)'){
-                        for(let j = start; j < end; j++) {
-                            $('.word:eq(' + j + ')').css('text-decoration', 'underline solid rgb(0, 0, 255)');
-                            $('.word:eq(' + j + ')').css('color', "blue");
-                        }
-                        this.misUnderstandSentences.push();
-                        return;
+            changeSentenceSelect: async function (num) {
+                let start = 0;
+                let end = 0;
+                for(let i = 0; i < this.sentences.length; i++){
+                    let w = this.sentences[i].split(' ');
+                    for(let j = 0; j < w.length; j++)
+                        if(w[j] == '')
+                            w.splice(j,1);
+                    if(start + w.length < num){
+                        start += w.length;
+                    }else{
+                        end = start + w.length;
+                        break;
                     }
                 }
+
                 for(let i = start; i < end; i++){
-                    $('.word:eq(' + i + ')').css('text-decoration', '');
-                    $('.word:eq(' + i + ')').css('color', "black");
-                    this.misUnderstandSentences.splice();
+                    if ($('.word:eq(' + num + ')').css('text-decoration') == 'underline solid rgb(128, 0, 128)') {
+                        return;
+                    }else if($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)'){
+                        await this.changeWordSelect(i);
+                        for(let j = start; j < end; j++) {
+                            $('.word:eq(' + j + ')').css('text-decoration', 'underline');
+                            $('.word:eq(' + j + ')').css('color', "red");
+                        }
+                        this.labels[this.page-1].sentenceLabels.push(new Array(start,end));
+                        console.log(this.labels);
+                        return;
+                    }else if ($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(255, 0, 0)'){
+                        for(let j = start; j < end; j++){
+                            $('.word:eq(' + j + ')').css('text-decoration', '');
+                            $('.word:eq(' + j + ')').css('color', "black");
+                        }
+                        for(let j = 0;j < this.labels[this.page-1].sentenceLabels.length; j++){
+                            if(this.labels[this.page-1].sentenceLabels[j][0] == start && this.labels[this.page-1].sentenceLabels[j][1] == end){
+                                this.labels[this.page-1].sentenceLabels.splice(j,1);
+                                console.log(this.labels);
+                                return;
+                            }
+                        }
+                    }
                 }
+                for(let i = start; i < end; i++) {
+                    $('.word:eq(' + i + ')').css('text-decoration', 'underline');
+                    $('.word:eq(' + i + ')').css('color', "red");
+                }
+                this.labels[this.page-1].sentenceLabels.push(new Array(start,end));
+                console.log(this.labels);
+            },
+
+            changeWanderSelect: async function (num) {
+                let start = 0;
+                let end = 0;
+                for(let i = 0; i < num-1; i++){
+                    let w = this.sentences[i].split(' ');
+                    for(let j = 0; j < w.length; j++)
+                        if(w[j] == '')
+                            w.splice(j,1);
+                    start += w.length;
+                }
+                let w = this.sentences[num-1].split(' ');
+                for(let i = 0; i < w.length; i++){
+                    if(w[i] == '')
+                        w.splice(i,1);
+                }
+                end = start + w.length;
+
+                for(let i = start; i < end; i++){
+                    if($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)'){
+                        await this.changeWordSelect(i);
+                        for(let j = start; j < end; j++) {
+                            $('.word:eq(' + j + ')').css('text-decoration', 'underline');
+                            $('.word:eq(' + j + ')').css('color', "purple");
+                        }
+                        document.getElementsByClassName('wander')[num-1].style.borderColor = "purple";
+                        document.getElementsByClassName('wander')[num-1].style.color = "purple";
+                        this.labels[this.page-1].wanderLabels.push(new Array(start,end));
+                        console.log(this.labels);
+                        return;
+                    }else if ($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(255, 0, 0)') {
+                        await this.changeSentenceSelect(i);
+                        for(let j = start; j < end; j++) {
+                            $('.word:eq(' + j + ')').css('text-decoration', 'underline');
+                            $('.word:eq(' + j + ')').css('color', "purple");
+                        }
+                        document.getElementsByClassName('wander')[num-1].style.borderColor = "purple";
+                        document.getElementsByClassName('wander')[num-1].style.color = "purple";
+                        this.labels[this.page-1].wanderLabels.push(new Array(start,end));
+                        console.log(this.labels);
+                        return;
+                    }else if ($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(128, 0, 128)'){
+                        for(let j = start; j < end; j++){
+                            $('.word:eq(' + j + ')').css('text-decoration', '');
+                            $('.word:eq(' + j + ')').css('color', "black");
+                        }
+                        document.getElementsByClassName('wander')[num-1].style.borderColor = "black";
+                        document.getElementsByClassName('wander')[num-1].style.color = "black";
+                        for(let j = 0;j < this.labels[this.page-1].wanderLabels.length; j++){
+                            if(this.labels[this.page-1].wanderLabels[j][0] == start && this.labels[this.page-1].wanderLabels[j][1] == end){
+                                this.labels[this.page-1].wanderLabels.splice(j,1);
+                                console.log(this.labels);
+                                return;
+                            }
+                        }
+                    }
+                }
+                for(let i = start; i < end; i++) {
+                    $('.word:eq(' + i + ')').css('text-decoration', 'underline');
+                    $('.word:eq(' + i + ')').css('color', "purple");
+                }
+                document.getElementsByClassName('wander')[num-1].style.borderColor = "purple";
+                document.getElementsByClassName('wander')[num-1].style.color = "purple";
+                this.labels[this.page-1].wanderLabels.push(new Array(start,end));
+                console.log(this.labels);
             },
 
             getPage: function () {
                 let num = 0;
                 var e = document.getElementById('para');
-                console.log(this.content)
-                console.log(this.page)
                 var Content = this.content[this.page-1].split('.');
                 Content.splice(Content.length-1, 1);
+                this.sentences = Content;
                 for (let i = 0; i < Content.length; i++) {
                     var sentence = Content[i].split(' ');
                     for (let j = 0; j < sentence.length; j++) {
@@ -129,28 +234,33 @@
                             el.id = num.toString();
                             el.innerHTML = sentence[j];
                             el.setAttribute("onclick", "changeWordSelect(" + num + ")");
-                            {#el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");#}
-                            if (j == sentence.length - 1)
-                                el.innerHTML = sentence[j] + '.';
+                            el.setAttribute("ondblclick", "changeSentenceSelect(" + num + ")");
                             e.appendChild(el);
+                            if (j == sentence.length - 1) {
+                                el.innerHTML = sentence[j] + '.';
+                                var lab = document.createElement("button");
+                                lab.className = "wander";
+                                lab.innerHTML = (i+1).toString();
+                                lab.style.left = el.getBoundingClientRect().right -10 + "px";
+                                lab.style.top = el.getBoundingClientRect().top + 40 + "px";
+                                lab.setAttribute("onclick", "changeWanderSelect("+ (i+1) + ")");
+                                document.getElementById('labelArea').appendChild(lab);
+                            }
                             num += 1;
                         }
                     }
                 }
-                if(!this.misUnderstandWords[this.page-1]){
-                    this.misUnderstandWords.push([this.page, new Array()]);
-                    this.misUnderstandWordsLabel.push([this.page, new Array()]);
+                if(!this.labels[this.page-1]){
+                    this.labels.push({page: this.page, wordLabels: new Array(), sentenceLabels: new Array(), wanderLabels: new Array()});
                 }
             },
 
             //把labels发送给后端存储,并更新word_level_data
             collect_labels: function () {
-                let formdata = new FormData();
-                formdata.append("labels", this.misUnderstandWordsLabel.toString());
                 $.ajax({
                     type: 'POST',
                     url: '/label/send/',
-                    data: formdata,
+                    data: JSON.stringify(this.labels),
                     success: function () {
                         console.log("success");
 
@@ -170,6 +280,9 @@
                 while(e.hasChildNodes()){
                     e.removeChild(e.children[0]);
                 }
+                e = document.getElementById('labelArea');
+                while(e.children[2])
+                    e.removeChild(e.children[2]);
                 this.words = [];
             },
 
@@ -182,6 +295,12 @@
         mounted() {
             window["changeWordSelect"] = (num) => {
                 this.changeWordSelect(num);
+            }
+            window["changeSentenceSelect"] = (num) => {
+                this.changeSentenceSelect(num);
+            }
+            window["changeWanderSelect"] = (num) => {
+                this.changeWanderSelect(num);
             }
         },
     })
@@ -216,7 +335,6 @@
             case 39: {
                 if (app._data.page < app._data.totalPage) {
                     app.clearPageWords();
-                    console.log(app._data.misUnderstandWordsLabel)
                     x = [];
                     y = [];
                     app._data.page = app._data.page + 1;

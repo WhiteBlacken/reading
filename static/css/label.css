@@ -14,7 +14,7 @@ body{
 #labelArea{
     width: auto;
     height: auto;
-    padding: 95px 135px 0px 330px;
+    padding: 95px 130px 0px 330px;
 }
 
 #para{
@@ -24,7 +24,7 @@ body{
 
 .word{
     font-size: 16pt;
-    padding: 100px 7px;
+    padding: 70px 7px;
     width: auto;
     height: auto;
     border-width: 0;
@@ -32,6 +32,16 @@ body{
     background: rgba(0,0,0,0);
     cursor: pointer;
 
+}
+
+.wander{
+    height: 24px;
+    width: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    background: rgba(0,0,0,0);
+    position: absolute;
+    font-size: 6px;
 }
 
 #pageBox{

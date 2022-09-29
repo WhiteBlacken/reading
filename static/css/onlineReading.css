@@ -14,7 +14,7 @@ body{
 #readArea{
     width: auto;
     height: auto;
-    padding: 95px 135px 0px 330px;
+    padding: 95px 130px 0px 330px;
 }
 
 /*#trans{*/
@@ -51,7 +51,7 @@ body{
 
 .word{
     font-size: 16pt;
-    padding: 100px 8px;
+    padding: 70px 8px;
     width: auto;
     height: auto;
     border-width: 0;

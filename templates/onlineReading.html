@@ -160,7 +160,7 @@
 
                     el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
 
-                    el.style.top = this.wordLocation.top - 35 + "px";
+                    el.style.top = this.wordLocation.top - 20 + "px";
                     let e = document.getElementById('readArea');
                     e.appendChild(el);
                     this.currentTransBox.push(num);
@@ -303,7 +303,7 @@
                             let paraTop = document.getElementById('para').getBoundingClientRect().top;
                             let buttonTop = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;
                             let buttonHeight = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().bottom - document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;
-                            if (Math.trunc((buttonTop - paraTop) / buttonHeight) >= 3) {
+                            if (Math.trunc((buttonTop - paraTop) / buttonHeight) >= 4) {
                                 while (e.children[0]) {
                                     e.removeChild(e.children[0]);
                                 }
