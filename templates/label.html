@@ -257,10 +257,12 @@
 
             //把labels发送给后端存储,并更新word_level_data
             collect_labels: function () {
+                let formdata = new FormData();
+                formdata.append('labels',JSON.stringify(this.labels));
                 $.ajax({
                     type: 'POST',
                     url: '/label/send/',
-                    data: JSON.stringify(this.labels),
+                    data: formdata,
                     success: function () {
                         console.log("success");
 
