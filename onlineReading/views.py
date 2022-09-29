@@ -1,4 +1,5 @@
 import base64
+import json
 import math
 import os
 
@@ -29,7 +30,8 @@ from utils import (
     x_y_t_2_coordinate,
     get_fixations,
     add_fixations_to_word,
-    fixation_image, reading_times,
+    fixation_image,
+    reading_times,
 )
 
 
@@ -141,14 +143,22 @@ def get_page_data(request):
 
 
 def get_labels(request):
+    """一次性获得所有页的label，分页存储"""
     labels = request.POST.get("labels")
-    page = request.POST.get("page")
     experiment_id = request.session.get("experiment_id", None)
+    # 示例：labels:[{"page":1,"wordLabels":[],"sentenceLabels":[[27,57]],"wanderLabels":[[0,27]]},{"page":2,"wordLabels":[36],"sentenceLabels":[],"wanderLabels":[]},{"page":3,"wordLabels":[],"sentenceLabels":[],"wanderLabels":[[0,34]]}]
+    labels = json.loads(labels)
+
     if experiment_id:
-        PageData.objects.filter(experiment_id=experiment_id).filter(page=page).update(
-            labels=str(labels)
-        )
-    return render(request, "login.html")
+        for label in labels:
+            PageData.objects.filter(experiment_id=experiment_id).filter(
+                page=label["page"]
+            ).update(
+                wordLabels=label["wordLabels"],
+                sentenceLabels=label["sentenceLabels"],
+                wanderLabels=label["wanderLabels"],
+            )
+    return HttpResponse(1)
 
 
 def cal(request):
