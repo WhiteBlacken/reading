@@ -31,7 +31,7 @@ from utils import (
     get_fixations,
     add_fixations_to_word,
     fixation_image,
-    reading_times,
+    reading_times, get_word_by_index,
 )
 
 
@@ -177,27 +177,6 @@ def test_dispersion(request):
 
 def label(request):
     return render(request, "label.html")
-
-
-# def get_word_level_data(request):
-#     gazes = simplejson.loads(request.body)  # list类型
-#     data_id = request.session.get("data_id", None)
-#
-#     if data_id:
-#         dataset = Dataset.objects.get(id=data_id)
-#         interventions = dataset.interventions.split(",")
-#         words = get_word_from_text(dataset.texts)
-#         for gaze in gazes:
-#             WordLevelData.objects.create(
-#                 data_id=data_id,
-#                 word_index_in_text=gaze[0],
-#                 gaze=gaze[1],
-#                 word=words[gaze[0]],
-#                 is_intervention=1 if str(gaze[0]) in interventions else 0,
-#                 is_understand=1,
-#             )
-#     return HttpResponse(1)
-
 
 def get_word_from_text(text):
     get_word = []
@@ -504,3 +483,29 @@ def get_utils_test(request):
     times = reading_times(result)
     print(times)
     return HttpResponse(result)
+
+def analysis(request):
+    # 要分析的页
+    page_data_id = request.GET.get("id")
+    pagedata = PageData.objects.get(id=page_data_id)
+    # 组合gaze点
+    gaze_coordinates = x_y_t_2_coordinate(
+        pagedata.gaze_x, pagedata.gaze_y, pagedata.gaze_t
+    )
+    print("len(gaze):%d" % (len(gaze_coordinates)))
+    # 根据gaze点计算fixation
+    fixations = get_fixations(gaze_coordinates)
+    word_fixation = add_fixations_to_word(fixations, pagedata.location)
+    times = reading_times(word_fixation)
+    words_index = get_word_by_index(pagedata.texts)
+    analysis_result = {}
+    for key in word_fixation:
+        result = {
+            'word': words_index[key],
+            'fixations': word_fixation[key],
+            'reading_time': times[key]
+        }
+        analysis_result[key] = result
+    return JsonResponse(analysis_result)
+
+

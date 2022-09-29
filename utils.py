@@ -23,8 +23,8 @@ def get_fixations(coordinates):
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if (
-            len(working_queue) < 2
-            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
+                len(working_queue) < 2
+                or (working_queue[-1][2] - working_queue[0][2]) < min_duration
         ):
             # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
             datum = remaining_gaze.popleft()
@@ -40,7 +40,7 @@ def get_fixations(coordinates):
         while remaining_gaze:
             datum = remaining_gaze[0]
             if datum[2] > working_queue[0][2] + max_duration or with_distance(
-                working_queue[0], datum, max_distance
+                    working_queue[0], datum, max_distance
             ):
                 fixations.append(from_gazes_to_fixation(list(working_queue)))
                 working_queue.clear()
@@ -219,11 +219,28 @@ def paint_image(path, coordinates):
     cv2.imwrite(path, img)
 
 
+# 示例:The Coral Sea reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast.
+def get_word_by_index(content):
+    text = content.replace(",", " ").replace(".", " ").strip()
+    contents = text.split(" ")
+    index_2_word = {}
+    cnt = 0
+    for item in contents:
+        if len(item) > 0:
+            index_2_word[cnt] = item.strip().lower()
+            cnt = cnt + 1
+    return index_2_word
+
+
 if __name__ == "__main__":
     location = (
         '[{"left":330,"top":95,"right":408.15625,"bottom":326.984375},{"left":408.15625,"top":95,'
         '"right":445.5,"bottom":326.984375}] '
     )
-    index = get_word_index_x_y(location, 440, 322)
-    print(index)
+    # index = get_word_index_x_y(location, 440, 322)
+    # print(index)
+    content = "The Coral Sea, reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast."
+    content = get_word_by_index(content)
+    print(content)
+
     pass
