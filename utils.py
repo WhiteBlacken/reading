@@ -23,8 +23,8 @@ def get_fixations(coordinates):
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if (
-                len(working_queue) < 2
-                or (working_queue[-1][2] - working_queue[0][2]) < min_duration
+            len(working_queue) < 2
+            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
         ):
             # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
             datum = remaining_gaze.popleft()
@@ -40,7 +40,7 @@ def get_fixations(coordinates):
         while remaining_gaze:
             datum = remaining_gaze[0]
             if datum[2] > working_queue[0][2] + max_duration or with_distance(
-                    working_queue[0], datum, max_distance
+                working_queue[0], datum, max_distance
             ):
                 fixations.append(from_gazes_to_fixation(list(working_queue)))
                 working_queue.clear()
@@ -98,6 +98,13 @@ def add_fixations_to_word(fixations, locations):
             words_fixations[index] = tmp
     print(words_fixations)
     return words_fixations
+
+
+def reading_times(words_fixations):
+    reading_times = {}
+    for key in words_fixations:
+        reading_times[key] = len(words_fixations[key])
+    return reading_times
 
 
 def get_word_index_x_y(location, x, y):

@@ -29,7 +29,7 @@ from utils import (
     x_y_t_2_coordinate,
     get_fixations,
     add_fixations_to_word,
-    fixation_image,
+    fixation_image, reading_times,
 )
 
 
@@ -490,5 +490,7 @@ def get_utils_test(request):
     print("fixations:%s" % fixations)
     result = add_fixations_to_word(fixations, pagedata.location)
     username = Experiment.objects.get(id=pagedata.experiment_id).user
-    fixation_image(pagedata.image, username, fixations, page_data_id)
+    # fixation_image(pagedata.image, username, fixations, page_data_id)
+    times = reading_times(result)
+    print(times)
     return HttpResponse(result)
