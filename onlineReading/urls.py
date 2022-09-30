@@ -20,7 +20,7 @@ import action.views
 from . import views
 
 urlpatterns = [
-    re_path(r"^$", views.reading),
+    re_path(r"^$", views.login_page),
     path("admin/", admin.site.urls),
     path("login/", views.login, name="login"),
     path("text/", views.get_all_text_available),
