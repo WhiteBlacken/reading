@@ -94,6 +94,7 @@
             selectNode: null,
             currentTransWord: -1,
             currentTransBox: [],
+            currentTransSentenceBox: [],
             readSequel: [],
         },
         methods: {
@@ -147,7 +148,25 @@
             },
 
             isSentenceTranslated: function (num) {
-
+                let start = 0;
+                let end = 0;
+                for(let i = 0; i < this.sentences.length; i++){
+                    let w = this.sentences[i].split(' ');
+                    for(let j = 0; j < w.length; j++)
+                        if(w[j] == '')
+                            w.splice(j,1);
+                    if(start + w.length <= num){
+                        start += w.length;
+                    }else{
+                        end = start + w.length;
+                        break;
+                    }
+                }
+                for (let i = 0; i < this.currentTransSentenceBox.length; i++) {
+                    if (this.currentTransSentenceBox[i][0] == start && this.currentTransSentenceBox[i][1] == end)
+                        return true;
+                }
+                return false;
             },
 
             getWordTranslation: function (num) {
@@ -156,7 +175,7 @@
                     {#    $('#trans').css('display','');#}
                     {#else if($('#trans').css('display') != "none" && this.currentTransWord == num)#}
                     {#    $('#trans').css('display','none');#}
-                    this.changeTextStyle(num, num + 1);
+                    this.changeTextStyle(num, num + 1, 1);
                     this.wordLocation = this.getWordLocation(num);
                     let el = document.createElement('div');
                     el.className = "trans";
@@ -170,6 +189,11 @@
                     e.appendChild(el);
                     this.currentTransBox.push(num);
                     this.currentTransWord = num;
+                } else {
+                    this.changeTextStyle(num, num+1, 0);
+                    let ind = this.currentTransBox.indexOf(num);
+                    this.currentTransBox.splice(ind, 1);
+                    document.getElementsByClassName('trans')[ind].remove();
                 }
 
             },
@@ -194,30 +218,67 @@
             {#        e.style.marginTop = this.wordLocation.top - 5 + "px";#}
             {#    this.currentTransWord = num;#}
             {# },#}
-            getSentenceTranslation: function () {
+            getSentenceTranslation: function (num) {
+                let start = 0;
+                let end = 0;
+                for(let i = 0; i < this.sentences.length; i++){
+                    let w = this.sentences[i].split(' ');
+                    for(let j = 0; j < w.length; j++)
+                        if(w[j] == '')
+                            w.splice(j,1);
+                    if(start + w.length <= num){
+                        start += w.length;
+                    }else{
+                        end = start + w.length;
+                        break;
+                    }
+                }
+                if(!this.isSentenceTranslated(num)) {
+                    this.changeTextStyle(start, end, 1);
+                    this.wordLocation = this.getWordLocation(num);
+                    let el = document.createElement('div');
+                    el.className = "transSentence";
 
+                    el.innerHTML = this.transPerPage[this.page - 1][num].sentence_zh;
+
+                    el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
+
+                    el.style.top = this.wordLocation.top - 20 + "px";
+                    let e = document.getElementById('readArea');
+                    e.appendChild(el);
+                    this.currentTransSentenceBox.push(new Array(start, end));
+                }else {
+                    this.changeTextStyle(start, end, 0);
+                    let ind = 0;
+                    for(let i = 0; i < this.currentTransSentenceBox.length; i++) {
+                        if(this.currentTransSentenceBox[i][0] == start && this.currentTransSentenceBox[i][1] == end){
+                            ind = i;
+                            break;
+                        }
+                    }
+                    this.currentTransSentenceBox.splice(ind, 1);
+                    document.getElementsByClassName('transSentence')[ind].remove();
+                }
             },
 
             getWanderRemind: function () {
 
             },
 
-            changeTextStyle: function (start, end) {
-                for (let i = 0; i < start; i++) {
-                    document.getElementsByClassName('word')[i].style.textDecoration = "";
-                    document.getElementsByClassName('word')[i].style.color = "black";
-                }
-                for (let i = end; i < this.words.length; i++) {
-                    document.getElementsByClassName('word')[i].style.textDecoration = "";
-                    document.getElementsByClassName('word')[i].style.color = "black";
-                }
-                for (let i = start; i < end; i++) {
-                    if ($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)') {
-                        $('.word:eq(' + i + ')').css('text-decoration', "");
-                        $('.word:eq(' + i + ')').css('color', "black");
-                    } else {
-                        $('.word:eq(' + i + ')').css('text-decoration', "underline");
-                        $('.word:eq(' + i + ')').css('color', "blue");
+            changeTextStyle: function (start, end, isHighlight) {
+                if(isHighlight == 1) {
+                    for (let i = start; i < end; i++) {
+                        if ($('.word:eq(' + i + ')').css('text-decoration') == 'none solid rgb(51, 51, 51)') {
+                            $('.word:eq(' + i + ')').css('text-decoration', "underline");
+                            $('.word:eq(' + i + ')').css('color', "blue");
+                        }
+                    }
+                }else {
+                    for (let i = start; i < end; i++) {
+                        if ($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)') {
+                            $('.word:eq(' + i + ')').css('text-decoration', "none solid rgb(51, 51, 51)");
+                            $('.word:eq(' + i + ')').css('color', "black");
+                        }
                     }
                 }
             },
@@ -354,7 +415,6 @@
                     if (this.transPerPage[i].length == 0)
                         this.transPerPage.splice(i, 1);
                 }
-                console.log(this.buttonLocPerPage)
                 this.totalPage = this.contentPerPage.length;
                 let tmp = this.contentPerPage;
                 let tmp_ = tmp.join('-.');
@@ -398,9 +458,9 @@
                 this.buttonCurLoc = this.buttonLocPerPage[this.page - 1];
                 let sentences = Content.split('.');
                 sentences.splice(sentences.length - 1, 1);
+                this.sentences = sentences;
                 for (let i = 0; i < sentences.length; i++) {
                     var words = sentences[i].split(' ');
-                    console.log(sentences[i])
                     for (let j = 0; j < words.length; j++) {
                         if (words[j] != "") {
                             var el = document.createElement("button");
@@ -450,9 +510,11 @@
                 }
                 this.content = "";
                 this.words = [];
+                this.sentences = [];
                 this.translation = [];
                 this.rereading = [];
                 this.currentTransWord = -1;
+                this.currentTransSentenceBox = [];
                 this.currentTransBox = [];
                 this.readSequel = [];
             },
@@ -533,8 +595,7 @@
                 break;
             }
             case 39: {
-                console.log(app._data.totalPage)
-                console.log(app._data.page)
+
                 if (app._data.page < app._data.totalPage) {
                     get_base64_gaze_and_intervention(1);
                 }
@@ -548,7 +609,7 @@
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
-                console.log(app._data.readSequel);
+
                 break;
             }
 
@@ -650,7 +711,6 @@
                     y = [];
                     t = [];
                     app._data.page = app._data.page + page;
-                    console.log(app._data.page)
                     app.getPage();
                 },
                 error: function () {
