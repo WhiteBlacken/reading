@@ -1,16 +1,12 @@
 import datetime
 import json
 import math
-from queue import Queue
 
 import requests
-from django.http import JsonResponse
-from django.shortcuts import render
 
-# Create your views here.
+
 from loguru import logger
 
-from action.models import WordLevelData
 from onlineReading import settings
 
 
