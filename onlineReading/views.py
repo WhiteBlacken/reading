@@ -1,12 +1,6 @@
-import base64
 import json
-import math
-import os
 
-import simplejson
 from django.core import serializers
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
@@ -17,7 +11,7 @@ from action.models import (
     WordLevelData,
     Dispersion,
     Paragraph,
-    Experiment,
+    Experiment, Translation,
 )
 from onlineReading.utils import (
     translate,
@@ -31,7 +25,8 @@ from utils import (
     get_fixations,
     add_fixations_to_word,
     fixation_image,
-    reading_times, get_word_by_index,
+    reading_times,
+    get_sentence_by_word_index,
 )
 
 
@@ -75,15 +70,28 @@ def get_paragraph_and_translation(request):
         sentences = paragraph.content.split(".")
         cnt = 0
         words_dict[0] = paragraph.content
+        sentence_id = 0
         for sentence in sentences:
             # 去除句子前后空格
             sentence = sentence.strip()
             if len(sentence) > 3:
                 # 句子长度低于 3，不是空，就是切割问题，暂时不考虑
-                response = translate(sentence)
-                if response["status"] == 500:
-                    return HttpResponse("翻译句子:%s 时出现错误" % sentence)
-                sentence_zh = response["zh"]
+                # 句子翻译前先查表
+                translations = Translation.objects.filter(article_id=article_id).filter(para_id=para).filter(sentence_id=sentence_id)
+                if translations:
+                    sentence_zh = translations.first().txt
+                else:
+                    response = translate(sentence)
+                    print(response)
+                    if response["status"] == 500:
+                        return HttpResponse("翻译句子:%s 时出现错误" % sentence)
+                    sentence_zh = response["zh"]
+                    Translation.objects.create(
+                        txt=sentence_zh,
+                        article_id=article_id,
+                        para_id=para,
+                        sentence_id=sentence_id
+                    )
                 # 切成单词
                 words = sentence.split(" ")
                 for word in words:
@@ -103,6 +111,7 @@ def get_paragraph_and_translation(request):
                         Dictionary.objects.create(en=word.lower(), zh=zh)
                     cnt = cnt + 1
                     words_dict[cnt] = {"en": word, "zh": zh, "sentence_zh": sentence_zh}
+                sentence_id = sentence_id + 1
         para_dict[para] = words_dict
         para = para + 1
     # 创建一次实验
@@ -178,6 +187,7 @@ def test_dispersion(request):
 def label(request):
     return render(request, "label.html")
 
+
 def get_word_from_text(text):
     get_word = []
     sentences = text.split(".")
@@ -189,66 +199,6 @@ def get_word_from_text(text):
                 word = word.strip().lower().replace(",", "")
                 get_word.append(word)
     return get_word
-
-
-# def get_hot_map(request, id):
-#     datas = WordLevelData.objects.filter(data_id=id)
-#     words = {}
-#     dataset = Dataset.objects.get(id=id)
-#     get_word = get_word_from_text(dataset.texts)
-#     for data in datas:
-#         # [[1210.9457590013656, 159.23231147793268, 9945], [1217.6909072718718, 159.41882110020455, 9990.800000011921], [1230.8749738465856, 168.33542300501568, 10017.700000017881]]
-#         if words.get(get_word[data.word_index_in_text], -1) == -1:
-#             tmp = []
-#             # [[499.97320585558384, 500.07984655036023, 21.5]]
-#             # [[499.97320585558384, 500.07984655036023, 21.5]]
-#         else:
-#             tmp = words[get_word[data.word_index_in_text]]
-#         gaze = data.gaze[2:-2]
-#         gazes = gaze.split("], [")
-#         t = []
-#         for gaze in gazes:
-#             coordinate = gaze.split(", ")
-#             t.append(int(float(coordinate[2])))
-#         if t[-1] - t[0] > 30:
-#             tmp.append(t[-1] - t[0])
-#         if len(tmp) > 0:
-#             words[get_word[data.word_index_in_text]] = tmp
-#     # 补0画图
-#     max_length = 0
-#     words_name = []
-#     for key in words:
-#         if len(words[key]) > max_length:
-#             max_length = len(words[key])
-#         words_name.append(key)
-#     print(max_length)
-#     pic_data = []
-#     for key in words:
-#         if len(words[key]) < max_length:
-#             i = max_length - len(words[key])
-#             tmp = words[key]
-#             while i > 0:
-#                 tmp.append(0)
-#                 i = i - 1
-#             words[key] = tmp
-#         pic_data.append(words[key])
-#     print(pic_data)
-#
-#     print(words_name)
-#     # import matplotlib.pyplot as plt
-#     # import numpy as np
-#     #
-#     # harvest = np.array(pic_data)
-#     #
-#     # plt.yticks(np.arange(len(words_name)), labels=words_name)
-#     # print(words_name)
-#     # plt.title("Harvest of local farmers (in tons/year)")
-#     #
-#     # plt.imshow(harvest)
-#     # plt.tight_layout()
-#     # plt.show()
-#
-#     return JsonResponse(words)
 
 
 def get_dispersion(request):
@@ -484,6 +434,7 @@ def get_utils_test(request):
     print(times)
     return HttpResponse(result)
 
+
 def analysis(request):
     # 要分析的页
     page_data_id = request.GET.get("id")
@@ -493,19 +444,77 @@ def analysis(request):
         pagedata.gaze_x, pagedata.gaze_y, pagedata.gaze_t
     )
     print("len(gaze):%d" % (len(gaze_coordinates)))
-    # 根据gaze点计算fixation
+    # 根据gaze点计算fixation list
     fixations = get_fixations(gaze_coordinates)
+    # 得到word对应的fixation dict
     word_fixation = add_fixations_to_word(fixations, pagedata.location)
+    # 得到word对应的reading times dict
     times = reading_times(word_fixation)
-    words_index = get_word_by_index(pagedata.texts)
-    analysis_result = {}
+    # 得到word在文章中下标 dict
+    words_index, sentence_index = get_sentence_by_word_index(pagedata.texts)
+    # 获取不懂的单词的label 使用", "来切割，#TODO可能要改
+    wordlabels = pagedata.wordLabels[1:-1].split(", ")
+    # 需要输出的单词level分析结果
+    analysis_result_by_word_level = {}
+    # 因为所有的特征都依赖于fixation，所以遍历有fixation的word就足够了
+    # TODO 那没有fixation的word怎么比较？
     for key in word_fixation:
+        # 计算平均duration
+        sum_t = 0
+        for fixation in word_fixation[key]:
+            sum_t = sum_t + fixation[2]
+        mean_fixations_duration = sum_t / len(word_fixation[key])
+
         result = {
-            'word': words_index[key],
-            'fixations': word_fixation[key],
-            'reading_time': times[key]
+            "word": words_index[key],
+            "is_understand": 0 if str(key) in wordlabels else 1,  # 是否理解
+            "mean_fixations_duration": mean_fixations_duration,  # 平均阅读时长
+            "fixation_duration": word_fixation[key][0][2],  # 首次的fixation时长
+            "second_pass_duration": word_fixation[key][1][2]
+            if times[key] > 1
+            else 0,  # second-pass duration
+            "reading_time": times[key],  # 阅读次数
         }
-        analysis_result[key] = result
-    return JsonResponse(analysis_result)
 
+        analysis_result_by_word_level[key] = result
+    analysis_result_by_sentence_level = {}
+    # 获取不懂的句子
+    sentencelabels = json.loads(pagedata.sentenceLabels)
+    print(sentencelabels)
 
+    # 需要输出的句子level的输出结果
+    for key in sentence_index:
+        begin = sentence_index[key]["begin_word_index"]
+        end = sentence_index[key]["end_word_index"]
+        print("句子index:[%d,%d]" % (begin, end))
+        sum_duration = 0
+        # 将在这个句子中所有单词的fixation duration相加
+        for word_key in word_fixation:
+            if begin <= word_key < end:
+                for fixation_in_word in word_fixation[word_key]:
+                    sum_duration = sum_duration + fixation_in_word[2]
+        # 判断句子是否懂
+        is_understand = 1
+        for sentencelabel in sentencelabels:
+            if begin == sentencelabel[0] and end == sentencelabel[1]:
+                is_understand = 0
+        result = {
+            "sentence": sentence_index[key]["sentence"],  # 句子本身
+            "is_understand": is_understand,  # 是否理解
+            "sum_dwell_time": sum_duration,  # 在该句子上的fixation总时长
+        }
+        analysis_result_by_sentence_level[key] = result
+    # 输出图示
+    fixation_image(
+        pagedata.image,
+        Experiment.objects.get(id=pagedata.experiment_id).user,
+        fixations,
+        page_data_id,
+    )
+    analysis = {
+        "word": analysis_result_by_word_level,
+        "sentence": analysis_result_by_sentence_level,
+        "row": "暂无信息",
+    }
+
+    return JsonResponse(analysis, json_dumps_params={"ensure_ascii": False})
