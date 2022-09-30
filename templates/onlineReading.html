@@ -79,6 +79,7 @@
             content: [],
             contentCurPage: "",
             paras: [],
+            sentences: [],
             contentPerPage: [],
             transPerPage: [],
             buttonLocPerPage: [],
@@ -116,7 +117,7 @@
             },
 
             getTransLocation: function (num) {
-                if (this.isTranslated(num)) {
+                if (this.isWordTranslated(num)) {
                     let i = this.getTransNum(num);
                     return {
                         left: document.getElementsByClassName('word')[i].getBoundingClientRect().left,
@@ -137,7 +138,7 @@
                 return -1;
             },
 
-            isTranslated: function (num) {
+            isWordTranslated: function (num) {
                 for (let i = 0; i < this.currentTransBox.length; i++) {
                     if (this.currentTransBox[i] == num)
                         return true;
@@ -145,8 +146,12 @@
                 return false;
             },
 
+            isSentenceTranslated: function (num) {
+
+            },
+
             getWordTranslation: function (num) {
-                if (!this.isTranslated(num)) {
+                if (!this.isWordTranslated(num)) {
                     {#if($('#trans').css('display') == "none")#}
                     {#    $('#trans').css('display','');#}
                     {#else if($('#trans').css('display') != "none" && this.currentTransWord == num)#}
@@ -189,6 +194,13 @@
             {#        e.style.marginTop = this.wordLocation.top - 5 + "px";#}
             {#    this.currentTransWord = num;#}
             {# },#}
+            getSentenceTranslation: function () {
+
+            },
+
+            getWanderRemind: function () {
+
+            },
 
             changeTextStyle: function (start, end) {
                 for (let i = 0; i < start; i++) {
