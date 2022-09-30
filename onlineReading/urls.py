@@ -30,8 +30,6 @@ urlpatterns = [
     path("label/", views.label),
     path("data/", views.get_page_data),
     path("label/send/", views.get_labels),
-    # path("word_level_data/",views.get_word_level_data),
-    # path("hotmap/<int:id>/",views.get_hot_map),
     path("test/", views.test_dispersion),
     path("dispersion/", views.get_dispersion),
     path("cm/<int:k>/", views.cm_2_pixel_test),

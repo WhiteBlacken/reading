@@ -1,8 +1,10 @@
+import datetime
 import json
 
 from django.core import serializers
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from loguru import logger
 
 from action.models import (
     Text,
@@ -77,9 +79,15 @@ def get_paragraph_and_translation(request):
             if len(sentence) > 3:
                 # 句子长度低于 3，不是空，就是切割问题，暂时不考虑
                 # 句子翻译前先查表
-                translations = Translation.objects.filter(article_id=article_id).filter(para_id=para).filter(sentence_id=sentence_id)
+                starttime = datetime.datetime.now()
+                translations = Translation.objects.filter(article_id=article_id).filter(para_id=para).filter(
+                    sentence_id=sentence_id)
                 if translations:
                     sentence_zh = translations.first().txt
+                    endtime = datetime.datetime.now()
+                    logger.info(
+                        "该翻译已经缓存，读取时间为%sms" % round((endtime - starttime).microseconds / 1000 / 1000, 3)
+                    )
                 else:
                     response = translate(sentence)
                     print(response)
