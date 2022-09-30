@@ -66,6 +66,9 @@ def get_paragraph_and_translation(request):
     print(len(paragraphs))
     para_dict = {}
     para = 0
+    logger.info(
+        "--实验开始--"
+    )
     for paragraph in paragraphs:
         words_dict = {}
         # 切成句子
@@ -127,6 +130,9 @@ def get_paragraph_and_translation(request):
         article_id=article_id, user=request.session.get("username")
     )
     request.session["experiment_id"] = experiment.id
+    logger.info(
+        "--本次实验开始,实验者：%s，实验id：%d--"%(request.session.get("username"),experiment.id)
+    )
     return JsonResponse(para_dict, json_dumps_params={"ensure_ascii": False})
 
 
@@ -156,6 +162,9 @@ def get_page_data(request):
             experiment_id=experiment_id,
             location=location,
         )
+    logger.info(
+        "第%s页数据已存储" % page
+    )
     return HttpResponse(1)
 
 
@@ -175,6 +184,12 @@ def get_labels(request):
                 sentenceLabels=label["sentenceLabels"],
                 wanderLabels=label["wanderLabels"],
             )
+    logger.info(
+        "已获得所有页标签"
+    )
+    logger.info(
+        "--实验结束--"
+    )
     return HttpResponse(1)
 
 
