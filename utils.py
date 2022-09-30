@@ -2,6 +2,12 @@ import base64
 import json
 import math
 import os
+import datetime
+
+import requests
+from loguru import logger
+
+from onlineReading import settings
 
 
 def get_fixations(coordinates):
@@ -219,11 +225,92 @@ def paint_image(path, coordinates):
     cv2.imwrite(path, img)
 
 
+# 示例:The Coral Sea reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast.
+def get_word_by_index(content):
+    text = content.replace(",", "").replace(".", "").strip()
+    contents = text.split(" ")
+    index_2_word = {}
+    cnt = 0
+    for item in contents:
+        if len(item) > 0:
+            index_2_word[cnt] = item.strip().lower()
+            cnt = cnt + 1
+    return index_2_word
+
+
+# [{"left":330,"top":95,"right":408.15625,"bottom":326.984375},{"left":408.15625,"top":95,"right":445.5,"bottom":326.984375},{"left":445.5,"top":95,"right":518.6875,"bottom":326.984375},{"left":518.6875,"top":95,"right":589.140625,"bottom":326.984375},{"left":589.140625,"top":95,"right":645.03125,"bottom":326.984375},{"left":645.03125,"top":95,"right":725.46875,"bottom":326.984375},{"left":725.46875,"top":95,"right":780.046875,"bottom":326.984375},{"left":780.046875,"top":95,"right":836.4375,"bottom":326.984375},{"left":836.4375,"top":95,"right":942.625,"bottom":326.984375},{"left":942.625,"top":95,"right":979.171875,"bottom":326.984375},{"left":979.171875,"top":95,"right":1055.796875,"bottom":326.984375},{"left":1055.796875,"top":95,"right":1113.015625,"bottom":326.984375},{"left":1113.015625,"top":95,"right":1162.203125,"bottom":326.984375},{"left":1162.203125,"top":95,"right":1231.65625,"bottom":326.984375},{"left":1231.65625,"top":95,"right":1283.859375,"bottom":326.984375},{"left":1283.859375,"top":95,"right":1315.421875,"bottom":326.984375},{"left":1315.421875,"top":95,"right":1343.21875,"bottom":326.984375},{"left":1343.21875,"top":95,"right":1430.078125,"bottom":326.984375},{"left":1430.078125,"top":95,"right":1507.3125,"bottom":326.984375},{"left":1507.3125,"top":95,"right":1543.859375,"bottom":326.984375},{"left":1543.859375,"top":95,"right":1678.296875,"bottom":326.984375},{"left":1678.296875,"top":95,"right":1722.234375,"bottom":326.984375},{"left":330,"top":326.984375,"right":379.1875,"bottom":558.96875},{"left":379.1875,"top":326.984375,"right":526.671875,"bottom":558.96875},{"left":526.671875,"top":326.984375,"right":596.25,"bottom":558.96875},{"left":596.25,"top":326.984375,"right":632.796875,"bottom":558.96875},{"left":632.796875,"top":326.984375,"right":742.984375,"bottom":558.96875},{"left":742.984375,"top":326.984375,"right":772.65625,"bottom":558.96875},{"left":772.65625,"top":326.984375,"right":800.453125,"bottom":558.96875},{"left":800.453125,"top":326.984375,"right":906.015625,"bottom":558.96875},{"left":906.015625,"top":326.984375,"right":946.9375,"bottom":558.96875},{"left":946.9375,"top":326.984375,"right":996.125,"bottom":558.96875},{"left":996.125,"top":326.984375,"right":1114.328125,"bottom":558.96875},{"left":1114.328125,"top":326.984375,"right":1255.125,"bottom":558.96875},{"left":1255.125,"top":326.984375,"right":1320.3125,"bottom":558.96875},{"left":1320.3125,"top":326.984375,"right":1403.90625,"bottom":558.96875},{"left":1403.90625,"top":326.984375,"right":1453.09375,"bottom":558.96875},{"left":1453.09375,"top":326.984375,"right":1535.078125,"bottom":558.96875},{"left":1535.078125,"top":326.984375,"right":1584.953125,"bottom":558.96875},{"left":1584.953125,"top":326.984375,"right":1641.859375,"bottom":558.96875},{"left":1641.859375,"top":326.984375,"right":1739.9375,"bottom":558.96875},{"left":330,"top":558.96875,"right":379.1875,"bottom":790.953125},{"left":379.1875,"top":558.96875,"right":467.59375,"bottom":790.953125},{"left":467.59375,"top":558.96875,"right":552.46875,"bottom":790.953125}]
+# 根据bottom可以判
+# 做两件事：切割成不同的句子，切割成不同的行
+def get_sentence_by_word_index(content):
+    sentences = content.split(".")
+    sentence_cnt = 0
+    word_cnt = 0
+    sentence_dict = {}
+    index_2_word = {}
+    for sentence in sentences:
+        if len(sentence) > 0:
+            sen_begin = word_cnt
+            sen_end = 0
+            # 分割每一个句子
+            words = sentence.strip().replace(",", "").split(" ")
+            for word in words:
+                if len(word) > 0:
+                    index_2_word[word_cnt] = word.strip().lower()
+                    word_cnt = word_cnt + 1
+                    sen_end = word_cnt
+            dict = {
+                "sentence": sentence,
+                "begin_word_index": sen_begin,
+                "end_word_index": sen_end,
+            }
+            sentence_cnt = sentence_cnt + 1
+            sentence_dict[sentence_cnt] = dict
+    print(index_2_word)
+    print(sentence_dict)
+    return index_2_word, sentence_dict
+
+
+def translate(content):
+    """翻译接口"""
+    try:
+        starttime = datetime.datetime.now()
+        # 1. 准备参数
+        appid = settings.APPID
+        salt = "990503"
+        secret = settings.SECRET
+        sign = appid + content + salt + secret
+        # 2. 将sign进行md5加密
+        import hashlib
+
+        Encry = hashlib.md5()
+        Encry.update(sign.encode())
+        sign = Encry.hexdigest()
+        # 3. 发送请求
+        url = (
+            "http://api.fanyi.baidu.com/api/trans/vip/translate?"
+            + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
+            % (content, appid, salt, sign)
+        )
+        # 4. 解析结果
+        response = requests.get(url)
+        data = json.loads(response.text)
+        endtime = datetime.datetime.now()
+        logger.info(
+            "翻译接口执行时间为%sms" % round((endtime - starttime).microseconds / 1000 / 1000, 3)
+        )
+        return {"status": 200, "zh": data["trans_result"][0]["dst"]}
+    except Exception as e:
+        return {"status": 500, "zh": None}
+
+
 if __name__ == "__main__":
     location = (
         '[{"left":330,"top":95,"right":408.15625,"bottom":326.984375},{"left":408.15625,"top":95,'
         '"right":445.5,"bottom":326.984375}] '
     )
-    index = get_word_index_x_y(location, 440, 322)
-    print(index)
+    # index = get_word_index_x_y(location, 440, 322)
+    # print(index)
+    content = "The Coral Sea, reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast."
+    get_sentence_by_word_index(content)
+
     pass

@@ -33,12 +33,24 @@ class Paragraph(models.Model):
         db_table = "material_paragraph"
 
 
+class Translation(models.Model):
+    # 记录下句子翻译
+    txt = models.TextField()
+    article_id = models.BigIntegerField()
+    para_id = models.IntegerField()
+    sentence_id = models.IntegerField()
+
+    class Meta:
+        db_table = "material_translation"
+
+
 class Dictionary(models.Model):
+    # 记录下单词翻译
     en = models.CharField(max_length=100)
     zh = models.CharField(max_length=800)
 
     class Meta:
-        db_table = "dictionary"
+        db_table = "material_dictionary"
 
 
 class Experiment(models.Model):
