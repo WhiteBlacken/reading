@@ -262,6 +262,19 @@
             },
 
             getWanderRemind: function () {
+                let style = 'alert-warning';
+                let time =  1200;
+                $('<div>')
+                    .appendTo('body')
+                    .addClass('alert ' + style)
+                    .html("你刚刚走神了，请重新认真阅读错过的内容！")
+                    .fadeIn('fast', function () {
+                        setTimeout(function () {
+                            $('.alert').fadeOut('fast', function () {
+
+                            });
+                        }, 2000)
+                    });
 
             },
 
@@ -476,7 +489,7 @@
                         }
                     }
                 }
-
+                this.getWanderRemind();
             },
 
             listen: function () {

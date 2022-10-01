@@ -42,6 +42,7 @@ body{
 }
 
 .transSentence{
+    display: none;
     position: absolute;
     z-index: -1;
     width: auto;
@@ -91,4 +92,23 @@ body{
     display:flex;
     justify-content:center;
     align-items:center;
+}
+
+.alert {
+    display: none;
+    position: absolute !important;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 320px;
+    padding: 25px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.alert-warning {
+    color: #8a6d3b;
+    background-color: #fcf8e3;
+    border-color: #faebcc;
 }
