@@ -21,7 +21,7 @@ def get_fixations(coordinates):
     fixations = []
     min_duration = 100
     max_duration = 1200
-    max_distance = 150
+    max_distance = 140
     # 先进先出队列
     working_queue = deque()
     remaining_gaze = deque(coordinates)
@@ -29,29 +29,38 @@ def get_fixations(coordinates):
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if (
-            len(working_queue) < 2
-            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
+                len(working_queue) < 2
+                or (working_queue[-1][2] - working_queue[0][2]) < min_duration
         ):
             # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
             datum = remaining_gaze.popleft()
             working_queue.append(datum)
             continue
-        # 如果队列中两点距离超过max_distance，则不是一个fixation
-        if with_distance(working_queue[-1], working_queue[0], max_distance):
-            # not a fixation,move forward
-            working_queue.popleft()
+        # 如果队列中两点任意距离超过max_distance，则不是一个fixation
+        flag = False
+        for i in range(len(working_queue) - 1):
+            for j in range(i + 1, len(working_queue) - 1):
+                if not with_distance(working_queue[i], working_queue[j], max_distance):
+                    # not a fixation,move forward
+                    working_queue.popleft()
+                    flag = True
+                    break
+            if flag:
+                break
+        if flag:
             continue
 
         # minimal fixation found,collect maximal data
         while remaining_gaze:
             datum = remaining_gaze[0]
             if datum[2] > working_queue[0][2] + max_duration or with_distance(
-                working_queue[0], datum, max_distance
+                    working_queue[0], datum, max_distance
             ):
                 fixations.append(from_gazes_to_fixation(list(working_queue)))
                 working_queue.clear()
                 break  # maximum data found
             working_queue.append(remaining_gaze.popleft())
+    print("fixaions:%s" % fixations)
     return fixations
 
 
@@ -84,16 +93,19 @@ def get_euclid_distance(x1, x2, y1, y2):
     return math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2))
 
 
-def add_fixations_to_word(fixations, locations):
+def add_fixations_to_location(fixations, locations):
     """
-    给出fixations，将fixation与单词对应起来
+    给出fixations，将fixation与单词对应起来  word level/row level
     :param fixations: [(坐标x,坐标y,durations),(坐标x,坐标y,durations)]
     :param locations: '[{"left:220,"top":23,"right":222,"bottom":222},{"left:220,"top":23,"right":222,"bottom":222}]'
     :return: {"0":[(坐标x,坐标y,durations),(坐标x,坐标y,durations)],"3":...}
     """
     words_fixations = {}
+    print("locations")
+    print(locations)
+    print(type(locations))
     for fixation in fixations:
-        index = get_word_index_x_y(locations, fixation[0], fixation[1])
+        index = get_item_index_x_y(locations, fixation[0], fixation[1])
         if index != -1:
             if index in words_fixations.keys():
                 # 如果当前索引已经存在
@@ -113,13 +125,13 @@ def reading_times(words_fixations):
     return reading_times
 
 
-def get_word_index_x_y(location, x, y):
-    """根据所有word的位置，当前给出的x,y,判断其在哪个word里"""
+def get_item_index_x_y(location, x, y):
+    """根据所有item的位置，当前给出的x,y,判断其在哪个item里 分为word level和row level"""
     # 解析location
-    words = json.loads(location)
+    location = json.loads(location)
 
     index = 0
-    for word in words:
+    for word in location:
         if word["left"] <= x <= word["right"] and word["top"] <= y <= word["bottom"]:
             return index
         index = index + 1
@@ -270,6 +282,29 @@ def get_sentence_by_word_index(content):
     return index_2_word, sentence_dict
 
 
+# 样例 ： [{"left":330,"top":95,"right":408.15625,"bottom":326.984375},{"left":408.15625,"top":95,"right":445.5,"bottom":326.984375},{"left":445.5,"top":95,"right":518.6875,"bottom":326.984375},{"left":518.6875,"top":95,"right":589.140625,"bottom":326.984375},{"left":589.140625,"top":95,"right":645.03125,"bottom":326.984375},{"left":645.03125,"top":95,"right":725.46875,"bottom":326.984375},{"left":725.46875,"top":95,"right":780.046875,"bottom":326.984375},{"left":780.046875,"top":95,"right":836.4375,"bottom":326.984375},{"left":836.4375,"top":95,"right":942.625,"bottom":326.984375},{"left":942.625,"top":95,"right":979.171875,"bottom":326.984375},{"left":979.171875,"top":95,"right":1055.796875,"bottom":326.984375},{"left":1055.796875,"top":95,"right":1113.015625,"bottom":326.984375},{"left":1113.015625,"top":95,"right":1162.203125,"bottom":326.984375},{"left":1162.203125,"top":95,"right":1231.65625,"bottom":326.984375},{"left":1231.65625,"top":95,"right":1283.859375,"bottom":326.984375},{"left":1283.859375,"top":95,"right":1315.421875,"bottom":326.984375},{"left":1315.421875,"top":95,"right":1343.21875,"bottom":326.984375},{"left":1343.21875,"top":95,"right":1430.078125,"bottom":326.984375},{"left":1430.078125,"top":95,"right":1507.3125,"bottom":326.984375},{"left":1507.3125,"top":95,"right":1543.859375,"bottom":326.984375},{"left":1543.859375,"top":95,"right":1678.296875,"bottom":326.984375},{"left":1678.296875,"top":95,"right":1722.234375,"bottom":326.984375},{"left":330,"top":326.984375,"right":379.1875,"bottom":558.96875},{"left":379.1875,"top":326.984375,"right":526.671875,"bottom":558.96875},{"left":526.671875,"top":326.984375,"right":596.25,"bottom":558.96875},{"left":596.25,"top":326.984375,"right":632.796875,"bottom":558.96875},{"left":632.796875,"top":326.984375,"right":742.984375,"bottom":558.96875},{"left":742.984375,"top":326.984375,"right":772.65625,"bottom":558.96875},{"left":772.65625,"top":326.984375,"right":800.453125,"bottom":558.96875},{"left":800.453125,"top":326.984375,"right":906.015625,"bottom":558.96875},{"left":906.015625,"top":326.984375,"right":946.9375,"bottom":558.96875},{"left":946.9375,"top":326.984375,"right":996.125,"bottom":558.96875},{"left":996.125,"top":326.984375,"right":1114.328125,"bottom":558.96875},{"left":1114.328125,"top":326.984375,"right":1255.125,"bottom":558.96875},{"left":1255.125,"top":326.984375,"right":1320.3125,"bottom":558.96875},{"left":1320.3125,"top":326.984375,"right":1403.90625,"bottom":558.96875},{"left":1403.90625,"top":326.984375,"right":1453.09375,"bottom":558.96875},{"left":1453.09375,"top":326.984375,"right":1535.078125,"bottom":558.96875},{"left":1535.078125,"top":326.984375,"right":1584.953125,"bottom":558.96875},{"left":1584.953125,"top":326.984375,"right":1641.859375,"bottom":558.96875},{"left":1641.859375,"top":326.984375,"right":1739.9375,"bottom":558.96875},{"left":330,"top":558.96875,"right":379.1875,"bottom":790.953125},{"left":379.1875,"top":558.96875,"right":467.59375,"bottom":790.953125},{"left":467.59375,"top":558.96875,"right":552.46875,"bottom":790.953125}]
+def get_row_location(words_locations):
+    """根据button的位置切割行"""
+    buttons = json.loads(words_locations)
+    begin_word = 0
+    row_index = 0
+    top = buttons[0]["top"]
+    rows_fixation = []
+    for i, button in enumerate(buttons):
+        if button["top"] != top:
+            top = button["top"]
+            row_dict = {
+                "left": buttons[begin_word]["left"],
+                "top": buttons[begin_word]["top"],
+                "right": buttons[i - 1]["right"],
+                "bottom": buttons[begin_word]["bottom"],
+            }
+            rows_fixation.append(row_dict)
+            row_index = row_index + 1
+            begin_word = i
+    return rows_fixation
+
+
 def translate(content):
     """翻译接口"""
     try:
@@ -287,9 +322,9 @@ def translate(content):
         sign = Encry.hexdigest()
         # 3. 发送请求
         url = (
-            "http://api.fanyi.baidu.com/api/trans/vip/translate?"
-            + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
-            % (content, appid, salt, sign)
+                "http://api.fanyi.baidu.com/api/trans/vip/translate?"
+                + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
+                % (content, appid, salt, sign)
         )
         # 4. 解析结果
         response = requests.get(url)
@@ -303,6 +338,78 @@ def translate(content):
         return {"status": 500, "zh": None}
 
 
+def get_out_of_screen_times(coordinates):
+    out_of_screen_times = 0
+    for gaze in coordinates:
+        if gaze[0] < 0 or gaze[1] < 0:
+            out_of_screen_times = out_of_screen_times + 1
+    return out_of_screen_times
+
+
+def get_proportion_of_horizontal_saccades(fixations, locations):
+    pre_row = 0
+    vertical_saccade = 0
+    for fixation in fixations:
+        now_row = get_item_index_x_y(locations, fixation[0], fixation[1])
+        if pre_row != now_row and now_row != -1:
+            vertical_saccade = vertical_saccade + 1
+    return (
+        (len(fixations) - vertical_saccade) / len(fixations)
+        if len(fixations) != 0
+        else 0
+    )
+
+
+def get_saccade_angle(fixation1, fixation2):
+    """获得saccade的角度"""
+    vertical_dis = abs(fixation2[1] - fixation1[1])
+    horizontal_dis = abs(fixation2[0] - fixation1[0])
+    print(vertical_dis / horizontal_dis)
+    return math.atan(vertical_dis / horizontal_dis) * 180 / math.pi
+
+
+def get_saccade_info(fixations):
+    """根据fixation，获取和saccade相关的 saccade_time,mean_saccade_angle"""
+    saccade_times = 0
+    sum_angle = 0
+    for i in range(len(fixations) - 1):
+        if (
+                get_euclid_distance(
+                    fixations[i][0],
+                    fixations[i + 1][0],
+                    fixations[i][1],
+                    fixations[i + 1][1],
+                )
+                > 500
+        ):
+            saccade_times = saccade_times + 1
+            sum_angle = sum_angle + get_saccade_angle(fixations[i], fixations[i + 1])
+    return (
+        saccade_times,
+        sum_angle / saccade_times if saccade_times != 0 else 0,
+    )
+
+
+def get_reading_times(fixations, locations):
+    # 根据每个单词的位置
+    location = json.loads(locations)
+    pre_fixation = [-2 for x in range(0, len(location))]
+    reading_times = {}
+    fixation_cnt = 0
+    for fixation in fixations:
+        index = get_item_index_x_y(locations, fixation[0], fixation[1])
+        if index != -1:
+            if fixation_cnt - pre_fixation[index] > 1:
+                if index in reading_times.keys():
+                    tmp = reading_times[index] + 1
+                    reading_times[index] = tmp
+                else:
+                    reading_times[index] = 1
+            pre_fixation[index] = fixation_cnt
+        fixation_cnt = fixation_cnt + 1
+    return reading_times
+
+
 if __name__ == "__main__":
     location = (
         '[{"left":330,"top":95,"right":408.15625,"bottom":326.984375},{"left":408.15625,"top":95,'
@@ -310,7 +417,11 @@ if __name__ == "__main__":
     )
     # index = get_word_index_x_y(location, 440, 322)
     # print(index)
-    content = "The Coral Sea, reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast."
-    get_sentence_by_word_index(content)
+    # content = "The Coral Sea, reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast."
+    # get_sentence_by_word_index(content)
 
+    # bottom":326.984375},{"left":1055.796875,"top":95,"right":1113.015625,"bottom":326.984375},{"left":1113.015625,"top":95,"right":1162.203125,"bottom":326.984375},{"left":1162.203125,"top":95,"right":1231.65625,"bottom":326.984375},{"left":1231.65625,"top":95,"right":1283.859375,"bottom":326.984375},{"left":1283.859375,"top":95,"right":1315.421875,"bottom":326.984375},{"left":1315.421875,"top":95,"right":1343.21875,"bottom":326.984375},{"left":1343.21875,"top":95,"right":1430.078125,"bottom":326.984375},{"left":1430.078125,"top":95,"right":1507.3125,"bottom":326.984375},{"left":1507.3125,"top":95,"right":1543.859375,"bottom":326.984375},{"left":1543.859375,"top":95,"right":1678.296875,"bottom":326.984375},{"left":1678.296875,"top":95,"right":1722.234375,"bottom":326.984375},{"left":330,"top":326.984375,"right":379.1875,"bottom":558.96875},{"left":379.1875,"top":326.984375,"right":526.671875,"bottom":558.96875},{"left":526.671875,"top":326.984375,"right":596.25,"bottom":558.96875},{"left":596.25,"top":326.984375,"right":632.796875,"bottom":558.96875},{"left":632.796875,"top":326.984375,"right":742.984375,"bottom":558.96875},{"left":742.984375,"top":326.984375,"right":772.65625,"bottom":558.96875},{"left":772.65625,"top":326.984375,"right":800.453125,"bottom":558.96875},{"left":800.453125,"top":326.984375,"right":906.015625,"bottom":558.96875},{"left":906.015625,"top":326.984375,"right":946.9375,"bottom":558.96875},{"left":946.9375,"top":326.984375,"right":996.125,"bottom":558.96875},{"left":996.125,"top":326.984375,"right":1114.328125,"bottom":558.96875}'
+    content = '[{"left":330,"top":95,"right":360.2250003814697,"bottom":267},{"left":360.2250061035156,"top":95,"right":391.7750072479248,"bottom":267},{"left":391.7749938964844,"top":95,"right":442.4249954223633,"bottom":267},{"left":442.4250183105469,"top":95,"right":589.6500244140625,"bottom":267},{"left":589.6500244140625,"top":95,"right":626.9875259399414,"bottom":267},{"left":626.9874877929688,"top":95,"right":675.9499893188477,"bottom":267},{"left":675.9500122070312,"top":95,"right":732.7750129699707,"bottom":267},{"left":732.7750244140625,"top":95,"right":773.7125244140625,"bottom":267},{"left":773.7125244140625,"top":95,"right":891.0625228881836,"bottom":267},{"left":891.0625,"top":95,"right":946.4375,"bottom":267},{"left":946.4375,"top":95,"right":1029.912498474121,"bottom":267},{"left":1029.9124755859375,"top":95,"right":1084.674976348877,"bottom":267},{"left":1084.675048828125,"top":95,"right":1169.587547302246,"bottom":267},{"left":1169.5875244140625,"top":95,"right":1224.637523651123,"bottom":267},{"left":1224.6375732421875,"top":95,"right":1272.375072479248,"bottom":267},{"left":1272.375,"top":95,"right":1321.5625,"bottom":267},{"left":1321.5625,"top":95,"right":1388.9250030517578,"bottom":267},{"left":330,"top":267,"right":438.9250030517578,"bottom":439},{"left":438.9250183105469,"top":267,"right":475.46252059936523,"bottom":439},{"left":475.4624938964844,"top":267,"right":566.5374984741211,"bottom":439},{"left":566.5375366210938,"top":267,"right":646.8375396728516,"bottom":439},{"left":646.8375244140625,"top":267,"right":757.4500274658203,"bottom":439},{"left":757.4500122070312,"top":267,"right":851.337516784668,"bottom":439},{"left":851.3375244140625,"top":267,"right":924.8000259399414,"bottom":439},{"left":924.7999877929688,"top":267,"right":1073.6124877929688,"bottom":439},{"left":1073.612548828125,"top":267,"right":1110.950050354004,"bottom":439},{"left":1110.9500732421875,"top":267,"right":1196.8750762939453,"bottom":439},{"left":1196.875,"top":267,"right":1251.4500007629395,"bottom":439},{"left":1251.4500732421875,"top":267,"right":1333.2125778198242,"bottom":439},{"left":1333.2125244140625,"top":267,"right":1364.7625255584717,"bottom":439},{"left":330,"top":439,"right":379.1875,"bottom":611},{"left":379.1875,"top":439,"right":421.54999923706055,"bottom":611},{"left":421.5500183105469,"top":439,"right":488.9125213623047,"bottom":611},{"left":488.9125061035156,"top":439,"right":566.1750106811523,"bottom":611},{"left":566.1749877929688,"top":439,"right":661.0249862670898,"bottom":611},{"left":661.0250244140625,"top":439,"right":703.7375259399414,"bottom":611},{"left":703.7374877929688,"top":439,"right":778.2749862670898,"bottom":611},{"left":778.2750244140625,"top":439,"right":839.3750267028809,"bottom":611},{"left":839.375,"top":439,"right":870.9250011444092,"bottom":611},{"left":870.9249877929688,"top":439,"right":898.7249889373779,"bottom":611},{"left":898.7250366210938,"top":439,"right":977.1625366210938,"bottom":611},{"left":977.1625366210938,"top":439,"right":1056.9500350952148,"bottom":611},{"left":1056.9500732421875,"top":439,"right":1189.5625762939453,"bottom":611},{"left":1189.5625,"top":439,"right":1240.0375022888184,"bottom":611},{"left":1240.0374755859375,"top":439,"right":1333.4249801635742,"bottom":611},{"left":1333.425048828125,"top":439,"right":1382.612548828125,"bottom":611},{"left":330,"top":611,"right":432.4124984741211,"bottom":783},{"left":432.4125061035156,"top":611,"right":463.9625072479248,"bottom":783},{"left":463.9624938964844,"top":611,"right":513.1499938964844,"bottom":783},{"left":513.1500244140625,"top":611,"right":574.2125244140625,"bottom":783},{"left":574.2125244140625,"top":611,"right":637.2125244140625,"bottom":783}]'
+    result = get_row_location(content)
+    print(result)
     pass
