@@ -13,7 +13,8 @@ from action.models import (
     WordLevelData,
     Dispersion,
     Paragraph,
-    Experiment, Translation,
+    Experiment,
+    Translation,
 )
 from onlineReading.utils import (
     translate,
@@ -28,8 +29,12 @@ from utils import (
     fixation_image,
     reading_times,
     get_sentence_by_word_index,
-    add_fixations_to_location, get_row_location, get_out_of_screen_times, get_proportion_of_horizontal_saccades,
-    get_saccade_angle
+    add_fixations_to_location,
+    get_row_location,
+    get_out_of_screen_times,
+    get_proportion_of_horizontal_saccades,
+    get_saccade_angle,
+    get_saccade_info, get_reading_times,
 )
 
 
@@ -67,9 +72,7 @@ def get_paragraph_and_translation(request):
     print(len(paragraphs))
     para_dict = {}
     para = 0
-    logger.info(
-        "--实验开始--"
-    )
+    logger.info("--实验开始--")
     for paragraph in paragraphs:
         words_dict = {}
         # 切成句子
@@ -84,13 +87,17 @@ def get_paragraph_and_translation(request):
                 # 句子长度低于 3，不是空，就是切割问题，暂时不考虑
                 # 句子翻译前先查表
                 starttime = datetime.datetime.now()
-                translations = Translation.objects.filter(article_id=article_id).filter(para_id=para).filter(
-                    sentence_id=sentence_id)
+                translations = (
+                    Translation.objects.filter(article_id=article_id)
+                        .filter(para_id=para)
+                        .filter(sentence_id=sentence_id)
+                )
                 if translations:
                     sentence_zh = translations.first().txt
                     endtime = datetime.datetime.now()
                     logger.info(
-                        "该翻译已经缓存，读取时间为%sms" % round((endtime - starttime).microseconds / 1000 / 1000, 3)
+                        "该翻译已经缓存，读取时间为%sms"
+                        % round((endtime - starttime).microseconds / 1000 / 1000, 3)
                     )
                 else:
                     response = translate(sentence)
@@ -102,7 +109,7 @@ def get_paragraph_and_translation(request):
                         txt=sentence_zh,
                         article_id=article_id,
                         para_id=para,
-                        sentence_id=sentence_id
+                        sentence_id=sentence_id,
                     )
                 # 切成单词
                 words = sentence.split(" ")
@@ -163,9 +170,7 @@ def get_page_data(request):
             experiment_id=experiment_id,
             location=location,
         )
-    logger.info(
-        "第%s页数据已存储" % page
-    )
+    logger.info("第%s页数据已存储" % page)
     return HttpResponse(1)
 
 
@@ -185,12 +190,8 @@ def get_labels(request):
                 sentenceLabels=label["sentenceLabels"],
                 wanderLabels=label["wanderLabels"],
             )
-    logger.info(
-        "已获得所有页标签"
-    )
-    logger.info(
-        "--实验结束--"
-    )
+    logger.info("已获得所有页标签")
+    logger.info("--实验结束--")
     return HttpResponse(1)
 
 
@@ -472,12 +473,14 @@ def analysis(request):
     fixations = get_fixations(gaze_coordinates)
     # 得到word对应的fixation dict
     word_fixation = add_fixations_to_location(fixations, pagedata.location)
-    # 得到word对应的reading times dict
-    times = reading_times(word_fixation)
+    # # 得到word对应的reading times dict
+    # times = reading_times(word_fixation)
     # 得到word在文章中下标 dict
     words_index, sentence_index = get_sentence_by_word_index(pagedata.texts)
-    # 获取不懂的单词的label 使用", "来切割，#TODO可能要改
+    # 获取不懂的单词的label 使用", "来切割，#TODO 可能要改
     wordlabels = pagedata.wordLabels[1:-1].split(", ")
+    # 获取每个单词的reading times dict
+    reading_times = get_reading_times(fixations,pagedata.location)
     # 需要输出的单词level分析结果
     analysis_result_by_word_level = {}
     # 因为所有的特征都依赖于fixation，所以遍历有fixation的word就足够了
@@ -495,9 +498,11 @@ def analysis(request):
             "mean_fixations_duration": mean_fixations_duration,  # 平均阅读时长
             "fixation_duration": word_fixation[key][0][2],  # 首次的fixation时长
             "second_pass_duration": word_fixation[key][1][2]
-            if times[key] > 1
+            if len(word_fixation[key]) > 1
             else 0,  # second-pass duration
-            "reading_time": times[key],  # 阅读次数
+            "number of fixations": len(word_fixation[key]),  # 在一个单词上的fixation次数
+            # "fixations": word_fixation[key],  # 输出所有的fixation点
+            "reading times":reading_times[key]
         }
 
         analysis_result_by_word_level[key] = result
@@ -530,38 +535,29 @@ def analysis(request):
         analysis_result_by_sentence_level[key] = result
 
     # 需要输出行level的输出结果
-    row_fixation = add_fixations_to_location(fixations, str(get_row_location(pagedata.location)).replace('\'', '"'))
+    row_fixation = add_fixations_to_location(
+        fixations, str(get_row_location(pagedata.location)).replace("'", '"')
+    )
     analysis_result_by_row_level = {}
     for key in row_fixation:
-        saccade_times = 0
-        sum_angle = 0
-        for i in range(len(row_fixation[key]) - 1):
-            if get_euclid_distance(row_fixation[key][i][0], row_fixation[key][i + 1][0], row_fixation[key][i][1],
-                                   row_fixation[key][i + 1][1]) > 500:
-                saccade_times = saccade_times + 1
-                sum_angle = sum_angle + get_saccade_angle(row_fixation[key][i], row_fixation[key][i + 1])
+        saccade_times_of_row, mean_saccade_angle_of_row = get_saccade_info(row_fixation[key])
 
         result = {
-            'saccade_times': saccade_times,
-            'mean_saccade_angle': sum_angle / saccade_times if saccade_times !=0 else 0
+            "saccade_times": saccade_times_of_row,
+            "mean_saccade_angle": mean_saccade_angle_of_row
         }
         analysis_result_by_row_level[key] = result
 
-    saccade_times = 0
-    sum_angle = 0
-    for i in range(len(fixations)-1):
-        if get_euclid_distance(fixations[i][0], fixations[i+1][0], fixations[i][1],
-                               fixations[i+1][1]) > 500:
-            saccade_times = saccade_times + 1
-            sum_angle = sum_angle + get_saccade_angle(fixations[i], fixations[i + 1])
+    # 获取page level的特征
+    saccade_times_of_page, mean_saccade_angle_of_page = get_saccade_info(fixations)
     analysis_result_by_page_level = {
-        'saccade_times': saccade_times,
-        'mean_saccade_angle': sum_angle / saccade_times if saccade_times!=0 else 0,
-        'out_of_screen_times': get_out_of_screen_times(gaze_coordinates),
-        'proportion of horizontal saccades': get_proportion_of_horizontal_saccades(fixations,
-                                                                                   str(get_row_location(
-                                                                                       pagedata.location)).replace('\'',
-                                                                                                                   '"'))
+        "saccade_times": saccade_times_of_page,
+        "mean_saccade_angle": mean_saccade_angle_of_page,
+        "out_of_screen_times": get_out_of_screen_times(gaze_coordinates),
+        "proportion of horizontal saccades": get_proportion_of_horizontal_saccades(
+            fixations, str(get_row_location(pagedata.location)).replace("'", '"')
+        ),
+        "number_of_fixations": len(fixations)
     }
 
     # 输出图示
@@ -575,7 +571,7 @@ def analysis(request):
         "word": analysis_result_by_word_level,
         "sentence": analysis_result_by_sentence_level,
         "row": analysis_result_by_row_level,
-        "page": analysis_result_by_page_level
+        "page": analysis_result_by_page_level,
     }
 
     return JsonResponse(analysis, json_dumps_params={"ensure_ascii": False})

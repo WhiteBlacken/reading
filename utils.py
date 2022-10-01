@@ -60,7 +60,7 @@ def get_fixations(coordinates):
                 working_queue.clear()
                 break  # maximum data found
             working_queue.append(remaining_gaze.popleft())
-    print("fixaions:%s"% fixations)
+    print("fixaions:%s" % fixations)
     return fixations
 
 
@@ -288,16 +288,16 @@ def get_row_location(words_locations):
     buttons = json.loads(words_locations)
     begin_word = 0
     row_index = 0
-    top = buttons[0]['top']
+    top = buttons[0]["top"]
     rows_fixation = []
     for i, button in enumerate(buttons):
-        if button['top'] != top:
-            top = button['top']
+        if button["top"] != top:
+            top = button["top"]
             row_dict = {
-                'left': buttons[begin_word]['left'],
-                'top': buttons[begin_word]['top'],
-                'right': buttons[i - 1]['right'],
-                'bottom': buttons[begin_word]['bottom']
+                "left": buttons[begin_word]["left"],
+                "top": buttons[begin_word]["top"],
+                "right": buttons[i - 1]["right"],
+                "bottom": buttons[begin_word]["bottom"],
             }
             rows_fixation.append(row_dict)
             row_index = row_index + 1
@@ -353,17 +353,61 @@ def get_proportion_of_horizontal_saccades(fixations, locations):
         now_row = get_item_index_x_y(locations, fixation[0], fixation[1])
         if pre_row != now_row and now_row != -1:
             vertical_saccade = vertical_saccade + 1
-    return (len(fixations) - vertical_saccade) / len(fixations) if len(fixations) != 0 else 0
+    return (
+        (len(fixations) - vertical_saccade) / len(fixations)
+        if len(fixations) != 0
+        else 0
+    )
 
 
 def get_saccade_angle(fixation1, fixation2):
+    """获得saccade的角度"""
     vertical_dis = abs(fixation2[1] - fixation1[1])
     horizontal_dis = abs(fixation2[0] - fixation1[0])
-    print("dis")
-    # print(vertical_dis)
-    # print(horizontal_dis)
     print(vertical_dis / horizontal_dis)
-    return math.atan(vertical_dis / horizontal_dis)
+    return math.atan(vertical_dis / horizontal_dis) * 180 / math.pi
+
+
+def get_saccade_info(fixations):
+    """根据fixation，获取和saccade相关的 saccade_time,mean_saccade_angle"""
+    saccade_times = 0
+    sum_angle = 0
+    for i in range(len(fixations) - 1):
+        if (
+                get_euclid_distance(
+                    fixations[i][0],
+                    fixations[i + 1][0],
+                    fixations[i][1],
+                    fixations[i + 1][1],
+                )
+                > 500
+        ):
+            saccade_times = saccade_times + 1
+            sum_angle = sum_angle + get_saccade_angle(fixations[i], fixations[i + 1])
+    return (
+        saccade_times,
+        sum_angle / saccade_times if saccade_times != 0 else 0,
+    )
+
+
+def get_reading_times(fixations, locations):
+    # 根据每个单词的位置
+    location = json.loads(locations)
+    pre_fixation = [-2 for x in range(0, len(location))]
+    reading_times = {}
+    fixation_cnt = 0
+    for fixation in fixations:
+        index = get_item_index_x_y(locations, fixation[0], fixation[1])
+        if index != -1:
+            if fixation_cnt - pre_fixation[index] > 1:
+                if index in reading_times.keys():
+                    tmp = reading_times[index] + 1
+                    reading_times[index] = tmp
+                else:
+                    reading_times[index] = 1
+            pre_fixation[index] = fixation_cnt
+        fixation_cnt = fixation_cnt + 1
+    return reading_times
 
 
 if __name__ == "__main__":
