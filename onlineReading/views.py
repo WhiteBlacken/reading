@@ -27,14 +27,14 @@ from utils import (
     x_y_t_2_coordinate,
     get_fixations,
     fixation_image,
-    reading_times,
     get_sentence_by_word_index,
     add_fixations_to_location,
     get_row_location,
     get_out_of_screen_times,
     get_proportion_of_horizontal_saccades,
     get_saccade_angle,
-    get_saccade_info, get_reading_times,
+    get_saccade_info,
+    get_reading_times_of_word, get_reading_times_and_dwell_time_of_sentence,
 )
 
 
@@ -89,8 +89,8 @@ def get_paragraph_and_translation(request):
                 starttime = datetime.datetime.now()
                 translations = (
                     Translation.objects.filter(article_id=article_id)
-                        .filter(para_id=para)
-                        .filter(sentence_id=sentence_id)
+                    .filter(para_id=para)
+                    .filter(sentence_id=sentence_id)
                 )
                 if translations:
                     sentence_zh = translations.first().txt
@@ -455,8 +455,6 @@ def get_utils_test(request):
     result = add_fixations_to_location(fixations, pagedata.location)
     username = Experiment.objects.get(id=pagedata.experiment_id).user
     # fixation_image(pagedata.image, username, fixations, page_data_id)
-    times = reading_times(result)
-    print(times)
     return HttpResponse(result)
 
 
@@ -477,10 +475,14 @@ def analysis(request):
     # times = reading_times(word_fixation)
     # 得到word在文章中下标 dict
     words_index, sentence_index = get_sentence_by_word_index(pagedata.texts)
+    # row本身的信息
+    row_info = get_row_location(pagedata.location)
     # 获取不懂的单词的label 使用", "来切割，#TODO 可能要改
     wordlabels = pagedata.wordLabels[1:-1].split(", ")
     # 获取每个单词的reading times dict
-    reading_times = get_reading_times(fixations,pagedata.location)
+    reading_times_of_word = get_reading_times_of_word(fixations, pagedata.location)
+    # 获取每隔句子的reading times dict/list 下标代表第几次 0-first pass
+    reading_times_of_sentence,dwell_time_of_sentence = get_reading_times_and_dwell_time_of_sentence(fixations,pagedata.location,sentence_index)
     # 需要输出的单词level分析结果
     analysis_result_by_word_level = {}
     # 因为所有的特征都依赖于fixation，所以遍历有fixation的word就足够了
@@ -502,7 +504,7 @@ def analysis(request):
             else 0,  # second-pass duration
             "number of fixations": len(word_fixation[key]),  # 在一个单词上的fixation次数
             # "fixations": word_fixation[key],  # 输出所有的fixation点
-            "reading times":reading_times[key]
+            "reading times": reading_times_of_word[key],
         }
 
         analysis_result_by_word_level[key] = result
@@ -515,7 +517,6 @@ def analysis(request):
     for key in sentence_index:
         begin = sentence_index[key]["begin_word_index"]
         end = sentence_index[key]["end_word_index"]
-        print("句子index:[%d,%d]" % (begin, end))
         sum_duration = 0
         # 将在这个句子中所有单词的fixation duration相加
         for word_key in word_fixation:
@@ -531,33 +532,49 @@ def analysis(request):
             "sentence": sentence_index[key]["sentence"],  # 句子本身
             "is_understand": is_understand,  # 是否理解
             "sum_dwell_time": sum_duration,  # 在该句子上的fixation总时长
+            "reading_times_of_sentence": reading_times_of_sentence[key],
+            "dwell_time": dwell_time_of_sentence[0][key],
+            "second_pass_dwell_time":dwell_time_of_sentence[1][key]
         }
         analysis_result_by_sentence_level[key] = result
 
     # 需要输出行level的输出结果
-    row_fixation = add_fixations_to_location(
-        fixations, str(get_row_location(pagedata.location)).replace("'", '"')
-    )
+    row_fixation = add_fixations_to_location(fixations, str(row_info).replace("'", '"'))
     analysis_result_by_row_level = {}
+    wanderlabels = json.loads(pagedata.wanderLabels)
+    print(sentencelabels)
+    # TODO 一旦有一行是wander,那么整页的标签就是wander
+    page_wander = 0
     for key in row_fixation:
-        saccade_times_of_row, mean_saccade_angle_of_row = get_saccade_info(row_fixation[key])
-
+        saccade_times_of_row, mean_saccade_angle_of_row = get_saccade_info(
+            row_fixation[key]
+        )
+        # 判断该行是否走神
+        begin_word = row_info[key]["begin_word"]
+        end_word = row_info[key]["end_word"]
+        is_wander = 0
+        for wanderlabel in wanderlabels:
+            if begin_word == wanderlabel[0] and end_word == wanderlabel[1]:
+                is_wander = 1
+                page_wander = 1
         result = {
+            "is_wander": is_wander,
             "saccade_times": saccade_times_of_row,
-            "mean_saccade_angle": mean_saccade_angle_of_row
+            "mean_saccade_angle": mean_saccade_angle_of_row,
         }
         analysis_result_by_row_level[key] = result
 
     # 获取page level的特征
     saccade_times_of_page, mean_saccade_angle_of_page = get_saccade_info(fixations)
     analysis_result_by_page_level = {
+        "page_wander":page_wander,
         "saccade_times": saccade_times_of_page,
         "mean_saccade_angle": mean_saccade_angle_of_page,
         "out_of_screen_times": get_out_of_screen_times(gaze_coordinates),
         "proportion of horizontal saccades": get_proportion_of_horizontal_saccades(
-            fixations, str(get_row_location(pagedata.location)).replace("'", '"')
+            fixations, str(row_info).replace("'", '"')
         ),
-        "number_of_fixations": len(fixations)
+        "number_of_fixations": len(fixations),
     }
 
     # 输出图示
@@ -568,7 +585,7 @@ def analysis(request):
         page_data_id,
     )
     analysis = {
-        "word": analysis_result_by_word_level,
+        # "word": analysis_result_by_word_level,
         "sentence": analysis_result_by_sentence_level,
         "row": analysis_result_by_row_level,
         "page": analysis_result_by_page_level,
