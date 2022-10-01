@@ -25,10 +25,11 @@ from onlineReading.utils import (
 from utils import (
     x_y_t_2_coordinate,
     get_fixations,
-    add_fixations_to_word,
     fixation_image,
     reading_times,
     get_sentence_by_word_index,
+    add_fixations_to_location, get_row_location, get_out_of_screen_times, get_proportion_of_horizontal_saccades,
+    get_saccade_angle
 )
 
 
@@ -131,7 +132,7 @@ def get_paragraph_and_translation(request):
     )
     request.session["experiment_id"] = experiment.id
     logger.info(
-        "--本次实验开始,实验者：%s，实验id：%d--"%(request.session.get("username"),experiment.id)
+        "--本次实验开始,实验者：%s，实验id：%d--" % (request.session.get("username"), experiment.id)
     )
     return JsonResponse(para_dict, json_dumps_params={"ensure_ascii": False})
 
@@ -450,7 +451,7 @@ def get_utils_test(request):
     print("len(gaze):%d" % (len(gaze_coordinates)))
     fixations = get_fixations(gaze_coordinates)
     print("fixations:%s" % fixations)
-    result = add_fixations_to_word(fixations, pagedata.location)
+    result = add_fixations_to_location(fixations, pagedata.location)
     username = Experiment.objects.get(id=pagedata.experiment_id).user
     # fixation_image(pagedata.image, username, fixations, page_data_id)
     times = reading_times(result)
@@ -470,7 +471,7 @@ def analysis(request):
     # 根据gaze点计算fixation list
     fixations = get_fixations(gaze_coordinates)
     # 得到word对应的fixation dict
-    word_fixation = add_fixations_to_word(fixations, pagedata.location)
+    word_fixation = add_fixations_to_location(fixations, pagedata.location)
     # 得到word对应的reading times dict
     times = reading_times(word_fixation)
     # 得到word在文章中下标 dict
@@ -527,6 +528,42 @@ def analysis(request):
             "sum_dwell_time": sum_duration,  # 在该句子上的fixation总时长
         }
         analysis_result_by_sentence_level[key] = result
+
+    # 需要输出行level的输出结果
+    row_fixation = add_fixations_to_location(fixations, str(get_row_location(pagedata.location)).replace('\'', '"'))
+    analysis_result_by_row_level = {}
+    for key in row_fixation:
+        saccade_times = 0
+        sum_angle = 0
+        for i in range(len(row_fixation[key]) - 1):
+            if get_euclid_distance(row_fixation[key][i][0], row_fixation[key][i + 1][0], row_fixation[key][i][1],
+                                   row_fixation[key][i + 1][1]) > 500:
+                saccade_times = saccade_times + 1
+                sum_angle = sum_angle + get_saccade_angle(row_fixation[key][i], row_fixation[key][i + 1])
+
+        result = {
+            'saccade_times': saccade_times,
+            'mean_saccade_angle': sum_angle / saccade_times if saccade_times !=0 else 0
+        }
+        analysis_result_by_row_level[key] = result
+
+    saccade_times = 0
+    sum_angle = 0
+    for i in range(len(fixations)-1):
+        if get_euclid_distance(fixations[i][0], fixations[i+1][0], fixations[i][1],
+                               fixations[i+1][1]) > 500:
+            saccade_times = saccade_times + 1
+            sum_angle = sum_angle + get_saccade_angle(fixations[i], fixations[i + 1])
+    analysis_result_by_page_level = {
+        'saccade_times': saccade_times,
+        'mean_saccade_angle': sum_angle / saccade_times if saccade_times!=0 else 0,
+        'out_of_screen_times': get_out_of_screen_times(gaze_coordinates),
+        'proportion of horizontal saccades': get_proportion_of_horizontal_saccades(fixations,
+                                                                                   str(get_row_location(
+                                                                                       pagedata.location)).replace('\'',
+                                                                                                                   '"'))
+    }
+
     # 输出图示
     fixation_image(
         pagedata.image,
@@ -537,7 +574,8 @@ def analysis(request):
     analysis = {
         "word": analysis_result_by_word_level,
         "sentence": analysis_result_by_sentence_level,
-        "row": "暂无信息",
+        "row": analysis_result_by_row_level,
+        "page": analysis_result_by_page_level
     }
 
     return JsonResponse(analysis, json_dumps_params={"ensure_ascii": False})
