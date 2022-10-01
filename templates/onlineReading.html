@@ -177,24 +177,45 @@
                     {#    $('#trans').css('display','none');#}
                     this.changeTextStyle(num, num + 1, 1);
                     this.wordLocation = this.getWordLocation(num);
-                    let el = document.createElement('div');
-                    el.className = "trans";
-
-                    el.innerHTML = this.transPerPage[this.page - 1][num].zh;
-
-                    el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
-
-                    el.style.top = this.wordLocation.top - 20 + "px";
-                    let e = document.getElementById('readArea');
-                    e.appendChild(el);
+                    {#let el = document.createElement('div');#}
+                    {#el.className = "trans";#}
+                    {##}
+                    {#el.innerHTML = this.transPerPage[this.page - 1][num].zh;#}
+                    {##}
+                    {#el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";#}
+                    {##}
+                    {#el.style.top = this.wordLocation.top - 20 + "px";#}
+                    {#let e = document.getElementById('readArea');#}
+                    {#e.appendChild(el);#}
                     this.currentTransBox.push(num);
                     this.currentTransWord = num;
-                } else {
-                    this.changeTextStyle(num, num+1, 0);
-                    let ind = this.currentTransBox.indexOf(num);
-                    this.currentTransBox.splice(ind, 1);
-                    document.getElementsByClassName('trans')[ind].remove();
+                    $('<div>')
+                        .appendTo('#readArea')
+                        .addClass('trans')
+                        .attr('id', 'transWord' + num)
+                        .css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px")
+                        .css('top', this.wordLocation.top - 20 + "px")
+                        .html(this.transPerPage[this.page - 1][num].zh)
+                        .fadeIn('fast', function () {
+                            setTimeout(function () {
+                                $('#transWord' + num).fadeOut('fast', function () {
+                                    app.changeTextStyle(num, num+1, 0);
+                                    let ind = app._data.currentTransBox.indexOf(num);
+                                    app._data.currentTransBox.splice(ind, 1);
+                                    $('#transWord' + num).remove();
+                                })
+                            }, 1500);
+                        });
+                }else {
+                    this.currentTransBox.splice(this.currentTransBox.indexOf(num), 1);
+                    $('#transWord'+num).remove();
                 }
+                {#else {#}
+                {#    this.changeTextStyle(num, num+1, 0);#}
+                {#    let ind = this.currentTransBox.indexOf(num);#}
+                {#    this.currentTransBox.splice(ind, 1);#}
+                {#    document.getElementsByClassName('trans')[ind].remove();#}
+                {# }#}
 
             },
 
@@ -236,29 +257,59 @@
                 if(!this.isSentenceTranslated(num)) {
                     this.changeTextStyle(start, end, 1);
                     this.wordLocation = this.getWordLocation(num);
-                    let el = document.createElement('div');
-                    el.className = "transSentence";
-
-                    el.innerHTML = this.transPerPage[this.page - 1][num].sentence_zh;
-
-                    el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";
-
-                    el.style.top = this.wordLocation.top - 20 + "px";
-                    let e = document.getElementById('readArea');
-                    e.appendChild(el);
+                    {#let el = document.createElement('div');#}
+                    {#el.className = "transSentence";#}
+                    {##}
+                    {#el.innerHTML = this.transPerPage[this.page - 1][num].sentence_zh;#}
+                    {##}
+                    {#el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";#}
+                    {##}
+                    {#el.style.top = this.wordLocation.top - 20 + "px";#}
+                    {#let e = document.getElementById('readArea');#}
+                    {#e.appendChild(el);#}
                     this.currentTransSentenceBox.push(new Array(start, end));
-                }else {
-                    this.changeTextStyle(start, end, 0);
-                    let ind = 0;
-                    for(let i = 0; i < this.currentTransSentenceBox.length; i++) {
-                        if(this.currentTransSentenceBox[i][0] == start && this.currentTransSentenceBox[i][1] == end){
-                            ind = i;
-                            break;
-                        }
-                    }
-                    this.currentTransSentenceBox.splice(ind, 1);
-                    document.getElementsByClassName('transSentence')[ind].remove();
+
+                    $('<div>')
+                        .appendTo('#readArea')
+                        .addClass('transSentence')
+                        .attr('id', 'transSentence' + start);
+                    if(this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 < 840)
+                        $('#transSentence' + start).css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px");
+                    else
+                        $('#transSentence' + start).css('right',  "130px");
+                    $('#transSentence' + start)
+                        .css('top', this.wordLocation.top - 20 + "px")
+                        .html(this.transPerPage[this.page - 1][num].sentence_zh)
+                        .fadeIn('fast', function () {
+                            setTimeout(function () {
+                                $('#transSentence' + start).fadeOut('fast', function () {
+                                    app.changeTextStyle(start, end, 0);
+                                    let ind = 0;
+                                    for(let i = 0; i < app._data.currentTransSentenceBox.length; i++) {
+                                        if(app._data.currentTransSentenceBox[i][0] == start && app._data.currentTransSentenceBox[i][1] == end){
+                                            ind = i;
+                                            break;
+                                        }
+                                    }
+                                    app._data.currentTransSentenceBox.splice(ind, 1);
+                                    $('#transSentence' + start).remove();
+                                })
+                            }, 2500);
+                        });
                 }
+                {#else {#}
+                    {#this.changeTextStyle(start, end, 0);#}
+                    {#let ind = 0;#}
+                    {#for(let i = 0; i < this.currentTransSentenceBox.length; i++) {#}
+                    {#    if(this.currentTransSentenceBox[i][0] == start && this.currentTransSentenceBox[i][1] == end){#}
+                    {#        ind = i;#}
+                    {#        break;#}
+                    {#    }#}
+                    {# }#}
+                    {#this.currentTransSentenceBox.splice(ind, 1);#}
+                    {#document.getElementsByClassName('transSentence')[ind].remove();#}
+                {# }#}
+
             },
 
             getWanderRemind: function () {
