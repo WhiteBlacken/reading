@@ -444,14 +444,25 @@ def get_reading_times_and_dwell_time_of_sentence(fixations, buttons_location, se
         fixation_cnt = fixation_cnt + 1
     # 计算dwell_time TODO：此处是按照fixation算的，应该用gaze
     dwell_time = []
-    for sentence in dwell_time_fixations:
+    # for sentence in dwell_time_fixations:
+    #     sentence_dwell = []
+    #     for sentence_fixation in sentence:
+    #         sum_dwell = 0
+    #         for fix in sentence_fixation:
+    #             sum_dwell = sum_dwell + fix[2]
+    #         sentence_dwell.append(sum_dwell)
+    #     dwell_time.append(sentence_dwell)
+    dwell_time = []
+    for times in dwell_time_fixations:
         sentence_dwell = []
-        for sentence_fixation in sentence:
-            sum_dwell = 0
+        for sentence_fixation in times:
+            sum_duration = 0
             for fix in sentence_fixation:
-                sum_dwell = sum_dwell + fix[2]
-            sentence_dwell.append(sum_dwell)
-        dwell_time.append(sentence_dwell)
+                sum_duration = sum_duration + fix[2]
+                sentence_dwell.append(sum_duration)
+        sentence_dwell.append(sentence_fixation)
+    print(dwell_time)
+    print("dwell time:%s"%dwell_time)
 
     return reading_times, dwell_time
 
