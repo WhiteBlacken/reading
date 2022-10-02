@@ -580,9 +580,8 @@ def analysis(request):
         mean_saccade_length,
         mean_saccade_angle,
     ) = get_saccade(fixations, pagedata.location)
-    proportion_of_horizontal_saccades = get_proportion_of_horizontal_saccades(
-        fixations, str(row_info).replace("'", '"'), saccade_time
-    )
+
+    proportion_of_horizontal_saccades = get_proportion_of_horizontal_saccades(fixations,str(row_info).replace("'", '"'),saccade_time)
     analysis_result_by_page_level = {
         "page_wander": page_wander,
         "saccade_times": saccade_time,

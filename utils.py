@@ -520,6 +520,7 @@ def get_saccade(fixations, location):
         sum_saccade_angle / saccade_times if saccade_times != 0 else 0,
     )
 
+
 def corr(path):
     """
     计算变量之间的相关性
@@ -532,6 +533,7 @@ def corr(path):
 
     # print(data[['is_understand','mean_fixations_duration','fixation_duration','second_pass_duration','number_of_fixations','reading_times']])
     print(data[['is_understand','mean_fixations_duration','fixation_duration','second_pass_duration','number_of_fixations','reading_times']].corr())
+
 
 if __name__ == "__main__":
     location = (
