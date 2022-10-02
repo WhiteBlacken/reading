@@ -91,8 +91,8 @@ def get_paragraph_and_translation(request):
                 starttime = datetime.datetime.now()
                 translations = (
                     Translation.objects.filter(article_id=article_id)
-                    .filter(para_id=para)
-                    .filter(sentence_id=sentence_id)
+                        .filter(para_id=para)
+                        .filter(sentence_id=sentence_id)
                 )
                 if translations:
                     sentence_zh = translations.first().txt
@@ -171,6 +171,7 @@ def get_page_data(request):
             page=page,  # todo 前端发送过来
             experiment_id=experiment_id,
             location=location,
+            is_test=0
         )
     logger.info("第%s页数据已存储" % page)
     return HttpResponse(1)
@@ -579,6 +580,7 @@ def analysis(request):
         mean_saccade_length,
         mean_saccade_angle,
     ) = get_saccade(fixations, pagedata.location)
+
     proportion_of_horizontal_saccades = get_proportion_of_horizontal_saccades(fixations,str(row_info).replace("'", '"'),saccade_time)
     analysis_result_by_page_level = {
         "page_wander": page_wander,
@@ -599,11 +601,56 @@ def analysis(request):
         fixations,
         page_data_id,
     )
+
+    # 将数据写入csv
+    # 先看word level
+    import pandas as pd
+
+    is_understand = []
+    mean_fixations_duration = []
+    fixation_duration = []
+    second_pass_duration = []
+    number_of_fixations = []
+    reading_times = []
+    for key in analysis_result_by_word_level:
+        is_understand.append(analysis_result_by_word_level[key]["is_understand"])
+        mean_fixations_duration.append(
+            analysis_result_by_word_level[key]["mean_fixations_duration"]
+        )
+        fixation_duration.append(
+            analysis_result_by_word_level[key]["fixation_duration"]
+        )
+        second_pass_duration.append(
+            analysis_result_by_word_level[key]["second_pass_duration"]
+        )
+        number_of_fixations.append(
+            analysis_result_by_word_level[key]["number of fixations"]
+        )
+        reading_times.append(analysis_result_by_word_level[key]["reading times"])
+    df = pd.DataFrame(
+        {
+            "is_understand": is_understand,
+            "mean_fixations_duration": mean_fixations_duration,
+            "fixation_duration": fixation_duration,
+            "second_pass_duration": second_pass_duration,
+            "number_of_fixations": number_of_fixations,
+            "reading_times": reading_times,
+        }
+    )
+    path = "static/user/" + "word_level_xhl.csv"
+    import os
+    # model='a' 是追加模式
+    if os.path.exists(path):
+        df.to_csv(path, index=False, mode='a',header=False)
+    else:
+        df.to_csv(path, index=False, mode='a')
+    # 返回结果
     analysis = {
-        # "word": analysis_result_by_word_level,
+        "word": analysis_result_by_word_level,
         "sentence": analysis_result_by_sentence_level,
         "row": analysis_result_by_row_level,
         "page": analysis_result_by_page_level,
     }
 
+    print(analysis_result_by_word_level)
     return JsonResponse(analysis, json_dumps_params={"ensure_ascii": False})
