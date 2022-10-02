@@ -454,7 +454,6 @@
                                 }
                                 for (let k = num; k < num + words.length; k++) {
                                     locPerPage.push(this.getWordLocation(k));
-
                                 }
 
                                 num += words.length;
@@ -467,7 +466,6 @@
                         this.buttonLocPerPage.push(locPerPage);
                         this.transPerPage.push(transPerPage);
                         this.contentPerPage.push(conPerPage.join('.') + ".");
-
                     }
                 }
 
@@ -520,6 +518,7 @@
                 var Content = this.contentPerPage[this.page - 1];
                 this.contentCurPage = Content;
                 this.buttonCurLoc = this.buttonLocPerPage[this.page - 1];
+                console.log(this.buttonCurLoc.length)
                 let sentences = Content.split('.');
                 sentences.splice(sentences.length - 1, 1);
                 this.sentences = sentences;
@@ -540,6 +539,7 @@
                         }
                     }
                 }
+                console.log(num);
                 this.getWanderRemind();
             },
 
@@ -782,7 +782,6 @@
                 },
                 processData: false,
                 contentType: false
-
             })
         });
     }
