@@ -34,7 +34,9 @@ from utils import (
     get_proportion_of_horizontal_saccades,
     get_saccade_angle,
     get_saccade_info,
-    get_reading_times_of_word, get_reading_times_and_dwell_time_of_sentence,
+    get_reading_times_of_word,
+    get_reading_times_and_dwell_time_of_sentence,
+    get_saccade,
 )
 
 
@@ -482,7 +484,12 @@ def analysis(request):
     # 获取每个单词的reading times dict
     reading_times_of_word = get_reading_times_of_word(fixations, pagedata.location)
     # 获取每隔句子的reading times dict/list 下标代表第几次 0-first pass
-    reading_times_of_sentence,dwell_time_of_sentence = get_reading_times_and_dwell_time_of_sentence(fixations,pagedata.location,sentence_index)
+    (
+        reading_times_of_sentence,
+        dwell_time_of_sentence,
+    ) = get_reading_times_and_dwell_time_of_sentence(
+        fixations, pagedata.location, sentence_index
+    )
     # 需要输出的单词level分析结果
     analysis_result_by_word_level = {}
     # 因为所有的特征都依赖于fixation，所以遍历有fixation的word就足够了
@@ -534,7 +541,7 @@ def analysis(request):
             "sum_dwell_time": sum_duration,  # 在该句子上的fixation总时长
             "reading_times_of_sentence": reading_times_of_sentence[key],
             "dwell_time": dwell_time_of_sentence[0][key],
-            "second_pass_dwell_time":dwell_time_of_sentence[1][key]
+            "second_pass_dwell_time": dwell_time_of_sentence[1][key],
         }
         analysis_result_by_sentence_level[key] = result
 
@@ -565,15 +572,23 @@ def analysis(request):
         analysis_result_by_row_level[key] = result
 
     # 获取page level的特征
-    saccade_times_of_page, mean_saccade_angle_of_page = get_saccade_info(fixations)
+    (
+        saccade_time,
+        forward_saccade_times,
+        backward_saccade_times,
+        mean_saccade_length,
+        mean_saccade_angle,
+    ) = get_saccade(fixations, pagedata.location)
+    proportion_of_horizontal_saccades = get_proportion_of_horizontal_saccades(fixations,str(row_info).replace("'", '"'),saccade_time)
     analysis_result_by_page_level = {
-        "page_wander":page_wander,
-        "saccade_times": saccade_times_of_page,
-        "mean_saccade_angle": mean_saccade_angle_of_page,
+        "page_wander": page_wander,
+        "saccade_times": saccade_time,
+        "forward_saccade_times": forward_saccade_times,
+        "backward_saccade_times": backward_saccade_times,
+        "mean_saccade_length": mean_saccade_length,
+        "mean_saccade_angle": mean_saccade_angle,
         "out_of_screen_times": get_out_of_screen_times(gaze_coordinates),
-        "proportion of horizontal saccades": get_proportion_of_horizontal_saccades(
-            fixations, str(row_info).replace("'", '"')
-        ),
+        "proportion of horizontal saccades": proportion_of_horizontal_saccades,
         "number_of_fixations": len(fixations),
     }
 

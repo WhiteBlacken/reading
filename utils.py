@@ -29,8 +29,8 @@ def get_fixations(coordinates):
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if (
-                len(working_queue) < 2
-                or (working_queue[-1][2] - working_queue[0][2]) < min_duration
+            len(working_queue) < 2
+            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
         ):
             # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
             datum = remaining_gaze.popleft()
@@ -54,7 +54,7 @@ def get_fixations(coordinates):
         while remaining_gaze:
             datum = remaining_gaze[0]
             if datum[2] > working_queue[0][2] + max_duration or with_distance(
-                    working_queue[0], datum, max_distance
+                working_queue[0], datum, max_distance
             ):
                 fixations.append(from_gazes_to_fixation(list(working_queue)))
                 working_queue.clear()
@@ -328,9 +328,9 @@ def translate(content):
         sign = Encry.hexdigest()
         # 3. 发送请求
         url = (
-                "http://api.fanyi.baidu.com/api/trans/vip/translate?"
-                + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
-                % (content, appid, salt, sign)
+            "http://api.fanyi.baidu.com/api/trans/vip/translate?"
+            + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
+            % (content, appid, salt, sign)
         )
         # 4. 解析结果
         response = requests.get(url)
@@ -352,18 +352,22 @@ def get_out_of_screen_times(coordinates):
     return out_of_screen_times
 
 
-def get_proportion_of_horizontal_saccades(fixations, locations):
+def get_proportion_of_horizontal_saccades(fixations, locations, saccade_times):
+    return (
+        get_vertical_saccades(fixations, locations) / saccade_times
+        if saccade_times != 0
+        else 0
+    )
+
+
+def get_vertical_saccades(fixations, locations):
     pre_row = 0
     vertical_saccade = 0
     for fixation in fixations:
         now_row = get_item_index_x_y(locations, fixation[0], fixation[1])
         if pre_row != now_row and now_row != -1:
             vertical_saccade = vertical_saccade + 1
-    return (
-        (len(fixations) - vertical_saccade) / len(fixations)
-        if len(fixations) != 0
-        else 0
-    )
+    return vertical_saccade
 
 
 def get_saccade_angle(fixation1, fixation2):
@@ -379,13 +383,13 @@ def get_saccade_info(fixations):
     sum_angle = 0
     for i in range(len(fixations) - 1):
         if (
-                get_euclid_distance(
-                    fixations[i][0],
-                    fixations[i + 1][0],
-                    fixations[i][1],
-                    fixations[i + 1][1],
-                )
-                > 500
+            get_euclid_distance(
+                fixations[i][0],
+                fixations[i + 1][0],
+                fixations[i][1],
+                fixations[i + 1][1],
+            )
+            > 500
         ):
             saccade_times = saccade_times + 1
             sum_angle = sum_angle + get_saccade_angle(fixations[i], fixations[i + 1])
@@ -415,14 +419,15 @@ def get_reading_times_of_word(fixations, locations):
     return reading_times
 
 
-def get_reading_times_and_dwell_time_of_sentence(fixations, buttons_location, sentence_dict):
+def get_reading_times_and_dwell_time_of_sentence(
+    fixations, buttons_location, sentence_dict
+):
     pre_fixations = [-2 for x in range(0, len(sentence_dict))]
     fixation_cnt = 0
     reading_times = {}
     first_fixations = [[] for x in range(0, len(sentence_dict))]
     second_fixations = [[] for x in range(0, len(sentence_dict))]
     dwell_time_fixations = [first_fixations, second_fixations]
-    print(sentence_dict)
     for fixation in fixations:
         index = get_item_index_x_y(buttons_location, fixation[0], fixation[1])
         sentence = get_sentence_by_word(index, sentence_dict)
@@ -434,24 +439,24 @@ def get_reading_times_and_dwell_time_of_sentence(fixations, buttons_location, se
                     reading_times[sentence] = tmp
                 else:
                     reading_times[sentence] = 1
-            else:
-                # 求dwell_times
-                if reading_times[sentence] == 1:
-                    dwell_time_fixations[0][sentence].append(fixation)
-                if reading_times[sentence] == 2:
-                    dwell_time_fixations[1][sentence].append(fixation)
+            # 求dwell_times
+            if reading_times[sentence] == 1:
+                dwell_time_fixations[0][sentence].append(fixation)
+            if reading_times[sentence] == 2:
+                dwell_time_fixations[1][sentence].append(fixation)
             pre_fixations[sentence] = fixation_cnt
         fixation_cnt = fixation_cnt + 1
     # 计算dwell_time TODO：此处是按照fixation算的，应该用gaze
     dwell_time = []
-    for sentence in dwell_time_fixations:
+    for times in dwell_time_fixations:
         sentence_dwell = []
-        for sentence_fixation in sentence:
-            sum_dwell = 0
+        for sentence_fixation in times:
+            sum_duration = 0
             for fix in sentence_fixation:
-                sum_dwell = sum_dwell + fix[2]
-            sentence_dwell.append(sum_dwell)
+                sum_duration = sum_duration + fix[2]
+                sentence_dwell.append(sum_duration)
         dwell_time.append(sentence_dwell)
+    print("dwell time:%s" % dwell_time)
 
     return reading_times, dwell_time
 
@@ -460,11 +465,60 @@ def get_sentence_by_word(word_index, sentences):
     """判断单词在哪个句子中"""
     index = 0
     for key in sentences:
-        print(sentences[key])
-        if word_index < sentences[key]['end_word_index'] and word_index >= sentences[key]['begin_word_index']:
+        if (
+            sentences[key]["end_word_index"]
+            > word_index
+            >= sentences[key]["begin_word_index"]
+        ):
             return index
         index = index + 1
     return -1
+
+
+def get_saccade(fixations, location):
+    """
+    获取saccade
+    :param fixations: 注视点 [[x,y,t],...]
+    :param location: button的坐标
+    :return: saccade、前向saccade，后向saccade的次数，saccade的平均长度，saccade的平均角度
+    """
+    saccade_times = 0  # saccade的次数
+    forward_saccade_times = 0  # 前向saccde的次数
+    backward_saccade_times = 0  # 后向saccde的次数
+    sum_saccade_length = 0  # saccde的总长度，用于后面取平均
+    sum_saccade_angle = 0  # saccade的总角度，用于后面取平均
+    # pre fixation 设置为第一个点
+    pre_word_index = get_item_index_x_y(location, fixations[0][0], fixations[0][1])
+    pre_fixation = fixations[0]
+    for fixation in fixations:
+        # 获得当前fixation所在的位置
+        word_index = get_item_index_x_y(location, fixation[0], fixation[1])
+        if word_index != pre_word_index and word_index != -1:
+            # 1. 计算saccade的次数和长度
+            # 只要前后fix的单词不一致就是一个fixations
+            saccade_times = saccade_times + 1
+            sum_saccade_length = sum_saccade_length + abs(word_index - pre_word_index)
+            # 判断是前向还是后向
+            if word_index > pre_word_index:
+                forward_saccade_times = forward_saccade_times + 1
+            if word_index < pre_word_index:
+                backward_saccade_times = backward_saccade_times + 1
+
+            # 2. 计算saccade angle
+            sum_saccade_angle = sum_saccade_angle + get_saccade_angle(
+                pre_fixation, fixation
+            )
+            # 3. 更新pre fixation
+            pre_word_index = word_index
+            pre_fixation = fixation
+
+    return (
+        saccade_times,
+        forward_saccade_times,
+        backward_saccade_times,
+        sum_saccade_length / saccade_times if saccade_times != 0 else 0,
+        sum_saccade_angle / saccade_times if saccade_times != 0 else 0,
+    )
 
 
 if __name__ == "__main__":
