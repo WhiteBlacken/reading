@@ -638,7 +638,7 @@ def analysis(request):
             "reading_times": reading_times,
         }
     )
-    path = "static/user/" + "word_level.csv"
+    path = "static/user/" + "word_level_xhl.csv"
     import os
     # model='a' 是追加模式
     if os.path.exists(path):
