@@ -140,34 +140,39 @@
                     if (this.labels[this.page - 1].sentenceLabels[p][0] == start && this.labels[this.page - 1].sentenceLabels[p][1] == end) {
                         this.labels[this.page - 1].sentenceLabels.splice(p, 1);
                         console.log(this.labels);
-                        while (start < end) {
-                            let tmp = start;
-                            for (let q = 0; q < this.labels[this.page - 1].wanderLabels.length; q++) {
-                                if (start >= this.labels[this.page - 1].wanderLabels[q][0] && start < this.labels[this.page - 1].wanderLabels[q][1]) {
-                                    tmp = start;
-                                    if (end <= this.labels[this.page - 1].wanderLabels[q][1]) tmp = end;
-                                    else tmp = this.labels[this.page - 1].wanderLabels[q][1];
-                                    for (let r = start; r < tmp; r++) {
-                                        $('.word:eq(' + r + ')').css('text-decoration', 'underline');
-                                        $('.word:eq(' + r + ')').css('color', "purple");
-                                    }
-                                }
+                        for(let i = start; i < end; i++) {
+                            if(this.labels[this.page-1].wordLabels.indexOf(i) == -1) {
+                                $('.word:eq(' + i + ')').css('text-decoration', 'none solid rgb(51, 51, 51)');
+                                $('.word:eq(' + i + ')').css('color', "black");
                             }
-                            if (tmp > start)
-                                start = tmp;
-                            else break;
+                        {#while (start < end) {#}
+                        {#    let tmp = start;#}
+                        {#    for (let q = 0; q < this.labels[this.page - 1].wanderLabels.length; q++) {#}
+                        {#        if (start >= this.labels[this.page - 1].wanderLabels[q][0] && start < this.labels[this.page - 1].wanderLabels[q][1]) {#}
+                        {#            tmp = start;#}
+                        {#            if (end <= this.labels[this.page - 1].wanderLabels[q][1]) tmp = end;#}
+                        {#            else tmp = this.labels[this.page - 1].wanderLabels[q][1];#}
+                        {#            for (let r = start; r < tmp; r++) {#}
+                        {#                $('.word:eq(' + r + ')').css('text-decoration', 'underline');#}
+                        {#                $('.word:eq(' + r + ')').css('color', "purple");#}
+                        {#            }#}
+                        {#        }#}
+                        {#    }#}
+                        {#    if (tmp > start)#}
+                        {#        start = tmp;#}
+                        {#    else break;#}
                         }
-                        if(start == temp || start < end) {
-                            for (let a = start; a < end ; a++) {
-                                $('.word:eq(' + a + ')').css('text-decoration', 'none solid rgb(51, 51, 51)');
-                                $('.word:eq(' + a + ')').css('color', "black");
-                            }
-                        }
+                        {#if(start == temp || start < end) {#}
+                        {#    for (let a = start; a < end ; a++) {#}
+                        {#        $('.word:eq(' + a + ')').css('text-decoration', 'none solid rgb(51, 51, 51)');#}
+                        {#        $('.word:eq(' + a + ')').css('color', "black");#}
+                        {#    }#}
+                        {# }#}
                         return;
                     }
                 }
                 for (let j = start; j < end; j++) {
-                    if ($('.word:eq(' + j + ')').css('text-decoration') == 'none solid rgb(51, 51, 51)' || $('.word:eq(' + j + ')').css('text-decoration') == 'underline solid rgb(128, 0, 128)') {
+                    if (this.labels[this.page-1].wordLabels.indexOf(j) == -1) {
                         $('.word:eq(' + j + ')').css('text-decoration', 'underline');
                         $('.word:eq(' + j + ')').css('color', "red");
                     }
@@ -179,33 +184,46 @@
             changeWanderSelect: async function (num) {
                 let start = this.lines[num-1][0];
                 let end = this.lines[num-1][1];
-                for(let i = start; i < end; i++) {
-                    if($('.word:eq(' + i + ')').css('text-decoration') == 'none solid rgb(51, 51, 51)'){
-                        for(let j = start; j < end; j++) {
-                            if($('.word:eq(' + j + ')').css('text-decoration') == 'none solid rgb(51, 51, 51)') {
-                                $('.word:eq(' + j + ')').css('text-decoration', 'underline');
-                                $('.word:eq(' + j + ')').css('color', "purple");
-                            }
-                        }
-                        document.getElementsByClassName('wander')[num-1].style.borderColor = "purple";
-                        document.getElementsByClassName('wander')[num-1].style.color = "purple";
-                        this.labels[this.page-1].wanderLabels.push(new Array(start,end));
-                        console.log(this.labels);
-                        return;
-                    }else if($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(128, 0, 128)') {
-                        for(let j = start; j < end; j++) {
-                            if($('.word:eq(' + j + ')').css('text-decoration') == 'underline solid rgb(128, 0, 128)') {
-                                $('.word:eq(' + j + ')').css('text-decoration', 'none solid rgb(51, 51, 51)');
-                                $('.word:eq(' + j + ')').css('color', "black");
-                            }
-                        }
+                {#for(let i = start; i < end; i++) {#}
+                {#    if($('.word:eq(' + i + ')').css('text-decoration') == 'none solid rgb(51, 51, 51)'){#}
+                {#        for(let j = start; j < end; j++) {#}
+                {#            if($('.word:eq(' + j + ')').css('text-decoration') == 'none solid rgb(51, 51, 51)') {#}
+                {#                $('.word:eq(' + j + ')').css('text-decoration', 'underline');#}
+                {#                $('.word:eq(' + j + ')').css('color', "purple");#}
+                {#            }#}
+                {#        }#}
+                {#        document.getElementsByClassName('wander')[num-1].style.borderColor = "purple";#}
+                {#        document.getElementsByClassName('wander')[num-1].style.color = "purple";#}
+                {#        this.labels[this.page-1].wanderLabels.push(new Array(start,end));#}
+                {#        console.log(this.labels);#}
+                {#        return;#}
+                {#    }else if($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(128, 0, 128)') {#}
+                {#        for(let j = start; j < end; j++) {#}
+                {#            if($('.word:eq(' + j + ')').css('text-decoration') == 'underline solid rgb(128, 0, 128)') {#}
+                {#                $('.word:eq(' + j + ')').css('text-decoration', 'none solid rgb(51, 51, 51)');#}
+                {#                $('.word:eq(' + j + ')').css('color', "black");#}
+                {#            }#}
+                {#        }#}
+                {#        document.getElementsByClassName('wander')[num-1].style.borderColor = "black";#}
+                {#        document.getElementsByClassName('wander')[num-1].style.color = "black";#}
+                {#        this.labels[this.page-1].wanderLabels.splice(num-1,1);#}
+                {#        console.log(this.labels);#}
+                {#        return;#}
+                {#    }#}
+                {# }#}
+                for(let i = 0; i < this.labels[this.page-1].wanderLabels.length; i++) {
+                    if(this.labels[this.page-1].wanderLabels[i][0] == start && this.labels[this.page-1].wanderLabels[i][1] == end) {
+                        this.labels[this.page-1].wanderLabels.splice(i, 1);
                         document.getElementsByClassName('wander')[num-1].style.borderColor = "black";
                         document.getElementsByClassName('wander')[num-1].style.color = "black";
-                        this.labels[this.page-1].wanderLabels.splice(num-1,1);
                         console.log(this.labels);
                         return;
                     }
                 }
+                document.getElementsByClassName('wander')[num-1].style.borderColor = "orange";
+                document.getElementsByClassName('wander')[num-1].style.color = "orange";
+                this.labels[this.page-1].wanderLabels.push(new Array(start,end));
+                console.log(this.labels);
             },
 
             getPage: function () {
@@ -261,6 +279,7 @@
                 if(!this.labels[this.page-1]){
                     this.labels.push({page: this.page, wordLabels: new Array(), sentenceLabels: new Array(), wanderLabels: new Array()});
                 }
+                console.log(this.lines)
             },
 
             //把labels发送给后端存储,并更新word_level_data
