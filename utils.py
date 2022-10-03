@@ -404,6 +404,7 @@ def get_reading_times_of_word(fixations, locations):
     location = json.loads(locations)
     pre_fixation = [-2 for x in range(0, len(location))]
     reading_times = {}
+    reading_durations = {}
     fixation_cnt = 0
     for fixation in fixations:
         index = get_item_index_x_y(locations, fixation[0], fixation[1])
@@ -414,9 +415,28 @@ def get_reading_times_of_word(fixations, locations):
                     reading_times[index] = tmp
                 else:
                     reading_times[index] = 1
+                # 计算reading_duration
+                if index in reading_durations.keys():
+                    print(reading_times[index])
+                    print(reading_durations[index].keys())
+                    if reading_times[index] in reading_durations[index].keys():
+                        print("yes")
+                        tmp = (
+                            reading_durations[index][reading_times[index]] + fixation[2]
+                        )
+                        reading_durations[index][reading_times[index]] = tmp
+                    else:
+                        print("no")
+                        reading_durations[index][reading_times[index]] = fixation[2]
+                else:
+                    print('mid')
+                    reading_durations[index] = {reading_times[index]: fixation[2]}
+
             pre_fixation[index] = fixation_cnt
         fixation_cnt = fixation_cnt + 1
-    return reading_times
+    print("reading_durations")
+    print(reading_durations)
+    return reading_times, reading_durations
 
 
 def get_reading_times_and_dwell_time_of_sentence(
@@ -528,11 +548,23 @@ def corr(path):
     :return:
     """
     import pandas
+
     data = pandas.read_csv(path)
     # print(data)
 
     # print(data[['is_understand','mean_fixations_duration','fixation_duration','second_pass_duration','number_of_fixations','reading_times']])
-    print(data[['is_understand','mean_fixations_duration','fixation_duration','second_pass_duration','number_of_fixations','reading_times']].corr())
+    print(
+        data[
+            [
+                "is_understand",
+                "mean_fixations_duration",
+                "fixation_duration",
+                "second_pass_duration",
+                "number_of_fixations",
+                "reading_times",
+            ]
+        ].corr()
+    )
 
 
 if __name__ == "__main__":
@@ -552,6 +584,6 @@ if __name__ == "__main__":
     # content = '[{"left":330,"top":95,"right":360.21875,"bottom":266.984375},{"left":360.21875,"top":95,"right":391.78125,"bottom":266.984375},{"left":391.78125,"top":95,"right":442.4375,"bottom":266.984375},{"left":442.4375,"top":95,"right":589.671875,"bottom":266.984375},{"left":589.671875,"top":95,"right":627.015625,"bottom":266.984375},{"left":627.015625,"top":95,"right":675.984375,"bottom":266.984375},{"left":675.984375,"top":95,"right":732.8125,"bottom":266.984375},{"left":732.8125,"top":95,"right":773.75,"bottom":266.984375},{"left":773.75,"top":95,"right":891.109375,"bottom":266.984375},{"left":891.109375,"top":95,"right":946.484375,"bottom":266.984375},{"left":946.484375,"top":95,"right":1029.96875,"bottom":266.984375},{"left":1029.96875,"top":95,"right":1084.734375,"bottom":266.984375},{"left":1084.734375,"top":95,"right":1169.65625,"bottom":266.984375},{"left":1169.65625,"top":95,"right":1224.703125,"bottom":266.984375},{"left":1224.703125,"top":95,"right":1272.453125,"bottom":266.984375},{"left":1272.453125,"top":95,"right":1321.640625,"bottom":266.984375},{"left":1321.640625,"top":95,"right":1389,"bottom":266.984375},{"left":1389,"top":95,"right":1497.9375,"bottom":266.984375},{"left":1497.9375,"top":95,"right":1534.484375,"bottom":266.984375},{"left":1534.484375,"top":95,"right":1625.5625,"bottom":266.984375},{"left":1625.5625,"top":95,"right":1705.875,"bottom":266.984375},{"left":330,"top":266.984375,"right":440.625,"bottom":438.96875},{"left":440.625,"top":266.984375,"right":534.53125,"bottom":438.96875},{"left":534.53125,"top":266.984375,"right":608,"bottom":438.96875},{"left":608,"top":266.984375,"right":756.828125,"bottom":438.96875},{"left":756.828125,"top":266.984375,"right":794.171875,"bottom":438.96875},{"left":794.171875,"top":266.984375,"right":880.109375,"bottom":438.96875},{"left":880.109375,"top":266.984375,"right":934.6875,"bottom":438.96875},{"left":934.6875,"top":266.984375,"right":1016.453125,"bottom":438.96875},{"left":1016.453125,"top":266.984375,"right":1048.015625,"bottom":438.96875},{"left":1048.015625,"top":266.984375,"right":1097.203125,"bottom":438.96875},{"left":1097.203125,"top":266.984375,"right":1139.578125,"bottom":438.96875},{"left":1139.578125,"top":266.984375,"right":1206.953125,"bottom":438.96875},{"left":1206.953125,"top":266.984375,"right":1284.21875,"bottom":438.96875},{"left":1284.21875,"top":266.984375,"right":1379.078125,"bottom":438.96875},{"left":1379.078125,"top":266.984375,"right":1421.796875,"bottom":438.96875},{"left":1421.796875,"top":266.984375,"right":1496.34375,"bottom":438.96875},{"left":1496.34375,"top":266.984375,"right":1557.453125,"bottom":438.96875},{"left":1557.453125,"top":266.984375,"right":1589.015625,"bottom":438.96875},{"left":1589.015625,"top":266.984375,"right":1616.8125,"bottom":438.96875},{"left":1616.8125,"top":266.984375,"right":1695.265625,"bottom":438.96875},{"left":1695.265625,"top":266.984375,"right":1775.0625,"bottom":438.96875},{"left":330,"top":438.96875,"right":462.625,"bottom":610.953125},{"left":462.625,"top":438.96875,"right":513.109375,"bottom":610.953125},{"left":513.109375,"top":438.96875,"right":606.5,"bottom":610.953125},{"left":606.5,"top":438.96875,"right":655.6875,"bottom":610.953125},{"left":655.6875,"top":438.96875,"right":758.109375,"bottom":610.953125},{"left":758.109375,"top":438.96875,"right":789.671875,"bottom":610.953125},{"left":789.671875,"top":438.96875,"right":838.859375,"bottom":610.953125},{"left":838.859375,"top":438.96875,"right":899.921875,"bottom":610.953125},{"left":899.921875,"top":438.96875,"right":962.9375,"bottom":610.953125}]'
     # result = get_row_location(content)
     # print(result)
-    path = "static\\user\\"  + "473.csv"
+    path = "static\\user\\" + "473.csv"
     corr(path)
     pass
