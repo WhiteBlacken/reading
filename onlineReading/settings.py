@@ -28,7 +28,9 @@ SECRET_KEY = "h+dicc69ys#j^u0m2#ufps*elrndkdp6f1=l5016+($ql=j0ge"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+
 ALLOWED_HOSTS = []
+
 
 fp = open(os.path.join(BASE_DIR, "secret_id_key.yml"), "r")
 secret_info_dict = yaml.load(fp, Loader=yaml.FullLoader)

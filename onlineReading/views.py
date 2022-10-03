@@ -91,8 +91,8 @@ def get_paragraph_and_translation(request):
                 starttime = datetime.datetime.now()
                 translations = (
                     Translation.objects.filter(article_id=article_id)
-                        .filter(para_id=para)
-                        .filter(sentence_id=sentence_id)
+                    .filter(para_id=para)
+                    .filter(sentence_id=sentence_id)
                 )
                 if translations:
                     sentence_zh = translations.first().txt
@@ -171,7 +171,7 @@ def get_page_data(request):
             page=page,  # todo 前端发送过来
             experiment_id=experiment_id,
             location=location,
-            is_test=0
+            is_test=0,
         )
     logger.info("第%s页数据已存储" % page)
     return HttpResponse(1)
@@ -482,8 +482,10 @@ def analysis(request):
     row_info = get_row_location(pagedata.location)
     # 获取不懂的单词的label 使用", "来切割，#TODO 可能要改
     wordlabels = pagedata.wordLabels[1:-1].split(", ")
-    # 获取每个单词的reading times dict
-    reading_times_of_word = get_reading_times_of_word(fixations, pagedata.location)
+    # 获取每个单词的reading times dict  /dict.dict
+    reading_times_of_word, reading_durations = get_reading_times_of_word(
+        fixations, pagedata.location
+    )
     # 获取每隔句子的reading times dict/list 下标代表第几次 0-first pass
     (
         reading_times_of_sentence,
@@ -513,6 +515,16 @@ def analysis(request):
             "number of fixations": len(word_fixation[key]),  # 在一个单词上的fixation次数
             # "fixations": word_fixation[key],  # 输出所有的fixation点
             "reading times": reading_times_of_word[key],
+            "first reading durations": reading_durations[key][1],
+            "second reading durations": reading_durations[key][2]
+            if reading_times_of_word[key] > 1
+            else 0,
+            "third reading durations": reading_durations[key][3]
+            if reading_times_of_word[key] > 2
+            else 0,
+            "fourth reading durations": reading_durations[key][4]
+            if reading_times_of_word[key] > 3
+            else 0,
         }
 
         analysis_result_by_word_level[key] = result
@@ -581,7 +593,9 @@ def analysis(request):
         mean_saccade_angle,
     ) = get_saccade(fixations, pagedata.location)
 
-    proportion_of_horizontal_saccades = get_proportion_of_horizontal_saccades(fixations,str(row_info).replace("'", '"'),saccade_time)
+    proportion_of_horizontal_saccades = get_proportion_of_horizontal_saccades(
+        fixations, str(row_info).replace("'", '"'), saccade_time
+    )
     analysis_result_by_page_level = {
         "page_wander": page_wander,
         "saccade_times": saccade_time,
@@ -639,11 +653,12 @@ def analysis(request):
     )
     path = "static/user/" + "word_level_xhl.csv"
     import os
+
     # model='a' 是追加模式
     if os.path.exists(path):
-        df.to_csv(path, index=False, mode='a',header=False)
+        df.to_csv(path, index=False, mode="a", header=False)
     else:
-        df.to_csv(path, index=False, mode='a')
+        df.to_csv(path, index=False, mode="a")
     # 返回结果
     analysis = {
         "word": analysis_result_by_word_level,
