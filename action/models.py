@@ -76,7 +76,7 @@ class PageData(models.Model):
     page = models.IntegerField()
     created_time = models.DateTimeField(default=timezone.now)
     location = models.TextField()
-
+    is_test = models.BooleanField()
     class Meta:
         db_table = "data_page"
 
