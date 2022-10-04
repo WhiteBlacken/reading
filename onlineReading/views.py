@@ -446,52 +446,32 @@ def get_content_from_txt(request):
     return JsonResponse(words_dict, json_dumps_params={"ensure_ascii": False})
 
 
-def get_utils_test(request):
-    page_data_id = request.GET.get("id")
-    pagedata = PageData.objects.get(id=page_data_id)
-    gaze_coordinates = x_y_t_2_coordinate(
-        pagedata.gaze_x, pagedata.gaze_y, pagedata.gaze_t
-    )
-    print("len(gaze):%d" % (len(gaze_coordinates)))
-    fixations = get_fixations(gaze_coordinates)
-    print("fixations:%s" % fixations)
-    result = add_fixations_to_location(fixations, pagedata.location)
-    username = Experiment.objects.get(id=pagedata.experiment_id).user
-    # fixation_image(pagedata.image, username, fixations, page_data_id)
-    return HttpResponse(result)
-
-
 def analysis(request):
+    starttime = datetime.datetime.now()
     # 要分析的页
     page_data_id = request.GET.get("id")
     pagedata = PageData.objects.get(id=page_data_id)
-    # 组合gaze点
+    '''
+        准备工作：获取fixation
+    '''
+    # 组合gaze点  [(x,y,t),(x,y,t)]
     gaze_coordinates = x_y_t_2_coordinate(
         pagedata.gaze_x, pagedata.gaze_y, pagedata.gaze_t
     )
-    print("len(gaze):%d" % (len(gaze_coordinates)))
-    # 根据gaze点计算fixation list
+    # 根据gaze点计算fixation list [(x,y,duration),(x,y,duration)]
     fixations = get_fixations(gaze_coordinates)
+    '''
+        计算word level的特征
+    '''
     # 得到word对应的fixation dict
     word_fixation = add_fixations_to_location(fixations, pagedata.location)
-    # # 得到word对应的reading times dict
-    # times = reading_times(word_fixation)
     # 得到word在文章中下标 dict
     words_index, sentence_index = get_sentence_by_word_index(pagedata.texts)
-    # row本身的信息
-    row_info = get_row_location(pagedata.location)
     # 获取不懂的单词的label 使用", "来切割，#TODO 可能要改
     wordlabels = pagedata.wordLabels[1:-1].split(", ")
     # 获取每个单词的reading times dict  /dict.dict
     reading_times_of_word, reading_durations = get_reading_times_of_word(
         fixations, pagedata.location
-    )
-    # 获取每隔句子的reading times dict/list 下标代表第几次 0-first pass
-    (
-        reading_times_of_sentence,
-        dwell_time_of_sentence,
-    ) = get_reading_times_and_dwell_time_of_sentence(
-        fixations, pagedata.location, sentence_index
     )
     # 需要输出的单词level分析结果
     analysis_result_by_word_level = {}
@@ -512,28 +492,38 @@ def analysis(request):
             "second_pass_duration": word_fixation[key][1][2]
             if len(word_fixation[key]) > 1
             else 0,  # second-pass duration
-            "number of fixations": len(word_fixation[key]),  # 在一个单词上的fixation次数
-            # "fixations": word_fixation[key],  # 输出所有的fixation点
-            "reading times": reading_times_of_word[key],
-            "first reading durations": reading_durations[key][1],
-            "second reading durations": reading_durations[key][2]
+            "number_of_fixations": len(word_fixation[key]),  # 在一个单词上的fixation次数
+            "fixations": word_fixation[key],  # 输出所有的fixation点
+            "reading_times": reading_times_of_word[key],
+            "first_reading_durations": reading_durations[key][1],
+            "second_reading_durations": reading_durations[key][2]
             if reading_times_of_word[key] > 1
             else 0,
-            "third reading durations": reading_durations[key][3]
+            "third_reading_durations": reading_durations[key][3]
             if reading_times_of_word[key] > 2
             else 0,
-            "fourth reading durations": reading_durations[key][4]
+            "fourth_reading_durations": reading_durations[key][4]
             if reading_times_of_word[key] > 3
             else 0,
         }
 
         analysis_result_by_word_level[key] = result
+
+    '''
+        获取sentence level的特征
+    '''
     analysis_result_by_sentence_level = {}
     # 获取不懂的句子
     sentencelabels = json.loads(pagedata.sentenceLabels)
-    print(sentencelabels)
 
     # 需要输出的句子level的输出结果
+    # 获取每隔句子的reading times dict/list 下标代表第几次 0-first pass
+    (
+        reading_times_of_sentence,
+        dwell_time_of_sentence,
+    ) = get_reading_times_and_dwell_time_of_sentence(
+        fixations, pagedata.location, sentence_index
+    )
     for key in sentence_index:
         begin = sentence_index[key]["begin_word_index"]
         end = sentence_index[key]["end_word_index"]
@@ -557,12 +547,15 @@ def analysis(request):
             "second_pass_dwell_time": dwell_time_of_sentence[1][key],
         }
         analysis_result_by_sentence_level[key] = result
-
+    '''
+        计算row level的特征
+    '''
     # 需要输出行level的输出结果
+    # row本身的信息
+    row_info = get_row_location(pagedata.location)
     row_fixation = add_fixations_to_location(fixations, str(row_info).replace("'", '"'))
     analysis_result_by_row_level = {}
     wanderlabels = json.loads(pagedata.wanderLabels)
-    print(sentencelabels)
     # TODO 一旦有一行是wander,那么整页的标签就是wander
     page_wander = 0
     for key in row_fixation:
@@ -583,7 +576,9 @@ def analysis(request):
             "mean_saccade_angle": mean_saccade_angle_of_row,
         }
         analysis_result_by_row_level[key] = result
-
+    '''
+        计算page level的特征
+    '''
     # 获取page level的特征
     (
         saccade_time,
@@ -626,6 +621,10 @@ def analysis(request):
     second_pass_duration = []
     number_of_fixations = []
     reading_times = []
+    first_reading_durations = []
+    second_reading_durations = []
+    third_reading_durations = []
+    fourth_reading_durations = []
     for key in analysis_result_by_word_level:
         is_understand.append(analysis_result_by_word_level[key]["is_understand"])
         mean_fixations_duration.append(
@@ -638,9 +637,22 @@ def analysis(request):
             analysis_result_by_word_level[key]["second_pass_duration"]
         )
         number_of_fixations.append(
-            analysis_result_by_word_level[key]["number of fixations"]
+            analysis_result_by_word_level[key]["number_of_fixations"]
         )
-        reading_times.append(analysis_result_by_word_level[key]["reading times"])
+        reading_times.append(analysis_result_by_word_level[key]["reading_times"])
+        first_reading_durations.append(
+            analysis_result_by_word_level[key]["first_reading_durations"]
+        )
+        second_reading_durations.append(
+            analysis_result_by_word_level[key]["second_reading_durations"]
+        )
+        third_reading_durations.append(
+            analysis_result_by_word_level[key]["third_reading_durations"]
+        )
+        fourth_reading_durations.append(
+            analysis_result_by_word_level[key]["fourth_reading_durations"]
+        )
+
     df = pd.DataFrame(
         {
             "is_understand": is_understand,
@@ -649,9 +661,13 @@ def analysis(request):
             "second_pass_duration": second_pass_duration,
             "number_of_fixations": number_of_fixations,
             "reading_times": reading_times,
+            "first_reading_durations": first_reading_durations,
+            "second_reading_durations": second_reading_durations,
+            "third_reading_durations": third_reading_durations,
+            "fourth_reading_durations": fourth_reading_durations,
         }
     )
-    path = "static/user/" + "word_level_xhl.csv"
+    path = "static/user/" + "word_level_test.csv"
     import os
 
     # model='a' 是追加模式
