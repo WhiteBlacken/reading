@@ -274,8 +274,6 @@ def get_sentence_by_word_index(content):
             }
             sentence_dict[sentence_cnt] = dict
             sentence_cnt = sentence_cnt + 1
-    print(index_2_word)
-    print(sentence_dict)
     return index_2_word, sentence_dict
 
 
@@ -290,7 +288,7 @@ def get_row_location(buttons_locations):
     begin_word = 0
     row_index = 0
     top = buttons[0]["top"]
-    rows_fixation = []
+    rows_location = []
     for i, button in enumerate(buttons):
         # 换行时或者最后一个单词时触发
         if button["top"] != top or i == len(buttons) - 1:
@@ -305,10 +303,10 @@ def get_row_location(buttons_locations):
                 "right": buttons[i - 1]["right"],
                 "bottom": buttons[begin_word]["bottom"],
             }
-            rows_fixation.append(row_dict)
+            rows_location.append(row_dict)
             row_index = row_index + 1
             begin_word = i
-    return rows_fixation
+    return rows_location
 
 
 def translate(content):
@@ -403,39 +401,31 @@ def get_reading_times_of_word(fixations, locations):
     """获取区域的reading times"""
     location = json.loads(locations)
     pre_fixation = [-2 for x in range(0, len(location))]
-    reading_times = {}
-    reading_durations = {}
+    number_of_fixations = {}
+    reading_times = {}  # dict
+    reading_durations = {}  # dict.dict
     fixation_cnt = 0
     for fixation in fixations:
         index = get_item_index_x_y(locations, fixation[0], fixation[1])
         if index != -1:
+            # 计算reading times
             if fixation_cnt - pre_fixation[index] > 1:
                 if index in reading_times.keys():
                     tmp = reading_times[index] + 1
                     reading_times[index] = tmp
                 else:
                     reading_times[index] = 1
-                # 计算reading_duration
-                if index in reading_durations.keys():
-                    print(reading_times[index])
-                    print(reading_durations[index].keys())
-                    if reading_times[index] in reading_durations[index].keys():
-                        print("yes")
-                        tmp = (
-                            reading_durations[index][reading_times[index]] + fixation[2]
-                        )
-                        reading_durations[index][reading_times[index]] = tmp
-                    else:
-                        print("no")
-                        reading_durations[index][reading_times[index]] = fixation[2]
-                else:
-                    print('mid')
-                    reading_durations[index] = {reading_times[index]: fixation[2]}
-
             pre_fixation[index] = fixation_cnt
+            # 计算reading duration
+            if index in reading_durations.keys():
+                if reading_times[index] in reading_durations[index].keys():
+                    tmp = reading_durations[index][reading_times[index]] + fixation[2]
+                    reading_durations[index][reading_times[index]] = tmp
+                else:
+                    reading_durations[index][reading_times[index]] = fixation[2]
+            else:
+                reading_durations[index] = {reading_times[index]: fixation[2]}
         fixation_cnt = fixation_cnt + 1
-    print("reading_durations")
-    print(reading_durations)
     return reading_times, reading_durations
 
 
@@ -567,23 +557,89 @@ def corr(path):
     )
 
 
+def kmeans_classifier(feature):
+    """
+    kmeans分类器
+    :return:
+    """
+    from sklearn.cluster import KMeans
+
+    kmeans = KMeans(n_clusters=2).fit(feature)
+    predicted = kmeans.labels_
+    # 输出的0和1与实际标签并不是对应的，假设我们认为1一定比0多
+    is_0 = 0
+    for predict in predicted:
+        if predict == 0:
+            is_0 += 1
+    if is_0 / len(predicted) > 0.5:
+        # 0的数量多，则标签是相反的
+        for i, predict in enumerate(predicted):
+            if predict == 1:
+                predicted[i] = 0
+            else:
+                predicted[i] = 1
+    return predicted
+
+
+def evaluate(path, classifier, feature):
+    """
+    评估分类器的性能
+    :return:
+    """
+    import numpy as np
+    import pandas as pd
+
+    reader = pd.read_csv(path)
+
+    is_understand = reader["is_understand"]
+
+    feature = reader[feature]
+    feature = np.array(feature)
+    feature = feature.reshape(-1, 1)
+
+    # 分类器
+    if classifier == "kmeans":
+        predicted = kmeans_classifier(feature)
+
+    # 计算TP等
+    tp = 0
+    fp = 0
+    tn = 0
+    fn = 0
+    for i in range(len(is_understand)):
+        if is_understand[i] == 0 and predicted[i] == 0:
+            tp += 1
+        if is_understand[i] == 0 and predicted[i] == 1:
+            fn += 1
+        if is_understand[i] == 1 and predicted[i] == 1:
+            tn += 1
+        if is_understand[i] == 1 and predicted[i] == 0:
+            fp += 1
+    print("tp:%d fp:%d tn:%d fn:%d" % (tp, fp, tn, fn))
+    # 计算指标
+    accuracy = (tp + tn) / (tp + tn + fp + fn)
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+
+    print("准确率：%f" % accuracy)
+    print("精确率：%f" % precision)
+    print("召回率：%f" % recall)
+
+    from sklearn.metrics import roc_auc_score
+
+    y_true = is_understand
+    y_pred = predicted
+    auc = roc_auc_score(y_true, y_pred)
+    print("auc:%f" % auc)
+
+
 if __name__ == "__main__":
     location = (
         '[{"left":330,"top":95,"right":408.15625,"bottom":326.984375},{"left":408.15625,"top":95,'
         '"right":445.5,"bottom":326.984375}] '
     )
-    # index = get_word_index_x_y(location, 440, 322)
-    # print(index)
-    # content = "The Coral Sea, reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast."
-    # get_sentence_by_word_index(content)
 
-    # bottom":326.984375},{"left":1055.796875,"top":95,"right":1113.015625,"bottom":326.984375},{"left":1113.015625,"top":95,"right":1162.203125,"bottom":326.984375},{"left":1162.203125,"top":95,"right":1231.65625,"bottom":326.984375},{"left":1231.65625,"top":95,"right":1283.859375,"bottom":326.984375},{"left":1283.859375,"top":95,"right":1315.421875,"bottom":326.984375},{"left":1315.421875,"top":95,"right":1343.21875,"bottom":326.984375},{"left":1343.21875,"top":95,"right":1430.078125,"bottom":326.984375},{"left":1430.078125,"top":95,"right":1507.3125,"bottom":326.984375},{"left":1507.3125,"top":95,"right":1543.859375,"bottom":326.984375},{"left":1543.859375,"top":95,"right":1678.296875,"bottom":326.984375},{"left":1678.296875,"top":95,"right":1722.234375,"bottom":326.984375},{"left":330,"top":326.984375,"right":379.1875,"bottom":558.96875},{"left":379.1875,"top":326.984375,"right":526.671875,"bottom":558.96875},{"left":526.671875,"top":326.984375,"right":596.25,"bottom":558.96875},{"left":596.25,"top":326.984375,"right":632.796875,"bottom":558.96875},{"left":632.796875,"top":326.984375,"right":742.984375,"bottom":558.96875},{"left":742.984375,"top":326.984375,"right":772.65625,"bottom":558.96875},{"left":772.65625,"top":326.984375,"right":800.453125,"bottom":558.96875},{"left":800.453125,"top":326.984375,"right":906.015625,"bottom":558.96875},{"left":906.015625,"top":326.984375,"right":946.9375,"bottom":558.96875},{"left":946.9375,"top":326.984375,"right":996.125,"bottom":558.96875},{"left":996.125,"top":326.984375,"right":1114.328125,"bottom":558.96875}'
-    # content = '[{"left":330,"top":95,"right":360.2250003814697,"bottom":267},{"left":360.2250061035156,"top":95,"right":391.7750072479248,"bottom":267},{"left":391.7749938964844,"top":95,"right":442.4249954223633,"bottom":267},{"left":442.4250183105469,"top":95,"right":589.6500244140625,"bottom":267},{"left":589.6500244140625,"top":95,"right":626.9875259399414,"bottom":267},{"left":626.9874877929688,"top":95,"right":675.9499893188477,"bottom":267},{"left":675.9500122070312,"top":95,"right":732.7750129699707,"bottom":267},{"left":732.7750244140625,"top":95,"right":773.7125244140625,"bottom":267},{"left":773.7125244140625,"top":95,"right":891.0625228881836,"bottom":267},{"left":891.0625,"top":95,"right":946.4375,"bottom":267},{"left":946.4375,"top":95,"right":1029.912498474121,"bottom":267},{"left":1029.9124755859375,"top":95,"right":1084.674976348877,"bottom":267},{"left":1084.675048828125,"top":95,"right":1169.587547302246,"bottom":267},{"left":1169.5875244140625,"top":95,"right":1224.637523651123,"bottom":267},{"left":1224.6375732421875,"top":95,"right":1272.375072479248,"bottom":267},{"left":1272.375,"top":95,"right":1321.5625,"bottom":267},{"left":1321.5625,"top":95,"right":1388.9250030517578,"bottom":267},{"left":330,"top":267,"right":438.9250030517578,"bottom":439},{"left":438.9250183105469,"top":267,"right":475.46252059936523,"bottom":439},{"left":475.4624938964844,"top":267,"right":566.5374984741211,"bottom":439},{"left":566.5375366210938,"top":267,"right":646.8375396728516,"bottom":439},{"left":646.8375244140625,"top":267,"right":757.4500274658203,"bottom":439},{"left":757.4500122070312,"top":267,"right":851.337516784668,"bottom":439},{"left":851.3375244140625,"top":267,"right":924.8000259399414,"bottom":439},{"left":924.7999877929688,"top":267,"right":1073.6124877929688,"bottom":439},{"left":1073.612548828125,"top":267,"right":1110.950050354004,"bottom":439},{"left":1110.9500732421875,"top":267,"right":1196.8750762939453,"bottom":439},{"left":1196.875,"top":267,"right":1251.4500007629395,"bottom":439},{"left":1251.4500732421875,"top":267,"right":1333.2125778198242,"bottom":439},{"left":1333.2125244140625,"top":267,"right":1364.7625255584717,"bottom":439},{"left":330,"top":439,"right":379.1875,"bottom":611},{"left":379.1875,"top":439,"right":421.54999923706055,"bottom":611},{"left":421.5500183105469,"top":439,"right":488.9125213623047,"bottom":611},{"left":488.9125061035156,"top":439,"right":566.1750106811523,"bottom":611},{"left":566.1749877929688,"top":439,"right":661.0249862670898,"bottom":611},{"left":661.0250244140625,"top":439,"right":703.7375259399414,"bottom":611},{"left":703.7374877929688,"top":439,"right":778.2749862670898,"bottom":611},{"left":778.2750244140625,"top":439,"right":839.3750267028809,"bottom":611},{"left":839.375,"top":439,"right":870.9250011444092,"bottom":611},{"left":870.9249877929688,"top":439,"right":898.7249889373779,"bottom":611},{"left":898.7250366210938,"top":439,"right":977.1625366210938,"bottom":611},{"left":977.1625366210938,"top":439,"right":1056.9500350952148,"bottom":611},{"left":1056.9500732421875,"top":439,"right":1189.5625762939453,"bottom":611},{"left":1189.5625,"top":439,"right":1240.0375022888184,"bottom":611},{"left":1240.0374755859375,"top":439,"right":1333.4249801635742,"bottom":611},{"left":1333.425048828125,"top":439,"right":1382.612548828125,"bottom":611},{"left":330,"top":611,"right":432.4124984741211,"bottom":783},{"left":432.4125061035156,"top":611,"right":463.9625072479248,"bottom":783},{"left":463.9624938964844,"top":611,"right":513.1499938964844,"bottom":783},{"left":513.1500244140625,"top":611,"right":574.2125244140625,"bottom":783},{"left":574.2125244140625,"top":611,"right":637.2125244140625,"bottom":783}]'
-    # content = '[{"left":330,"top":95,"right":408.15625,"bottom":266.984375},{"left":408.15625,"top":95,"right":445.5,"bottom":266.984375},{"left":445.5,"top":95,"right":518.6875,"bottom":266.984375},{"left":518.6875,"top":95,"right":589.140625,"bottom":266.984375},{"left":589.140625,"top":95,"right":645.03125,"bottom":266.984375},{"left":645.03125,"top":95,"right":725.46875,"bottom":266.984375},{"left":725.46875,"top":95,"right":780.046875,"bottom":266.984375},{"left":780.046875,"top":95,"right":836.4375,"bottom":266.984375},{"left":836.4375,"top":95,"right":942.625,"bottom":266.984375},{"left":942.625,"top":95,"right":979.171875,"bottom":266.984375},{"left":979.171875,"top":95,"right":1055.796875,"bottom":266.984375},{"left":1055.796875,"top":95,"right":1113.015625,"bottom":266.984375},{"left":1113.015625,"top":95,"right":1162.203125,"bottom":266.984375},{"left":1162.203125,"top":95,"right":1231.65625,"bottom":266.984375},{"left":1231.65625,"top":95,"right":1283.859375,"bottom":266.984375},{"left":1283.859375,"top":95,"right":1315.421875,"bottom":266.984375},{"left":1315.421875,"top":95,"right":1343.21875,"bottom":266.984375},{"left":1343.21875,"top":95,"right":1430.078125,"bottom":266.984375},{"left":1430.078125,"top":95,"right":1507.3125,"bottom":266.984375},{"left":1507.3125,"top":95,"right":1543.859375,"bottom":266.984375},{"left":1543.859375,"top":95,"right":1678.296875,"bottom":266.984375},{"left":1678.296875,"top":95,"right":1722.234375,"bottom":266.984375},{"left":1722.234375,"top":95,"right":1771.421875,"bottom":266.984375},{"left":330,"top":266.984375,"right":477.484375,"bottom":438.96875},{"left":477.484375,"top":266.984375,"right":547.0625,"bottom":438.96875},{"left":547.0625,"top":266.984375,"right":583.609375,"bottom":438.96875},{"left":583.609375,"top":266.984375,"right":693.796875,"bottom":438.96875},{"left":693.796875,"top":266.984375,"right":723.46875,"bottom":438.96875},{"left":723.46875,"top":266.984375,"right":751.265625,"bottom":438.96875},{"left":751.265625,"top":266.984375,"right":856.828125,"bottom":438.96875},{"left":856.828125,"top":266.984375,"right":897.75,"bottom":438.96875},{"left":897.75,"top":266.984375,"right":946.9375,"bottom":438.96875},{"left":946.9375,"top":266.984375,"right":1065.140625,"bottom":438.96875},{"left":1065.140625,"top":266.984375,"right":1205.9375,"bottom":438.96875},{"left":1205.9375,"top":266.984375,"right":1271.125,"bottom":438.96875},{"left":1271.125,"top":266.984375,"right":1354.71875,"bottom":438.96875},{"left":1354.71875,"top":266.984375,"right":1403.90625,"bottom":438.96875},{"left":1403.90625,"top":266.984375,"right":1485.890625,"bottom":438.96875},{"left":1485.890625,"top":266.984375,"right":1535.765625,"bottom":438.96875},{"left":1535.765625,"top":266.984375,"right":1592.671875,"bottom":438.96875},{"left":1592.671875,"top":266.984375,"right":1690.75,"bottom":438.96875},{"left":1690.75,"top":266.984375,"right":1739.9375,"bottom":438.96875},{"left":330,"top":438.96875,"right":418.40625,"bottom":610.953125},{"left":418.40625,"top":438.96875,"right":503.28125,"bottom":610.953125}]'
-    # content = '[{"left":330,"top":95,"right":376.90625,"bottom":266.984375},{"left":376.90625,"top":95,"right":431.71875,"bottom":266.984375},{"left":431.71875,"top":95,"right":533.4375,"bottom":266.984375},{"left":533.4375,"top":95,"right":582.625,"bottom":266.984375},{"left":582.625,"top":95,"right":650.578125,"bottom":266.984375},{"left":650.578125,"top":95,"right":685.40625,"bottom":266.984375},{"left":685.40625,"top":95,"right":770.578125,"bottom":266.984375},{"left":770.578125,"top":95,"right":807.125,"bottom":266.984375},{"left":807.125,"top":95,"right":853.984375,"bottom":266.984375},{"left":853.984375,"top":95,"right":908.5625,"bottom":266.984375},{"left":908.5625,"top":95,"right":1015.234375,"bottom":266.984375},{"left":1015.234375,"top":95,"right":1095.03125,"bottom":266.984375},{"left":1095.03125,"top":95,"right":1195.015625,"bottom":266.984375},{"left":1195.015625,"top":95,"right":1231.5625,"bottom":266.984375},{"left":1231.5625,"top":95,"right":1272.5,"bottom":266.984375},{"left":1272.5,"top":95,"right":1349.765625,"bottom":266.984375},{"left":1349.765625,"top":95,"right":1482.65625,"bottom":266.984375},{"left":1482.65625,"top":95,"right":1533.375,"bottom":266.984375},{"left":1533.375,"top":95,"right":1582.5625,"bottom":266.984375},{"left":1582.5625,"top":95,"right":1655.28125,"bottom":266.984375},{"left":1655.28125,"top":95,"right":1700.390625,"bottom":266.984375},{"left":330,"top":266.984375,"right":438.46875,"bottom":438.96875},{"left":438.46875,"top":266.984375,"right":498.046875,"bottom":438.96875},{"left":498.046875,"top":266.984375,"right":598.859375,"bottom":438.96875},{"left":598.859375,"top":266.984375,"right":639.78125,"bottom":438.96875},{"left":639.78125,"top":266.984375,"right":767.484375,"bottom":438.96875},{"left":767.484375,"top":266.984375,"right":892.96875,"bottom":438.96875},{"left":892.96875,"top":266.984375,"right":982.09375,"bottom":438.96875},{"left":982.09375,"top":266.984375,"right":1133.6875,"bottom":438.96875},{"left":1133.6875,"top":266.984375,"right":1188.265625,"bottom":438.96875},{"left":1188.265625,"top":266.984375,"right":1275.265625,"bottom":438.96875},{"left":1275.265625,"top":266.984375,"right":1333.0625,"bottom":438.96875},{"left":1333.0625,"top":266.984375,"right":1382.25,"bottom":438.96875},{"left":1382.25,"top":266.984375,"right":1454.90625,"bottom":438.96875},{"left":1454.90625,"top":266.984375,"right":1486.46875,"bottom":438.96875},{"left":1486.46875,"top":266.984375,"right":1594.3125,"bottom":438.96875},{"left":1594.3125,"top":266.984375,"right":1635.234375,"bottom":438.96875},{"left":1635.234375,"top":266.984375,"right":1741.484375,"bottom":438.96875},{"left":330,"top":438.96875,"right":394.796875,"bottom":610.953125},{"left":394.796875,"top":438.96875,"right":443.984375,"bottom":610.953125},{"left":443.984375,"top":438.96875,"right":559.21875,"bottom":610.953125},{"left":559.21875,"top":438.96875,"right":616.046875,"bottom":610.953125},{"left":616.046875,"top":438.96875,"right":687.6875,"bottom":610.953125},{"left":687.6875,"top":438.96875,"right":752.484375,"bottom":610.953125},{"left":752.484375,"top":438.96875,"right":902.84375,"bottom":610.953125},{"left":902.84375,"top":438.96875,"right":939.390625,"bottom":610.953125},{"left":939.390625,"top":438.96875,"right":1127.46875,"bottom":610.953125},{"left":1127.46875,"top":438.96875,"right":1238.9375,"bottom":610.953125}]'
-    # content = '[{"left":330,"top":95,"right":360.21875,"bottom":266.984375},{"left":360.21875,"top":95,"right":391.78125,"bottom":266.984375},{"left":391.78125,"top":95,"right":442.4375,"bottom":266.984375},{"left":442.4375,"top":95,"right":589.671875,"bottom":266.984375},{"left":589.671875,"top":95,"right":627.015625,"bottom":266.984375},{"left":627.015625,"top":95,"right":675.984375,"bottom":266.984375},{"left":675.984375,"top":95,"right":732.8125,"bottom":266.984375},{"left":732.8125,"top":95,"right":773.75,"bottom":266.984375},{"left":773.75,"top":95,"right":891.109375,"bottom":266.984375},{"left":891.109375,"top":95,"right":946.484375,"bottom":266.984375},{"left":946.484375,"top":95,"right":1029.96875,"bottom":266.984375},{"left":1029.96875,"top":95,"right":1084.734375,"bottom":266.984375},{"left":1084.734375,"top":95,"right":1169.65625,"bottom":266.984375},{"left":1169.65625,"top":95,"right":1224.703125,"bottom":266.984375},{"left":1224.703125,"top":95,"right":1272.453125,"bottom":266.984375},{"left":1272.453125,"top":95,"right":1321.640625,"bottom":266.984375},{"left":1321.640625,"top":95,"right":1389,"bottom":266.984375},{"left":1389,"top":95,"right":1497.9375,"bottom":266.984375},{"left":1497.9375,"top":95,"right":1534.484375,"bottom":266.984375},{"left":1534.484375,"top":95,"right":1625.5625,"bottom":266.984375},{"left":1625.5625,"top":95,"right":1705.875,"bottom":266.984375},{"left":330,"top":266.984375,"right":440.625,"bottom":438.96875},{"left":440.625,"top":266.984375,"right":534.53125,"bottom":438.96875},{"left":534.53125,"top":266.984375,"right":608,"bottom":438.96875},{"left":608,"top":266.984375,"right":756.828125,"bottom":438.96875},{"left":756.828125,"top":266.984375,"right":794.171875,"bottom":438.96875},{"left":794.171875,"top":266.984375,"right":880.109375,"bottom":438.96875},{"left":880.109375,"top":266.984375,"right":934.6875,"bottom":438.96875},{"left":934.6875,"top":266.984375,"right":1016.453125,"bottom":438.96875},{"left":1016.453125,"top":266.984375,"right":1048.015625,"bottom":438.96875},{"left":1048.015625,"top":266.984375,"right":1097.203125,"bottom":438.96875},{"left":1097.203125,"top":266.984375,"right":1139.578125,"bottom":438.96875},{"left":1139.578125,"top":266.984375,"right":1206.953125,"bottom":438.96875},{"left":1206.953125,"top":266.984375,"right":1284.21875,"bottom":438.96875},{"left":1284.21875,"top":266.984375,"right":1379.078125,"bottom":438.96875},{"left":1379.078125,"top":266.984375,"right":1421.796875,"bottom":438.96875},{"left":1421.796875,"top":266.984375,"right":1496.34375,"bottom":438.96875},{"left":1496.34375,"top":266.984375,"right":1557.453125,"bottom":438.96875},{"left":1557.453125,"top":266.984375,"right":1589.015625,"bottom":438.96875},{"left":1589.015625,"top":266.984375,"right":1616.8125,"bottom":438.96875},{"left":1616.8125,"top":266.984375,"right":1695.265625,"bottom":438.96875},{"left":1695.265625,"top":266.984375,"right":1775.0625,"bottom":438.96875},{"left":330,"top":438.96875,"right":462.625,"bottom":610.953125},{"left":462.625,"top":438.96875,"right":513.109375,"bottom":610.953125},{"left":513.109375,"top":438.96875,"right":606.5,"bottom":610.953125},{"left":606.5,"top":438.96875,"right":655.6875,"bottom":610.953125},{"left":655.6875,"top":438.96875,"right":758.109375,"bottom":610.953125},{"left":758.109375,"top":438.96875,"right":789.671875,"bottom":610.953125},{"left":789.671875,"top":438.96875,"right":838.859375,"bottom":610.953125},{"left":838.859375,"top":438.96875,"right":899.921875,"bottom":610.953125},{"left":899.921875,"top":438.96875,"right":962.9375,"bottom":610.953125}]'
-    # result = get_row_location(content)
-    # print(result)
-    path = "static\\user\\" + "473.csv"
-    corr(path)
+    path = "static\\user\\" + "word_level.csv"
+    print(path)
+    evaluate(path, "kmeans", "second_pass_duration")
     pass
