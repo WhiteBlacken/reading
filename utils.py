@@ -557,16 +557,89 @@ def corr(path):
     )
 
 
+def kmeans_classifier(feature):
+    """
+    kmeans分类器
+    :return:
+    """
+    from sklearn.cluster import KMeans
+
+    kmeans = KMeans(n_clusters=2).fit(feature)
+    predicted = kmeans.labels_
+    # 输出的0和1与实际标签并不是对应的，假设我们认为1一定比0多
+    is_0 = 0
+    for predict in predicted:
+        if predict == 0:
+            is_0 += 1
+    if is_0 / len(predicted) > 0.5:
+        # 0的数量多，则标签是相反的
+        for i, predict in enumerate(predicted):
+            if predict == 1:
+                predicted[i] = 0
+            else:
+                predicted[i] = 1
+    return predicted
+
+
+def evaluate(path, classifier, feature):
+    """
+    评估分类器的性能
+    :return:
+    """
+    import numpy as np
+    import pandas as pd
+
+    reader = pd.read_csv(path)
+
+    is_understand = reader["is_understand"]
+
+    feature = reader[feature]
+    feature = np.array(feature)
+    feature = feature.reshape(-1, 1)
+
+    # 分类器
+    if classifier == "kmeans":
+        predicted = kmeans_classifier(feature)
+
+    # 计算TP等
+    tp = 0
+    fp = 0
+    tn = 0
+    fn = 0
+    for i in range(len(is_understand)):
+        if is_understand[i] == 0 and predicted[i] == 0:
+            tp += 1
+        if is_understand[i] == 0 and predicted[i] == 1:
+            fn += 1
+        if is_understand[i] == 1 and predicted[i] == 1:
+            tn += 1
+        if is_understand[i] == 1 and predicted[i] == 0:
+            fp += 1
+    print("tp:%d fp:%d tn:%d fn:%d" % (tp, fp, tn, fn))
+    # 计算指标
+    accuracy = (tp + tn) / (tp + tn + fp + fn)
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+
+    print("准确率：%f" % accuracy)
+    print("精确率：%f" % precision)
+    print("召回率：%f" % recall)
+
+    from sklearn.metrics import roc_auc_score
+
+    y_true = is_understand
+    y_pred = predicted
+    auc = roc_auc_score(y_true, y_pred)
+    print("auc:%f" % auc)
+
+
 if __name__ == "__main__":
     location = (
         '[{"left":330,"top":95,"right":408.15625,"bottom":326.984375},{"left":408.15625,"top":95,'
         '"right":445.5,"bottom":326.984375}] '
     )
-    # index = get_word_index_x_y(location, 440, 322)
-    # print(index)
-    # content = "The Coral Sea, reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast."
-    # get_sentence_by_word_index(content)
 
-    path = "static\\user\\" + "473.csv"
-    corr(path)
+    path = "static\\user\\" + "word_level.csv"
+    print(path)
+    evaluate(path, "kmeans", "second_pass_duration")
     pass
