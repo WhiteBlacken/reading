@@ -5,3 +5,4 @@ __pycache__
 .vscode
 secret_id_key.yml
 static/user/
+static/ocr/

@@ -6,6 +6,8 @@ import datetime
 
 import requests
 from loguru import logger
+from paddleocr import PaddleOCR
+from paddleocr.tools.infer.utility import draw_ocr
 
 from onlineReading import settings
 
@@ -677,6 +679,22 @@ def standard_deviation(data_list):
 
     return math.sqrt(sum)
 
+def ocr(img_path):
+    ocr = PaddleOCR(use_angle_cls=True, lang="ch")
+    # 输出结果保存路径
+    result = ocr.ocr(img_path, cls=True)
+    for line in result:
+        print(line)
+
+    from PIL import Image
+    image = Image.open(img_path).convert('RGB')
+    boxes = [line[0] for line in result]
+    txts = [line[1][0] for line in result]
+    scores = [line[1][1] for line in result]
+    im_show = draw_ocr(image, boxes, txts, scores)
+    im_show = Image.fromarray(im_show)
+    im_show.show()
+
 
 if __name__ == "__main__":
     location = (
@@ -690,7 +708,15 @@ if __name__ == "__main__":
     #     path_qxy = "static\\user\\" + "word_level" + par + ".csv"
     #     evaluate(path_qxy, "kmeans", "number_of_fixations")
 
-    data_list = [58.33, 1]
-    sd = standard_deviation(data_list)
-    print("sd:%d" % sd)
+    from importlib import reload
+
+    starttime = datetime.datetime.now()
+    # 输入待识别图片路径
+    img_path = r"C:\Users\20591\Desktop\reading\static\ocr\img_split.png"
+    ocr(img_path)
+    endtime = datetime.datetime.now()
+    logger.info(
+        "OCR识别执行时长%sms" % round((endtime - starttime).microseconds / 1000 , 3)
+    )
+
     pass
