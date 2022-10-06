@@ -447,6 +447,12 @@ def get_content_from_txt(request):
 
 
 def add_word_feature_to_csv(analysis_result_by_word_level, path):
+    """
+    将word level的特征生成数据集
+    :param analysis_result_by_word_level:
+    :param path:
+    :return:
+    """
     import pandas as pd
 
     is_understand = []
@@ -499,6 +505,117 @@ def add_word_feature_to_csv(analysis_result_by_word_level, path):
             "second_reading_durations": second_reading_durations,
             "third_reading_durations": third_reading_durations,
             "fourth_reading_durations": fourth_reading_durations,
+        }
+    )
+
+    import os
+
+    # model='a' 是追加模式
+    if os.path.exists(path):
+        df.to_csv(path, index=False, mode="a", header=False)
+    else:
+        df.to_csv(path, index=False, mode="a")
+
+
+def add_sentence_feature_to_csv(analysis_result_by_sentence_level, path):
+    """
+    将sentence level的特征生成数据集
+    :param analysis_result_by_sentence_level:
+    :param path:
+    :return:
+    """
+    import pandas as pd
+
+    is_understand = []
+    sum_dwell_time = []
+    reading_times_of_sentence = []
+    dwell_time = []
+    second_pass_dwell_time = []
+    for key in analysis_result_by_sentence_level:
+        is_understand.append(analysis_result_by_sentence_level[key]["is_understand"])
+        sum_dwell_time.append(analysis_result_by_sentence_level[key]["sum_dwell_time"])
+        reading_times_of_sentence.append(
+            analysis_result_by_sentence_level[key]["reading_times_of_sentence"]
+        )
+        dwell_time.append(analysis_result_by_sentence_level[key]["dwell_time"])
+        second_pass_dwell_time.append(
+            analysis_result_by_sentence_level[key]["second_pass_dwell_time"]
+        )
+
+    df = pd.DataFrame(
+        {
+            "is_understand": is_understand,
+            "sum_dwell_time": sum_dwell_time,
+            "reading_times_of_sentence": reading_times_of_sentence,
+            "dwell_time": dwell_time,
+            "second_pass_dwell_time": second_pass_dwell_time,
+        }
+    )
+
+    import os
+
+    # model='a' 是追加模式
+    if os.path.exists(path):
+        df.to_csv(path, index=False, mode="a", header=False)
+    else:
+        df.to_csv(path, index=False, mode="a")
+
+
+def add_page_feature_to_csv(analysis_result_by_page_level, path):
+    """
+    将sentence level的特征生成数据集
+    :param analysis_result_by_sentence_level:
+    :param path:
+    :return:
+    """
+    import pandas as pd
+
+    page_wander = []
+    saccade_times = []
+
+    forward_saccade_times = []
+    backward_saccade_times = []
+    mean_saccade_length = []
+    mean_saccade_angle = []
+    out_of_screen_times = []
+    proportion_of_horizontal_saccades = []
+    number_of_fixations = []
+
+    page_wander.append(analysis_result_by_page_level["page_wander"])
+    saccade_times.append(analysis_result_by_page_level["saccade_times"])
+    forward_saccade_times.append(
+        analysis_result_by_page_level["forward_saccade_times"]
+    )
+    backward_saccade_times.append(
+        analysis_result_by_page_level["backward_saccade_times"]
+    )
+    mean_saccade_length.append(
+        analysis_result_by_page_level["mean_saccade_length"]
+    )
+    mean_saccade_angle.append(
+        analysis_result_by_page_level["mean_saccade_angle"]
+    )
+    out_of_screen_times.append(
+        analysis_result_by_page_level["out_of_screen_times"]
+    )
+    proportion_of_horizontal_saccades.append(
+        analysis_result_by_page_level["proportion of horizontal saccades"]
+    )
+    number_of_fixations.append(
+        analysis_result_by_page_level["number_of_fixations"]
+    )
+
+    df = pd.DataFrame(
+        {
+            "page_wander": page_wander,
+            "saccade_times": saccade_times,
+            "forward_saccade_times": forward_saccade_times,
+            "backward_saccade_times": backward_saccade_times,
+            "mean_saccade_length": mean_saccade_length,
+            "mean_saccade_angle": mean_saccade_angle,
+            "out_of_screen_times": out_of_screen_times,
+            "proportion_of_horizontal_saccades": proportion_of_horizontal_saccades,
+            "number_of_fixations": number_of_fixations,
         }
     )
 
@@ -655,6 +772,7 @@ def analysis(request):
     proportion_of_horizontal_saccades = get_proportion_of_horizontal_saccades(
         fixations, str(row_info).replace("'", '"'), saccade_time
     )
+
     analysis_result_by_page_level = {
         "page_wander": page_wander,
         "saccade_times": saccade_time,
@@ -679,16 +797,22 @@ def analysis(request):
 
     # 将数据写入csv
     # 先看word level
-    csv = request.GET.get('csv',False)
+    csv = request.GET.get("csv", False)
     if csv:
-        path = "static/user/" + "word_level_2.csv"
-        add_word_feature_to_csv(analysis_result_by_word_level, path)
+        # word_path = "static/user/dataset/" + "word_level_2.csv"
+        # add_word_feature_to_csv(analysis_result_by_word_level, word_path)
+
+        # sentence_path = "static/user/dataset/" + "sentence_level_qxy.csv"
+        # add_sentence_feature_to_csv(analysis_result_by_sentence_level, sentence_path)
+
+        page_path = "static/user/dataset/" + "page_level_czh.csv"
+        add_page_feature_to_csv(analysis_result_by_page_level,page_path)
 
     # 返回结果
     analysis = {
-        "word": analysis_result_by_word_level,
-        "sentence": analysis_result_by_sentence_level,
-        "row": analysis_result_by_row_level,
+        # "word": analysis_result_by_word_level,
+        # "sentence": analysis_result_by_sentence_level,
+        # "row": analysis_result_by_row_level,
         "page": analysis_result_by_page_level,
     }
 
