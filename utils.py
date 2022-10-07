@@ -454,9 +454,15 @@ def get_reading_times_and_dwell_time_of_sentence(
     first_fixations = [[] for x in range(0, len(sentence_dict))]
     second_fixations = [[] for x in range(0, len(sentence_dict))]
     dwell_time_fixations = [first_fixations, second_fixations]
+    number_of_word = 0 # 该句子中单词的数量
+    word_list = []
     for fixation in fixations:
         index = get_item_index_x_y(buttons_location, fixation[0], fixation[1])
         sentence = get_sentence_by_word(index, sentence_dict)
+        if index != -1:
+            if index not in word_list:
+                word_list.append(index)
+                number_of_word += 1
         if sentence != -1:
             if fixation_cnt - pre_fixations[sentence] > 1:
                 # 求reading_times
@@ -484,7 +490,7 @@ def get_reading_times_and_dwell_time_of_sentence(
         dwell_time.append(sentence_dwell)
     print("dwell time:%s" % dwell_time)
 
-    return reading_times, dwell_time
+    return reading_times, dwell_time,number_of_word
 
 
 def get_sentence_by_word(word_index, sentences):
