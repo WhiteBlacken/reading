@@ -264,10 +264,10 @@ def draw_heat_map(data,page_data_id,page,username,window):
 
     # 开始绘制
     hm = HeatMap(data)
-    hit_pic_name = "static\\data\\heatmap\\"+str(username)+"\\hit_"+str(page_data_id)+"_"+str(window)+".png"
+    # hit_pic_name = "static\\data\\heatmap\\"+str(username)+"\\hit_"+str(page_data_id)+"_"+str(window)+".png"
     heatmap_name = "static\\data\\heatmap\\"+str(username)+"\\heatmap_"+str(page_data_id)+"_"+str(window)+".png"
     base = "static\\background\\"+str(page)+".jpg"
-    hm.clickmap(save_as=hit_pic_name, base=base)
+    # hm.clickmap(save_as=hit_pic_name, base=base)
     hm.heatmap(save_as=heatmap_name, base=base)
 
     print("done.")

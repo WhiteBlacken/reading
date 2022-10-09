@@ -38,7 +38,7 @@ from utils import (
     get_reading_times_of_word,
     get_reading_times_and_dwell_time_of_sentence,
     get_saccade,
-    preprocess_data,
+    preprocess_data, get_importance,
 )
 
 
@@ -1016,9 +1016,12 @@ def get_heat_map(request):
     print(type(list_x[0]))
 
     filter = request.GET.get("filter", True)
+    print(type(filter))
+    print(filter)
     kernel_size = 0
-    if filter:
+    if filter != "False":
         # 滤波
+        print("执行了")
         kernel_size = int(request.GET.get("window"))
         list_x = preprocess_data(list_x, kernel_size)
         list_y = preprocess_data(list_y, kernel_size)
@@ -1037,3 +1040,17 @@ def get_heat_map(request):
     draw_heat_map(coordinates, page_data_id, pageData.page, username, kernel_size)
 
     return HttpResponse(1)
+
+def get_heatmap_of_text(request):
+    page_data_id = request.GET.get("id")
+    pageData = PageData.objects.get(id=page_data_id)
+    print(pageData.texts)
+    importances = get_importance(pageData.texts)
+    print(importances)
+    print(type(importances))
+    importance_list=[]
+    for importance in importances:
+        if importance[1]>0:
+            importance_list.append(importance)
+    return HttpResponse(importance_list)
+

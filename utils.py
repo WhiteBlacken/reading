@@ -138,6 +138,12 @@ def get_item_index_x_y(location, x, y):
         index = index + 1
     return -1
 
+# def get_word_and_location(location,word_index):
+#     word_and_locaton_dict = {}
+#     locations = json.loads(location)
+#     for i,loc in enumerate(locations):
+#         word_and_locaton_dict[i] =
+#         word_and_locaton_dict
 
 def x_y_t_2_coordinate(gaze_x, gaze_y, gaze_t):
     """
@@ -756,6 +762,13 @@ def preprocess_data(data, win):
     data = meanFilter(data, win)
     return data
 
+def get_importance(text):
+    """获取单词的重要性"""
+    from keybert import KeyBERT
+    kw_model = KeyBERT()
+
+    importance = kw_model.extract_keywords(text, keyphrase_ngram_range=(1, 1), stop_words=None,top_n=100)
+    return importance
 
 if __name__ == "__main__":
     location = (

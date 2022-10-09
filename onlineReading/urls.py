@@ -35,5 +35,6 @@ urlpatterns = [
     path("cm/<int:k>/", views.cm_2_pixel_test),
     path("analysis/", views.analysis),
     path("analysis_1/",views.analysis_1),
-    path("heatmap/",views.get_heat_map)
+    path("heatmap/",views.get_heat_map),
+    path("heatmap/text/",views.get_heatmap_of_text)
 ]
