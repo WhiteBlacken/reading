@@ -31,8 +31,8 @@ def get_fixations(coordinates):
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if (
-            len(working_queue) < 2
-            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
+                len(working_queue) < 2
+                or (working_queue[-1][2] - working_queue[0][2]) < min_duration
         ):
             # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
             datum = remaining_gaze.popleft()
@@ -56,7 +56,7 @@ def get_fixations(coordinates):
         while remaining_gaze:
             datum = remaining_gaze[0]
             if datum[2] > working_queue[0][2] + max_duration or with_distance(
-                working_queue[0], datum, max_distance
+                    working_queue[0], datum, max_distance
             ):
                 fixations.append(from_gazes_to_fixation(list(working_queue)))
                 working_queue.clear()
@@ -183,7 +183,7 @@ def fixation_image(image_base64, username, fixations, page_data_id):
     print("filename:%s" % filename)
     # 存储地址
     print("session.username:%s" % username)
-    path = "static/user/" + str(username) + "/"
+    path = "static/data/" + str(username) + "/"
     # 如果目录不存在，则创建目录
     if not os.path.exists(path):
         os.mkdir(path)
@@ -337,9 +337,9 @@ def translate(content):
         sign = Encry.hexdigest()
         # 3. 发送请求
         url = (
-            "http://api.fanyi.baidu.com/api/trans/vip/translate?"
-            + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
-            % (content, appid, salt, sign)
+                "http://api.fanyi.baidu.com/api/trans/vip/translate?"
+                + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
+                % (content, appid, salt, sign)
         )
         # 4. 解析结果
         response = requests.get(url)
@@ -397,13 +397,13 @@ def get_saccade_info(fixations):
     sum_angle = 0
     for i in range(len(fixations) - 1):
         if (
-            get_euclid_distance(
-                fixations[i][0],
-                fixations[i + 1][0],
-                fixations[i][1],
-                fixations[i + 1][1],
-            )
-            > 500
+                get_euclid_distance(
+                    fixations[i][0],
+                    fixations[i + 1][0],
+                    fixations[i][1],
+                    fixations[i + 1][1],
+                )
+                > 500
         ):
             saccade_times = saccade_times + 1
             sum_angle = sum_angle + get_saccade_angle(fixations[i], fixations[i + 1])
@@ -446,7 +446,7 @@ def get_reading_times_of_word(fixations, locations):
 
 
 def get_reading_times_and_dwell_time_of_sentence(
-    fixations, buttons_location, sentence_dict
+        fixations, buttons_location, sentence_dict
 ):
     pre_fixations = [-2 for x in range(0, len(sentence_dict))]
     fixation_cnt = 0
@@ -454,7 +454,7 @@ def get_reading_times_and_dwell_time_of_sentence(
     first_fixations = [[] for x in range(0, len(sentence_dict))]
     second_fixations = [[] for x in range(0, len(sentence_dict))]
     dwell_time_fixations = [first_fixations, second_fixations]
-    number_of_word = 0 # 该句子中单词的数量
+    number_of_word = 0  # 该句子中单词的数量
     word_list = []
     for fixation in fixations:
         index = get_item_index_x_y(buttons_location, fixation[0], fixation[1])
@@ -490,7 +490,7 @@ def get_reading_times_and_dwell_time_of_sentence(
         dwell_time.append(sentence_dwell)
     print("dwell time:%s" % dwell_time)
 
-    return reading_times, dwell_time,number_of_word
+    return reading_times, dwell_time, number_of_word
 
 
 def get_sentence_by_word(word_index, sentences):
@@ -498,9 +498,9 @@ def get_sentence_by_word(word_index, sentences):
     index = 0
     for key in sentences:
         if (
-            sentences[key]["end_word_index"]
-            > word_index
-            >= sentences[key]["begin_word_index"]
+                sentences[key]["end_word_index"]
+                > word_index
+                >= sentences[key]["begin_word_index"]
         ):
             return index
         index = index + 1
@@ -603,6 +603,7 @@ def kmeans_classifier(feature):
 
     kmeans = KMeans(n_clusters=2).fit(feature)
     predicted = kmeans.labels_
+    print(kmeans.cluster_centers_)
     # 输出的0和1与实际标签并不是对应的，假设我们认为1一定比0多
     is_0 = 0
     for predict in predicted:
@@ -660,15 +661,17 @@ def evaluate(path, classifier, feature):
     accuracy = (tp + tn) / (tp + tn + fp + fn)
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
-
+    f1 = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
     from sklearn.metrics import roc_auc_score
 
     y_true = is_understand
     y_pred = predicted
     auc = roc_auc_score(y_true, y_pred)
+    auc = 1 - auc if auc < 0.5 else auc
 
     print("precision：%f" % precision)
     print("recall：%f" % recall)
+    print("f1 score: %f" % f1)
     print("auc:%f" % auc)
     print("accuracy：%f" % accuracy)
 
@@ -708,21 +711,22 @@ if __name__ == "__main__":
         '"right":445.5,"bottom":326.984375}] '
     )
 
-    # pars = ['', '_qxy', '_lq', '_czh']
+    # pars = ['', '_qxy', '_lq']
     # for par in pars:
     #     print("--" + par + "--")
-    #     path_qxy = "static\\user\\" + "word_level" + par + ".csv"
-    #     evaluate(path_qxy, "kmeans", "number_of_fixations")
+    #     path_qxy = "static\\user\\dataset\\" + "sentence_level" + par + ".csv"
+    #     evaluate(path_qxy, "kmeans", "second_pass_dwell_time")
 
-    from importlib import reload
+    # starttime = datetime.datetime.now()
+    # # 输入待识别图片路径
+    # img_path = r"C:\Users\20591\Desktop\reading\static\ocr\img_split.png"
+    # ocr(img_path)
+    # endtime = datetime.datetime.now()
+    # logger.info(
+    #     "OCR识别执行时长%sms" % round((endtime - starttime).microseconds / 1000 , 3)
+    # )
 
-    starttime = datetime.datetime.now()
-    # 输入待识别图片路径
-    img_path = r"C:\Users\20591\Desktop\reading\static\ocr\img_split.png"
-    ocr(img_path)
-    endtime = datetime.datetime.now()
-    logger.info(
-        "OCR识别执行时长%sms" % round((endtime - starttime).microseconds / 1000 , 3)
-    )
-
+    data = [70.83,55.55]
+    sd = standard_deviation(data)
+    print(sd)
     pass
