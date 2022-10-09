@@ -759,9 +759,9 @@ def meanFilter(data, win):
 def preprocess_data(data, win):
     data = signal.medfilt(data, kernel_size=win)
     data = signal.medfilt(data, kernel_size=win)
-    data = meanFilter(data, win)
-    data = meanFilter(data, win)
-    data = meanFilter(data, win)
+    data = meanFilter(data, 5)
+    data = meanFilter(data, 5)
+    # data = meanFilter(data, win)
     return data
 
 def get_importance(text):

@@ -1057,11 +1057,12 @@ def get_heatmap_of_text(request):
     gaze_y = []
     importance_list=[]
     for importance in importances:
+        print("执行中")
         if importance[1]>0:
             importance_list.append(importance)
     for importance in importance_list:
         loc = word_and_location_dict[importance[0]]
-        for i in range(int(importance[1]*10000)):
+        for i in range(int(importance[1]*100)):
             gaze_x.append(random.randint(int(loc[0]),int(loc[2])))
             gaze_y.append(random.randint(int(loc[1]),int(loc[3])))
 
