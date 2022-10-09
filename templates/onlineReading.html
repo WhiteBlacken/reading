@@ -525,12 +525,14 @@
                     e.appendChild(el);
                     e = el;
                     var Content = this.contentPerPage[this.page - 1 + i];
-                    this.contentCurPage = Content;
+
+                    this.contentCurPage = this.contentCurPage + Content;
 
                     for(let j = 0; j < this.buttonLocPerPage[this.page - 1 + i].length; j++) {
                         this.buttonLocPerPage[this.page - 1 + i][j].top = this.buttonLocPerPage[this.page - 1 + i][j].top + height;
                         this.buttonLocPerPage[this.page - 1 + i][j].bottom = this.buttonLocPerPage[this.page - 1 + i][j].bottom + height;
                     }
+
                     
                     this.buttonCurLoc = this.buttonCurLoc.concat(this.buttonLocPerPage[this.page - 1 + i]);
 
@@ -557,7 +559,7 @@
 
                     height += e.getBoundingClientRect().bottom - e.getBoundingClientRect().top;
                 }
-                
+
 
                 {#this.getWanderRemind();#}
             },
