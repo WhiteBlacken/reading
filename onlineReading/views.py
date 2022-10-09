@@ -151,6 +151,25 @@ def get_paragraph_and_translation(request):
     )
     return JsonResponse(para_dict, json_dumps_params={"ensure_ascii": False})
 
+def get_gaze_data_pic(request):
+    image_base64 = request.POST.get("image")  # base64类型
+    x = request.POST.get("x")  # str类型
+    y = request.POST.get("y")  # str类型
+    t = request.POST.get("t")  # str类型
+    pagedata = PageData.objects.create(
+        gaze_x=str(x),
+        gaze_y=str(y),
+        gaze_t=str(t),
+        texts="",  # todo 前端发送过来
+        interventions="",
+        image=image_base64,
+        page=0,  # todo 前端发送过来
+        experiment_id=0,
+        location="",
+        is_test=0,
+    )
+    logger.info("pagedata:%d 已保存"%pagedata.id)
+    return HttpResponse(1)
 
 def get_gaze_data_pic(request):
     image_base64 = request.POST.get("image")  # base64类型
@@ -1172,3 +1191,4 @@ def get_nlp_heatmap(request):
     )
     draw_heat_map(coordinates, hit_pic_name, heatmap_name, base)
     return JsonResponse({"code": 200, "status": "success", "pic_path": heatmap_name})
+
