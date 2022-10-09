@@ -355,6 +355,62 @@
                 interventions.push(num);
             },
 
+            {#getContent_2: async function () {#}
+            {#    let paraNum = 0;#}
+            {#    let maxLine = 14;#}
+            {#    await axios.get("/para").then((response) => {#}
+            {#        this.content = response.data;#}
+            {#    });#}
+            {##}
+            {#    this.content = Object.values(this.content);#}
+            {#    paraNum = this.content.length;#}
+            {#    for (let i = 0; i < paraNum; i++)#}
+            {#        this.paras.push(this.content[i][0]);#}
+            {#    var e = document.getElementById('para');#}
+            {##}
+            {#    // 遍历每个段落#}
+            {#    #}
+            {#    for (let i = 0; i < paraNum; i++) {#}
+            {#        let num = 0;#}
+            {#        //分割出该段落的所有句子#}
+            {#        var sentences = this.paras[i].split('.');#}
+            {#        sentences.splice(sentences.length - 1, 1);#}
+            {#        let sentencNum = 0;#}
+            {#        let conPerPage = [];#}
+            {#        let transPerPage = [];#}
+            {#        let locPerPage = [];#}
+            {#        let wordLength = 0;#}
+            {#        for (let sentenceNum = 0; sentenceNum < sentences.length; sentenceNum++) {#}
+            {#            var words = sentences[sentenceNum].split(' ');#}
+            {#            for (let p = 0; p < words.length; p++) {#}
+            {#                if (words[p] == '')#}
+            {#                    words.splice(p, 1);#}
+            {#            }#}
+            {#            let wordNum = 0;#}
+            {#            while(wordNum < words.length) {#}
+            {#                for(; wordNum < words.length; wordNum++) {#}
+            {#                    var el = document.createElement("button");#}
+            {#                    el.className = "word";#}
+            {#                    el.id = (num + wordNum).toString();#}
+            {#                    el.innerHTML = words[wordNum];#}
+            {#                    if (wordNum == words.length - 1)#}
+            {#                        el.innerHTML = words[wordNum] + '.';#}
+            {#                    e.appendChild(el);#}
+            {#                }#}
+            {#                let paraTop = document.getElementById('para').getBoundingClientRect().top;#}
+            {#                let buttonTop = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;#}
+            {#                let buttonHeight = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().bottom - document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;#}
+            {#                if (Math.trunc((buttonTop - paraTop) / buttonHeight) >= maxLine) {#}
+            {#                    while (e.children[0]) {#}
+            {#                        e.removeChild(e.children[0]);#}
+            {#                    }#}
+            {#                    break;#}
+            {#                }#}
+            {#            }#}
+            {#        }#}
+            {#    }#}
+            {# },#}
+
             getContent: async function () {
                 {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
                 {#).then((response) => {#}
@@ -362,6 +418,8 @@
                 {#        this.setSheet();#}
                 {#    });});#}
                 let paraNum = 0;
+                let maxLine = 12;
+
                 await axios.get("/para").then((response) => {
                     this.content = response.data;
                 });
@@ -373,6 +431,7 @@
                 var e = document.getElementById('para');
 
                 // 遍历每个段落
+
                 for (let i = 0; i < paraNum; i++) {
                     let num = 0;
                     //分割出该段落的所有句子
@@ -408,7 +467,7 @@
                             let paraTop = document.getElementById('para').getBoundingClientRect().top;
                             let buttonTop = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;
                             let buttonHeight = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().bottom - document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;
-                            if (Math.trunc((buttonTop - paraTop) / buttonHeight) >= 4) {
+                            if (Math.trunc((buttonTop - paraTop) / buttonHeight) >= maxLine) {
                                 while (e.children[0]) {
                                     e.removeChild(e.children[0]);
                                 }
@@ -450,64 +509,43 @@
                 let tmp_ = tmp.join('-.');
                 setCookie('contentPerPage', tmp_);
 
-                {#console.log(this.transPerPage)#}
-
-                {#let num = 0;#}
-                {#var e = document.getElementById('para');#}
-                {#var Content = this.content.split('.');#}
-                {#for (let i = 0; i < Content.length; i++) {#}
-                {#    var sentence = Content[i].split(' ');#}
-                {##}
-                {#    for (let j = 0; j < sentence.length; j++) {#}
-                {#        if (sentence[j] && sentence[j] !== "") {#}
-                {#            this.words.push(sentence[j].split(',')[0]);#}
-                {#            var el = document.createElement("button");#}
-                {#            el.className = "word";#}
-                {#            el.id = num.toString();#}
-                {#            el.innerHTML = sentence[j];#}
-                {#            el.setAttribute("onclick", "getWordTranslation(" + num + ")");#}
-                {#            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");#}
-                {#            if (j == sentence.length - 1)#}
-                {#                el.innerHTML = sentence[j] + '.';#}
-                {#            e.appendChild(el);#}
-                {#            num += 1;#}
-                {#        }#}
-                {#    }#}
-                {# }#}
-                {#setCookie('content', this.content);#}
-                {##}
-                {#this.auto();#}
-
             },
 
             getPage: function () {
                 let num = 0;
-                var e = document.getElementById('para');
-                var Content = this.contentPerPage[this.page - 1];
-                this.contentCurPage = Content;
-                this.buttonCurLoc = this.buttonLocPerPage[this.page - 1];
-                console.log(this.buttonCurLoc.length)
-                let sentences = Content.split('.');
-                sentences.splice(sentences.length - 1, 1);
-                this.sentences = sentences;
-                for (let i = 0; i < sentences.length; i++) {
-                    var words = sentences[i].split(' ');
-                    for (let j = 0; j < words.length; j++) {
-                        if (words[j] != "") {
-                            var el = document.createElement("button");
-                            el.className = "word";
-                            el.id = num.toString();
-                            el.innerHTML = words[j];
-                            el.setAttribute("onclick", "getWordTranslation(" + num + ")");
-                            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
-                            if (j == words.length - 1)
-                                el.innerHTML = words[j] + '.';
-                            e.appendChild(el);
-                            num += 1;
+                let e = document.getElementById('readArea');
+                for(let i = 0; i < 3; i++) {
+                    let el = document.createElement('div');
+                    el.id = "para";
+                    e.appendChild(el);
+                    e = el;
+                    var Content = this.contentPerPage[this.page - 1 + i];
+                    this.contentCurPage = Content;
+                    this.buttonCurLoc = this.buttonLocPerPage[this.page - 1 + i];
+                    console.log(this.buttonCurLoc.length)
+                    let sentences = Content.split('.');
+                    sentences.splice(sentences.length - 1, 1);
+                    this.sentences = sentences;
+                    for (let i = 0; i < sentences.length; i++) {
+                        var words = sentences[i].split(' ');
+                        for (let j = 0; j < words.length; j++) {
+                            if (words[j] != "") {
+                                el = document.createElement("button");
+                                el.className = "word";
+                                el.id = num.toString();
+                                el.innerHTML = words[j];
+                                el.setAttribute("onclick", "getWordTranslation(" + num + ")");
+                                el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
+                                if (j == words.length - 1)
+                                    el.innerHTML = words[j] + '.';
+                                e.appendChild(el);
+                                num += 1;
+                            }
                         }
                     }
+                    console.log(num);
                 }
-                console.log(num);
+
                 {#this.getWanderRemind();#}
             },
 
@@ -624,13 +662,13 @@
         switch (event.keyCode) {
             case 37: {
                 if (app._data.page > 1) {
-                    get_base64_gaze_and_intervention(-1);
+                    get_base64_gaze_and_intervention(-3);
                 }
                 break;
             }
             case 39: {
-                if (app._data.page < app._data.totalPage) {
-                    get_base64_gaze_and_intervention(1);
+                if (app._data.page < app._data.totalPage - 3) {
+                    get_base64_gaze_and_intervention(3);
                     break;
                 }
             }
