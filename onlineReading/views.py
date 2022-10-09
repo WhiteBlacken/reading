@@ -1,5 +1,6 @@
 import datetime
 import json
+import random
 
 from django.core import serializers
 from django.http import HttpResponse, JsonResponse
@@ -38,7 +39,7 @@ from utils import (
     get_reading_times_of_word,
     get_reading_times_and_dwell_time_of_sentence,
     get_saccade,
-    preprocess_data,
+    preprocess_data, get_importance, get_word_by_index, get_word_and_location,
 )
 
 
@@ -1016,9 +1017,12 @@ def get_heat_map(request):
     print(type(list_x[0]))
 
     filter = request.GET.get("filter", True)
+    print(type(filter))
+    print(filter)
     kernel_size = 0
-    if filter:
+    if filter != "False":
         # 滤波
+        print("执行了")
         kernel_size = int(request.GET.get("window"))
         list_x = preprocess_data(list_x, kernel_size)
         list_y = preprocess_data(list_y, kernel_size)
@@ -1037,3 +1041,36 @@ def get_heat_map(request):
     draw_heat_map(coordinates, page_data_id, pageData.page, username, kernel_size)
 
     return HttpResponse(1)
+
+def get_heatmap_of_text(request):
+    page_data_id = request.GET.get("id")
+    pageData = PageData.objects.get(id=page_data_id)
+    print(pageData.texts)
+    importances = get_importance(pageData.texts)
+    print(importances)
+    print(type(importances))
+
+    word_index = get_word_by_index(pageData.texts)
+    word_and_location_dict = get_word_and_location(pageData.location, word_index)
+
+    gaze_x = []
+    gaze_y = []
+    importance_list=[]
+    for importance in importances:
+        print("执行中")
+        if importance[1]>0:
+            importance_list.append(importance)
+    for importance in importance_list:
+        loc = word_and_location_dict[importance[0]]
+        for i in range(int(importance[1]*100)):
+            gaze_x.append(random.randint(int(loc[0]),int(loc[2])))
+            gaze_y.append(random.randint(int(loc[1]),int(loc[3])))
+
+    coordinates = []
+    for i in range(len(gaze_x)):
+        coordinate = [gaze_x[i], gaze_y[i]]
+        coordinates.append(coordinate)
+    username = str(Experiment.objects.get(id=pageData.experiment_id).user)+"_text"
+    draw_heat_map(coordinates, page_data_id, pageData.page, username, 0)
+    return HttpResponse(importance_list)
+
