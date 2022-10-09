@@ -508,7 +508,7 @@
                     }
                 }
                 console.log(num);
-                this.getWanderRemind();
+                {#this.getWanderRemind();#}
             },
 
             listen: function () {
@@ -629,11 +629,10 @@
                 break;
             }
             case 39: {
-
                 if (app._data.page < app._data.totalPage) {
                     get_base64_gaze_and_intervention(1);
+                    break;
                 }
-                break;
             }
             case 32: {
                 stop = true;
@@ -643,7 +642,6 @@
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
-
                 break;
             }
 

@@ -51,3 +51,9 @@ body{
     justify-content:center;
     align-items:center;
 }
+
+#wanderLabeling{
+    position: fixed;
+    top: 10%;
+    left: 20px;
+}
