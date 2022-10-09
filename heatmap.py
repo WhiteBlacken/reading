@@ -65,18 +65,7 @@ class HeatMap(object):
             self.width = self.width or w
             self.height = self.height or h
 
-    def __mk_img(self, base=None):
-        u"""生成临时图片"""
 
-        base = base or self.base
-        self.__im0 = None
-
-        if base:
-            str_type = (str,) if PY3 else (str, unicode)
-            self.__im0 = Image.open(base) if type(base) in str_type else base
-            self.width, self.height = self.__im0.size
-
-        self.__im = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
 
     def __paint_hit(self, x, y, color):
         u"""绘制点击小叉图片"""
@@ -168,38 +157,7 @@ class HeatMap(object):
         self.__im0.paste(self.__im, mask=self.__im)
         self.__im = self.__im0
 
-    def sample(self, max_count=None, rate=None):
 
-        count = self.count
-        if count == 0:
-            return self.data
-
-        if rate and 0 < rate < 1:
-            count = int(self.count * rate)
-        if max_count and count > max_count:
-            count = max_count
-
-        if count == 0 or count >= self.count:
-            return self.data
-
-        data = []
-        _range = range if PY3 else xrange
-        for x, y, n in self.data:
-            for i in _range(n):
-                data.append((x, y))
-
-        sample = random.sample(data, count)
-        data = {}
-        for x, y in sample:
-            key = (x, y)
-            data[key] = data.get(key, 0) + 1
-
-        data2 = []
-        for key in data:
-            x, y = key
-            data2.append((x, y, data[key]))
-
-        return data2
 
     def heatmap(self, save_as=None, base=None, data=None, r=70):
         u"""绘制热图"""

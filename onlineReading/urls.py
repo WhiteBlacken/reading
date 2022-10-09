@@ -37,5 +37,6 @@ urlpatterns = [
     path("analysis_1/",views.analysis_1),
     path("heatmap/",views.get_heat_map),
     path("motion/",views.test_motion),
-    path("save_gaze/",views.get_gaze_data_pic)
+    path("save_gaze/",views.get_gaze_data_pic),
+    path("heatmap/text/",views.get_heatmap_of_text)
 ]
