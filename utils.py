@@ -138,12 +138,14 @@ def get_item_index_x_y(location, x, y):
         index = index + 1
     return -1
 
-# def get_word_and_location(location,word_index):
-#     word_and_locaton_dict = {}
-#     locations = json.loads(location)
-#     for i,loc in enumerate(locations):
-#         word_and_locaton_dict[i] =
-#         word_and_locaton_dict
+def get_word_and_location(location,word_index):
+    word_and_locaton_dict = {}
+    locations = json.loads(location)
+    for i,loc in enumerate(locations):
+        word = word_index[i]
+        word_and_locaton_dict[word] = [loc['left'],loc['top'],loc['right'],loc['bottom']]
+    return word_and_locaton_dict
+
 
 def x_y_t_2_coordinate(gaze_x, gaze_y, gaze_t):
     """

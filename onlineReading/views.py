@@ -1,5 +1,6 @@
 import datetime
 import json
+import random
 
 from django.core import serializers
 from django.http import HttpResponse, JsonResponse
@@ -38,7 +39,7 @@ from utils import (
     get_reading_times_of_word,
     get_reading_times_and_dwell_time_of_sentence,
     get_saccade,
-    preprocess_data, get_importance,
+    preprocess_data, get_importance, get_word_by_index, get_word_and_location,
 )
 
 
@@ -1048,9 +1049,27 @@ def get_heatmap_of_text(request):
     importances = get_importance(pageData.texts)
     print(importances)
     print(type(importances))
+
+    word_index = get_word_by_index(pageData.texts)
+    word_and_location_dict = get_word_and_location(pageData.location, word_index)
+
+    gaze_x = []
+    gaze_y = []
     importance_list=[]
     for importance in importances:
         if importance[1]>0:
             importance_list.append(importance)
+    for importance in importance_list:
+        loc = word_and_location_dict[importance[0]]
+        for i in range(int(importance[1]*10000)):
+            gaze_x.append(random.randint(int(loc[0]),int(loc[2])))
+            gaze_y.append(random.randint(int(loc[1]),int(loc[3])))
+
+    coordinates = []
+    for i in range(len(gaze_x)):
+        coordinate = [gaze_x[i], gaze_y[i]]
+        coordinates.append(coordinate)
+    username = str(Experiment.objects.get(id=pageData.experiment_id).user)+"_text"
+    draw_heat_map(coordinates, page_data_id, pageData.page, username, 0)
     return HttpResponse(importance_list)
 
