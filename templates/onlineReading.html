@@ -418,7 +418,9 @@
                 {#        this.setSheet();#}
                 {#    });});#}
                 let paraNum = 0;
+
                 let maxLine = 4;
+
 
                 await axios.get("/para").then((response) => {
                     this.content = response.data;
@@ -514,20 +516,26 @@
             getPage: function () {
                 let num = 0;
                 let e = document.getElementById('readArea');
+
                 let height = 0;
+
                 for(let i = 0; i < 3; i++) {
                     let el = document.createElement('div');
                     el.id = "para";
                     e.appendChild(el);
                     e = el;
                     var Content = this.contentPerPage[this.page - 1 + i];
+
                     this.contentCurPage = this.contentCurPage + Content;
+
                     for(let j = 0; j < this.buttonLocPerPage[this.page - 1 + i].length; j++) {
                         this.buttonLocPerPage[this.page - 1 + i][j].top = this.buttonLocPerPage[this.page - 1 + i][j].top + height;
                         this.buttonLocPerPage[this.page - 1 + i][j].bottom = this.buttonLocPerPage[this.page - 1 + i][j].bottom + height;
                     }
-                    console.log(this.buttonLocPerPage[this.page - 1 + i])
+
+                    
                     this.buttonCurLoc = this.buttonCurLoc.concat(this.buttonLocPerPage[this.page - 1 + i]);
+
                     let sentences = Content.split('.');
                     sentences.splice(sentences.length - 1, 1);
                     this.sentences = sentences;
@@ -548,9 +556,11 @@
                             }
                         }
                     }
+
                     height += e.getBoundingClientRect().bottom - e.getBoundingClientRect().top;
                 }
-                console.log(this.contentCurPage)
+
+
                 {#this.getWanderRemind();#}
             },
 
