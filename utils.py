@@ -277,6 +277,15 @@ def get_sentence_by_word_index(content):
     return index_2_word, sentence_dict
 
 
+def get_row_by_word_index(row_list, word_index):
+    cnt = 0
+    for row in row_list:
+        if row["end_word"] > word_index >= row["begin_word"]:
+            return cnt
+        cnt += 1
+    return -1
+
+
 # 样例 ： [{"left":330,"top":95,"right":408.15625,"bottom":326.984375},{"left":408.15625,"top":95,"right":445.5,"bottom":326.984375},{"left":445.5,"top":95,"right":518.6875,"bottom":326.984375},{"left":518.6875,"top":95,"right":589.140625,"bottom":326.984375},{"left":589.140625,"top":95,"right":645.03125,"bottom":326.984375},{"left":645.03125,"top":95,"right":725.46875,"bottom":326.984375},{"left":725.46875,"top":95,"right":780.046875,"bottom":326.984375},{"left":780.046875,"top":95,"right":836.4375,"bottom":326.984375},{"left":836.4375,"top":95,"right":942.625,"bottom":326.984375},{"left":942.625,"top":95,"right":979.171875,"bottom":326.984375},{"left":979.171875,"top":95,"right":1055.796875,"bottom":326.984375},{"left":1055.796875,"top":95,"right":1113.015625,"bottom":326.984375},{"left":1113.015625,"top":95,"right":1162.203125,"bottom":326.984375},{"left":1162.203125,"top":95,"right":1231.65625,"bottom":326.984375},{"left":1231.65625,"top":95,"right":1283.859375,"bottom":326.984375},{"left":1283.859375,"top":95,"right":1315.421875,"bottom":326.984375},{"left":1315.421875,"top":95,"right":1343.21875,"bottom":326.984375},{"left":1343.21875,"top":95,"right":1430.078125,"bottom":326.984375},{"left":1430.078125,"top":95,"right":1507.3125,"bottom":326.984375},{"left":1507.3125,"top":95,"right":1543.859375,"bottom":326.984375},{"left":1543.859375,"top":95,"right":1678.296875,"bottom":326.984375},{"left":1678.296875,"top":95,"right":1722.234375,"bottom":326.984375},{"left":330,"top":326.984375,"right":379.1875,"bottom":558.96875},{"left":379.1875,"top":326.984375,"right":526.671875,"bottom":558.96875},{"left":526.671875,"top":326.984375,"right":596.25,"bottom":558.96875},{"left":596.25,"top":326.984375,"right":632.796875,"bottom":558.96875},{"left":632.796875,"top":326.984375,"right":742.984375,"bottom":558.96875},{"left":742.984375,"top":326.984375,"right":772.65625,"bottom":558.96875},{"left":772.65625,"top":326.984375,"right":800.453125,"bottom":558.96875},{"left":800.453125,"top":326.984375,"right":906.015625,"bottom":558.96875},{"left":906.015625,"top":326.984375,"right":946.9375,"bottom":558.96875},{"left":946.9375,"top":326.984375,"right":996.125,"bottom":558.96875},{"left":996.125,"top":326.984375,"right":1114.328125,"bottom":558.96875},{"left":1114.328125,"top":326.984375,"right":1255.125,"bottom":558.96875},{"left":1255.125,"top":326.984375,"right":1320.3125,"bottom":558.96875},{"left":1320.3125,"top":326.984375,"right":1403.90625,"bottom":558.96875},{"left":1403.90625,"top":326.984375,"right":1453.09375,"bottom":558.96875},{"left":1453.09375,"top":326.984375,"right":1535.078125,"bottom":558.96875},{"left":1535.078125,"top":326.984375,"right":1584.953125,"bottom":558.96875},{"left":1584.953125,"top":326.984375,"right":1641.859375,"bottom":558.96875},{"left":1641.859375,"top":326.984375,"right":1739.9375,"bottom":558.96875},{"left":330,"top":558.96875,"right":379.1875,"bottom":790.953125},{"left":379.1875,"top":558.96875,"right":467.59375,"bottom":790.953125},{"left":467.59375,"top":558.96875,"right":552.46875,"bottom":790.953125}]
 def get_row_location(buttons_locations):
     """
@@ -365,13 +374,18 @@ def get_vertical_saccades(fixations, locations):
         now_row = get_item_index_x_y(locations, fixation[0], fixation[1])
         if pre_row != now_row and now_row != -1:
             vertical_saccade = vertical_saccade + 1
+        pre_row = now_row
     return vertical_saccade
 
 
 def get_saccade_angle(fixation1, fixation2):
     """获得saccade的角度"""
     vertical_dis = abs(fixation2[1] - fixation1[1])
-    horizontal_dis = abs(fixation2[0] - fixation1[0])
+
+    if abs(fixation2[0] - fixation1[0]) != 0:
+        horizontal_dis = abs(fixation2[0] - fixation1[0])
+    else:
+        horizontal_dis = 0.001
     return math.atan(vertical_dis / horizontal_dis) * 180 / math.pi
 
 
@@ -499,11 +513,23 @@ def get_saccade(fixations, location):
     sum_saccade_angle = 0  # saccade的总角度，用于后面取平均
     # pre fixation 设置为第一个点
     pre_word_index = get_item_index_x_y(location, fixations[0][0], fixations[0][1])
+    # 获取row
+    row = get_row_location(location)
+    first_word_index = get_item_index_x_y(location, fixations[0][0], fixations[0][1])
+    if first_word_index != -1:
+        pre_row = get_row_by_word_index(row, first_word_index)
+    else:
+        pre_row = 0
+
     pre_fixation = fixations[0]
+    qxy = 0
     for fixation in fixations:
         # 获得当前fixation所在的位置
         word_index = get_item_index_x_y(location, fixation[0], fixation[1])
-        if word_index != pre_word_index and word_index != -1:
+        now_row = get_row_by_word_index(row, word_index)
+        if now_row != pre_row:
+            qxy += 1
+        if (word_index != pre_word_index and word_index != -1) or (now_row != pre_row):
             # 1. 计算saccade的次数和长度
             # 只要前后fix的单词不一致就是一个fixations
             saccade_times = saccade_times + 1
@@ -521,11 +547,14 @@ def get_saccade(fixations, location):
             # 3. 更新pre fixation
             pre_word_index = word_index
             pre_fixation = fixation
-
+            # 4. 更新pre row
+            pre_row = now_row
+    print("qxy")
+    print(qxy)
     return (
         saccade_times,
-        forward_saccade_times,
-        backward_saccade_times,
+        forward_saccade_times / saccade_times if saccade_times != 0 else 0,
+        backward_saccade_times / saccade_times if saccade_times != 0 else 0,
         sum_saccade_length / saccade_times if saccade_times != 0 else 0,
         sum_saccade_angle / saccade_times if saccade_times != 0 else 0,
     )
@@ -600,6 +629,9 @@ def evaluate(path, classifier, feature):
     # 分类器
     if classifier == "kmeans":
         predicted = kmeans_classifier(feature)
+    else:
+        # 默认使用kmeans分类器
+        predicted = kmeans_classifier(feature)
 
     # 计算TP等
     tp = 0
@@ -621,16 +653,29 @@ def evaluate(path, classifier, feature):
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
 
-    print("准确率：%f" % accuracy)
-    print("精确率：%f" % precision)
-    print("召回率：%f" % recall)
-
     from sklearn.metrics import roc_auc_score
 
     y_true = is_understand
     y_pred = predicted
     auc = roc_auc_score(y_true, y_pred)
+
+    print("precision：%f" % precision)
+    print("recall：%f" % recall)
     print("auc:%f" % auc)
+    print("accuracy：%f" % accuracy)
+
+
+def standard_deviation(data_list):
+    sum = 0
+    for data in data_list:
+        sum = sum + data
+    mean = sum / len(data_list) if len(data_list) > 0 else 0
+    sum = 0
+    for data in data_list:
+        sum = sum + math.pow(data - mean, 2)
+    sum = sum / len(data_list) if len(data_list) > 0 else 0
+
+    return math.sqrt(sum)
 
 
 if __name__ == "__main__":
@@ -639,7 +684,13 @@ if __name__ == "__main__":
         '"right":445.5,"bottom":326.984375}] '
     )
 
-    path = "static\\user\\" + "word_level.csv"
-    print(path)
-    evaluate(path, "kmeans", "second_pass_duration")
+    # pars = ['', '_qxy', '_lq', '_czh']
+    # for par in pars:
+    #     print("--" + par + "--")
+    #     path_qxy = "static\\user\\" + "word_level" + par + ".csv"
+    #     evaluate(path_qxy, "kmeans", "number_of_fixations")
+
+    data_list = [58.33, 1]
+    sd = standard_deviation(data_list)
+    print("sd:%d" % sd)
     pass
