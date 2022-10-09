@@ -16,6 +16,7 @@ from action.models import (
     Experiment,
     Translation,
 )
+from heatmap import draw_heat_map
 from onlineReading.utils import (
     translate,
     get_euclid_distance,
@@ -37,6 +38,7 @@ from utils import (
     get_reading_times_of_word,
     get_reading_times_and_dwell_time_of_sentence,
     get_saccade,
+    preprocess_data,
 )
 
 
@@ -583,27 +585,17 @@ def add_page_feature_to_csv(analysis_result_by_page_level, path):
 
     page_wander.append(analysis_result_by_page_level["page_wander"])
     saccade_times.append(analysis_result_by_page_level["saccade_times"])
-    forward_saccade_times.append(
-        analysis_result_by_page_level["forward_saccade_times"]
-    )
+    forward_saccade_times.append(analysis_result_by_page_level["forward_saccade_times"])
     backward_saccade_times.append(
         analysis_result_by_page_level["backward_saccade_times"]
     )
-    mean_saccade_length.append(
-        analysis_result_by_page_level["mean_saccade_length"]
-    )
-    mean_saccade_angle.append(
-        analysis_result_by_page_level["mean_saccade_angle"]
-    )
-    out_of_screen_times.append(
-        analysis_result_by_page_level["out_of_screen_times"]
-    )
+    mean_saccade_length.append(analysis_result_by_page_level["mean_saccade_length"])
+    mean_saccade_angle.append(analysis_result_by_page_level["mean_saccade_angle"])
+    out_of_screen_times.append(analysis_result_by_page_level["out_of_screen_times"])
     proportion_of_horizontal_saccades.append(
         analysis_result_by_page_level["proportion of horizontal saccades"]
     )
-    number_of_fixations.append(
-        analysis_result_by_page_level["number_of_fixations"]
-    )
+    number_of_fixations.append(analysis_result_by_page_level["number_of_fixations"])
 
     df = pd.DataFrame(
         {
@@ -629,9 +621,219 @@ def add_page_feature_to_csv(analysis_result_by_page_level, path):
 
 
 def analysis(request):
+
+    # 要分析的页
+    experiment_id = request.GET.get("id")
+    image = request.GET.get("image", False)
+    csv = request.GET.get("csv", False)
+    pagedatas = PageData.objects.filter(experiment_id=experiment_id)
+    for pagedata in pagedatas:
+        try:
+            """
+            准备工作：获取fixation
+            """
+            # 组合gaze点  [(x,y,t),(x,y,t)]
+            gaze_coordinates = x_y_t_2_coordinate(
+                pagedata.gaze_x, pagedata.gaze_y, pagedata.gaze_t
+            )
+            # 根据gaze点计算fixation list [(x,y,duration),(x,y,duration)]
+            fixations = get_fixations(gaze_coordinates)
+            """
+                计算word level的特征
+            """
+            # 得到word对应的fixation dict
+            word_fixation = add_fixations_to_location(fixations, pagedata.location)
+            # 得到word在文章中下标 dict
+            words_index, sentence_index = get_sentence_by_word_index(pagedata.texts)
+            # 获取不懂的单词的label 使用", "来切割，#TODO 可能要改
+            wordlabels = pagedata.wordLabels[1:-1].split(", ")
+            # 获取每个单词的reading times dict  /dict.dict
+            reading_times_of_word, reading_durations = get_reading_times_of_word(
+                fixations, pagedata.location
+            )
+            # 需要输出的单词level分析结果
+            analysis_result_by_word_level = {}
+            # 因为所有的特征都依赖于fixation，所以遍历有fixation的word就足够了
+            # TODO 那没有fixation的word怎么比较？
+            for key in word_fixation:
+                # 计算平均duration
+                sum_t = 0
+                for fixation in word_fixation[key]:
+                    sum_t = sum_t + fixation[2]
+                mean_fixations_duration = sum_t / len(word_fixation[key])
+
+                result = {
+                    "word": words_index[key],
+                    "is_understand": 0 if str(key) in wordlabels else 1,  # 是否理解
+                    "mean_fixations_duration": mean_fixations_duration,  # 平均阅读时长
+                    "fixation_duration": word_fixation[key][0][2],  # 首次的fixation时长
+                    "second_pass_duration": word_fixation[key][1][2]
+                    if len(word_fixation[key]) > 1
+                    else 0,  # second-pass duration
+                    "number_of_fixations": len(word_fixation[key]),  # 在一个单词上的fixation次数
+                    "fixations": word_fixation[key],  # 输出所有的fixation点
+                    "reading_times": reading_times_of_word[key],
+                    "first_reading_durations": reading_durations[key][1],
+                    "second_reading_durations": reading_durations[key][2]
+                    if reading_times_of_word[key] > 1
+                    else 0,
+                    "third_reading_durations": reading_durations[key][3]
+                    if reading_times_of_word[key] > 2
+                    else 0,
+                    "fourth_reading_durations": reading_durations[key][4]
+                    if reading_times_of_word[key] > 3
+                    else 0,
+                }
+
+                analysis_result_by_word_level[key] = result
+
+            """
+                获取sentence level的特征
+            """
+            analysis_result_by_sentence_level = {}
+            # 获取不懂的句子
+            sentencelabels = json.loads(pagedata.sentenceLabels)
+
+            # 需要输出的句子level的输出结果
+            # 获取每隔句子的reading times dict/list 下标代表第几次 0-first pass
+            (
+                reading_times_of_sentence,
+                dwell_time_of_sentence,
+                number_of_word,
+            ) = get_reading_times_and_dwell_time_of_sentence(
+                fixations, pagedata.location, sentence_index
+            )
+            # for key in sentence_index:
+            #     begin = sentence_index[key]["begin_word_index"]
+            #     end = sentence_index[key]["end_word_index"]
+            #     sum_duration = 0
+            #     # 将在这个句子中所有单词的fixation duration相加
+            #     for word_key in word_fixation:
+            #         if begin <= word_key < end:
+            #             for fixation_in_word in word_fixation[word_key]:
+            #                 sum_duration = sum_duration + fixation_in_word[2]
+            #     # 判断句子是否懂
+            #     is_understand = 1
+            #     for sentencelabel in sentencelabels:
+            #         if begin == sentencelabel[0] and end == sentencelabel[1]:
+            #             is_understand = 0
+            #     result = {
+            #         "sentence": sentence_index[key]["sentence"],  # 句子本身
+            #         "is_understand": is_understand,  # 是否理解
+            #         "sum_dwell_time": sum_duration / number_of_word
+            #         if number_of_word != 0
+            #         else 0,  # 在该句子上的fixation总时长
+            #         "reading_times_of_sentence": reading_times_of_sentence[key],
+            #         "dwell_time": dwell_time_of_sentence[0][key] / number_of_word
+            #         if number_of_word != 0
+            #         else 0,
+            #         "second_pass_dwell_time": dwell_time_of_sentence[1][key] / number_of_word
+            #         if number_of_word != 0
+            #         else 0,
+            #     }
+            #     analysis_result_by_sentence_level[key] = result
+            """
+                计算row level的特征
+            """
+            # 需要输出行level的输出结果
+            # row本身的信息
+            row_info = get_row_location(pagedata.location)
+            row_fixation = add_fixations_to_location(
+                fixations, str(row_info).replace("'", '"')
+            )
+            analysis_result_by_row_level = {}
+            wanderlabels = json.loads(pagedata.wanderLabels)
+            # TODO 一旦有一行是wander,那么整页的标签就是wander
+            page_wander = 0
+            for key in row_fixation:
+                saccade_times_of_row, mean_saccade_angle_of_row = get_saccade_info(
+                    row_fixation[key]
+                )
+                # 判断该行是否走神
+                begin_word = row_info[key]["begin_word"]
+                end_word = row_info[key]["end_word"]
+                is_wander = 0
+                for wanderlabel in wanderlabels:
+                    if begin_word == wanderlabel[0] and end_word == wanderlabel[1]:
+                        is_wander = 1
+                        page_wander = 1
+                result = {
+                    "is_wander": is_wander,
+                    "saccade_times": saccade_times_of_row,
+                    "mean_saccade_angle": mean_saccade_angle_of_row,
+                }
+                analysis_result_by_row_level[key] = result
+            """
+                计算page level的特征
+            """
+            # 获取page level的特征
+            (
+                saccade_time,
+                forward_saccade_times,
+                backward_saccade_times,
+                mean_saccade_length,
+                mean_saccade_angle,
+            ) = get_saccade(fixations, pagedata.location)
+
+            proportion_of_horizontal_saccades = get_proportion_of_horizontal_saccades(
+                fixations, str(row_info).replace("'", '"'), saccade_time
+            )
+
+            analysis_result_by_page_level = {
+                "page_wander": page_wander,
+                "saccade_times": saccade_time,
+                "forward_saccade_times": forward_saccade_times,
+                "backward_saccade_times": backward_saccade_times,
+                "mean_saccade_length": mean_saccade_length,
+                "mean_saccade_angle": mean_saccade_angle,
+                "out_of_screen_times": get_out_of_screen_times(gaze_coordinates),
+                "proportion of horizontal saccades": proportion_of_horizontal_saccades,
+                "number_of_fixations": len(fixations),
+            }
+
+            if image:
+                # 输出图示
+                fixation_image(
+                    pagedata.image,
+                    Experiment.objects.get(id=pagedata.experiment_id).user,
+                    fixations,
+                    pagedata.id,
+                )
+
+            # 将数据写入csv
+            # 先看word level
+            if csv:
+                # word_path = "static/user/dataset/" + "word_level_2.csv"
+                # add_word_feature_to_csv(analysis_result_by_word_level, word_path)
+
+                sentence_path = "static/user/dataset/" + "sentence_level_lq.csv"
+                add_sentence_feature_to_csv(
+                    analysis_result_by_sentence_level, sentence_path
+                )
+
+                # page_path = "static/user/dataset/" + "page_level_czh.csv"
+                # add_page_feature_to_csv(analysis_result_by_page_level, page_path)
+
+            # 返回结果
+            analysis = {
+                "word": analysis_result_by_word_level,
+                "sentence": analysis_result_by_sentence_level,
+                "row": analysis_result_by_row_level,
+                "page": analysis_result_by_page_level,
+            }
+        except:
+            logger.warning("page_data:%d 计算发生错误" % pagedata.id)
+    # print(analysis_result_by_word_level)
+    # return JsonResponse(analysis, json_dumps_params={"ensure_ascii": False})
+    return HttpResponse(1)
+
+
+def analysis_1(request):
+
     # 要分析的页
     page_data_id = request.GET.get("id")
     pagedata = PageData.objects.get(id=page_data_id)
+
     """
         准备工作：获取fixation
     """
@@ -702,32 +904,39 @@ def analysis(request):
     (
         reading_times_of_sentence,
         dwell_time_of_sentence,
+        number_of_word,
     ) = get_reading_times_and_dwell_time_of_sentence(
         fixations, pagedata.location, sentence_index
     )
-    for key in sentence_index:
-        begin = sentence_index[key]["begin_word_index"]
-        end = sentence_index[key]["end_word_index"]
-        sum_duration = 0
-        # 将在这个句子中所有单词的fixation duration相加
-        for word_key in word_fixation:
-            if begin <= word_key < end:
-                for fixation_in_word in word_fixation[word_key]:
-                    sum_duration = sum_duration + fixation_in_word[2]
-        # 判断句子是否懂
-        is_understand = 1
-        for sentencelabel in sentencelabels:
-            if begin == sentencelabel[0] and end == sentencelabel[1]:
-                is_understand = 0
-        result = {
-            "sentence": sentence_index[key]["sentence"],  # 句子本身
-            "is_understand": is_understand,  # 是否理解
-            "sum_dwell_time": sum_duration,  # 在该句子上的fixation总时长
-            "reading_times_of_sentence": reading_times_of_sentence[key],
-            "dwell_time": dwell_time_of_sentence[0][key],
-            "second_pass_dwell_time": dwell_time_of_sentence[1][key],
-        }
-        analysis_result_by_sentence_level[key] = result
+    # for key in sentence_index:
+    #     begin = sentence_index[key]["begin_word_index"]
+    #     end = sentence_index[key]["end_word_index"]
+    #     sum_duration = 0
+    #     # 将在这个句子中所有单词的fixation duration相加
+    #     for word_key in word_fixation:
+    #         if begin <= word_key < end:
+    #             for fixation_in_word in word_fixation[word_key]:
+    #                 sum_duration = sum_duration + fixation_in_word[2]
+    #     # 判断句子是否懂
+    #     is_understand = 1
+    #     for sentencelabel in sentencelabels:
+    #         if begin == sentencelabel[0] and end == sentencelabel[1]:
+    #             is_understand = 0
+    #     result = {
+    #         "sentence": sentence_index[key]["sentence"],  # 句子本身
+    #         "is_understand": is_understand,  # 是否理解
+    #         "sum_dwell_time": sum_duration / number_of_word
+    #         if number_of_word != 0
+    #         else 0,  # 在该句子上的fixation总时长
+    #         "reading_times_of_sentence": reading_times_of_sentence[key],
+    #         "dwell_time": dwell_time_of_sentence[0][key] / number_of_word
+    #         if number_of_word != 0
+    #         else 0,
+    #         "second_pass_dwell_time": dwell_time_of_sentence[1][key] / number_of_word
+    #         if number_of_word != 0
+    #         else 0,
+    #     }
+    #     analysis_result_by_sentence_level[key] = result
     """
         计算row level的特征
     """
@@ -785,36 +994,46 @@ def analysis(request):
         "number_of_fixations": len(fixations),
     }
 
-    image = request.GET.get("image", False)
-    if image:
-        # 输出图示
-        fixation_image(
-            pagedata.image,
-            Experiment.objects.get(id=pagedata.experiment_id).user,
-            fixations,
-            page_data_id,
-        )
-
-    # 将数据写入csv
-    # 先看word level
-    csv = request.GET.get("csv", False)
-    if csv:
-        # word_path = "static/user/dataset/" + "word_level_2.csv"
-        # add_word_feature_to_csv(analysis_result_by_word_level, word_path)
-
-        # sentence_path = "static/user/dataset/" + "sentence_level_qxy.csv"
-        # add_sentence_feature_to_csv(analysis_result_by_sentence_level, sentence_path)
-
-        page_path = "static/user/dataset/" + "page_level_czh.csv"
-        add_page_feature_to_csv(analysis_result_by_page_level,page_path)
-
     # 返回结果
     analysis = {
-        # "word": analysis_result_by_word_level,
+        "word": analysis_result_by_word_level,
         # "sentence": analysis_result_by_sentence_level,
         # "row": analysis_result_by_row_level,
-        "page": analysis_result_by_page_level,
+        # "page": analysis_result_by_page_level,
     }
 
-    print(analysis_result_by_word_level)
     return JsonResponse(analysis, json_dumps_params={"ensure_ascii": False})
+
+
+def get_heat_map(request):
+    page_data_id = request.GET.get("id")
+    pageData = PageData.objects.get(id=page_data_id)
+    list_x = list(map(float, pageData.gaze_x.split(",")))
+    list_y = list(map(float, pageData.gaze_y.split(",")))
+
+    print(list_x)
+    print(type(list_x))
+    print(type(list_x[0]))
+
+    filter = request.GET.get("filter", True)
+    kernel_size = 0
+    if filter:
+        # 滤波
+        kernel_size = int(request.GET.get("window"))
+        list_x = preprocess_data(list_x, kernel_size)
+        list_y = preprocess_data(list_y, kernel_size)
+
+    # 滤波完是浮点数，需要转成int
+    list_x = list(map(int, list_x))
+    list_y = list(map(int, list_y))
+    # 组合
+    coordinates = []
+    for i in range(len(list_x)):
+        coordinate = [list_x[i], list_y[i]]
+        coordinates.append(coordinate)
+
+    # 画图
+    username = Experiment.objects.get(id=pageData.experiment_id).user
+    draw_heat_map(coordinates, page_data_id, pageData.page, username, kernel_size)
+
+    return HttpResponse(1)
