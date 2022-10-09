@@ -16,6 +16,7 @@ from action.models import (
     Experiment,
     Translation,
 )
+from heatmap import draw_heat_map
 from onlineReading.utils import (
     translate,
     get_euclid_distance,
@@ -37,6 +38,7 @@ from utils import (
     get_reading_times_of_word,
     get_reading_times_and_dwell_time_of_sentence,
     get_saccade,
+    preprocess_data,
 )
 
 
@@ -628,7 +630,7 @@ def analysis(request):
     for pagedata in pagedatas:
         try:
             """
-                准备工作：获取fixation
+            准备工作：获取fixation
             """
             # 组合gaze点  [(x,y,t),(x,y,t)]
             gaze_coordinates = x_y_t_2_coordinate(
@@ -736,7 +738,9 @@ def analysis(request):
             # 需要输出行level的输出结果
             # row本身的信息
             row_info = get_row_location(pagedata.location)
-            row_fixation = add_fixations_to_location(fixations, str(row_info).replace("'", '"'))
+            row_fixation = add_fixations_to_location(
+                fixations, str(row_info).replace("'", '"')
+            )
             analysis_result_by_row_level = {}
             wanderlabels = json.loads(pagedata.wanderLabels)
             # TODO 一旦有一行是wander,那么整页的标签就是wander
@@ -803,7 +807,9 @@ def analysis(request):
                 # add_word_feature_to_csv(analysis_result_by_word_level, word_path)
 
                 sentence_path = "static/user/dataset/" + "sentence_level_lq.csv"
-                add_sentence_feature_to_csv(analysis_result_by_sentence_level, sentence_path)
+                add_sentence_feature_to_csv(
+                    analysis_result_by_sentence_level, sentence_path
+                )
 
                 # page_path = "static/user/dataset/" + "page_level_czh.csv"
                 # add_page_feature_to_csv(analysis_result_by_page_level, page_path)
@@ -816,10 +822,11 @@ def analysis(request):
                 "page": analysis_result_by_page_level,
             }
         except:
-            logger.warning("page_data:%d 计算发生错误"%pagedata.id)
+            logger.warning("page_data:%d 计算发生错误" % pagedata.id)
     # print(analysis_result_by_word_level)
     # return JsonResponse(analysis, json_dumps_params={"ensure_ascii": False})
     return HttpResponse(1)
+
 
 def analysis_1(request):
 
@@ -996,3 +1003,37 @@ def analysis_1(request):
     }
 
     return JsonResponse(analysis, json_dumps_params={"ensure_ascii": False})
+
+
+def get_heat_map(request):
+    page_data_id = request.GET.get("id")
+    pageData = PageData.objects.get(id=page_data_id)
+    list_x = list(map(float, pageData.gaze_x.split(",")))
+    list_y = list(map(float, pageData.gaze_y.split(",")))
+
+    print(list_x)
+    print(type(list_x))
+    print(type(list_x[0]))
+
+    filter = request.GET.get("filter", True)
+    kernel_size = 0
+    if filter:
+        # 滤波
+        kernel_size = int(request.GET.get("window"))
+        list_x = preprocess_data(list_x, kernel_size)
+        list_y = preprocess_data(list_y, kernel_size)
+
+    # 滤波完是浮点数，需要转成int
+    list_x = list(map(int, list_x))
+    list_y = list(map(int, list_y))
+    # 组合
+    coordinates = []
+    for i in range(len(list_x)):
+        coordinate = [list_x[i], list_y[i]]
+        coordinates.append(coordinate)
+
+    # 画图
+    username = Experiment.objects.get(id=pageData.experiment_id).user
+    draw_heat_map(coordinates, page_data_id, pageData.page, username, kernel_size)
+
+    return HttpResponse(1)
