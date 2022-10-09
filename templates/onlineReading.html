@@ -207,26 +207,6 @@
 
             },
 
-
-            {#getSentenceTranslation: function (num) {#}
-            {#if($('#trans').css('display') == "none")#}
-            {#    $('#trans').css('display','');#}
-            {#else if($('#trans').css('display') == "none" && this.currentTransWord == num)#}
-            {#    $('#trans').css('display','none');#}
-            {#    this.changeTextStyle(num,num+1);#}
-            {#    this.getWordLocation(num);#}
-            {#    var e = document.getElementById('trans');#}
-            {#    e.innerHTML = this.translation[num].sentence_zh;#}
-            {#    if (this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2 - $('#trans').width() / 2 - 13 < 0)#}
-            {#        e.style.marginLeft = "0";#}
-            {#    else#}
-            {#        e.style.marginLeft = this.wordLocation.left - 190 + $('.word:eq(' + num + ')').width() / 2 - $('#trans').width() / 2 - 13 + "px";#}
-            {#    if ($('#trans').height() > 35)#}
-            {#        e.style.marginTop = this.wordLocation.top + 25 - $('#trans').height() + "px";#}
-            {#    else#}
-            {#        e.style.marginTop = this.wordLocation.top - 5 + "px";#}
-            {#    this.currentTransWord = num;#}
-            {# },#}
             getSentenceTranslation: function (num) {
                 let start = 0;
                 let end = 0;
@@ -528,7 +508,7 @@
                     }
                 }
                 console.log(num);
-                this.getWanderRemind();
+                {#this.getWanderRemind();#}
             },
 
             listen: function () {
@@ -572,9 +552,11 @@
             },
 
 
-            auto: function () {
+            autoIntervention: function () {
                 if (stop === false) {
-                    setInterval(this.autoRandomTranslation, 5000);
+                    setInterval(function () {
+                        get_base64_gaze_and_intervention(0);
+                    }, 5000);
                 }
 
             },
@@ -647,11 +629,10 @@
                 break;
             }
             case 39: {
-
                 if (app._data.page < app._data.totalPage) {
                     get_base64_gaze_and_intervention(1);
+                    break;
                 }
-                break;
             }
             case 32: {
                 stop = true;
@@ -661,7 +642,6 @@
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
                 esc_full_screen();
-
                 break;
             }
 
