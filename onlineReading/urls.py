@@ -35,5 +35,7 @@ urlpatterns = [
     path("cm/<int:k>/", views.cm_2_pixel_test),
     path("analysis/", views.analysis),
     path("analysis_1/",views.analysis_1),
-    path("heatmap/",views.get_heat_map)
+    path("heatmap/",views.get_heat_map),
+    path("motion/",views.test_motion),
+    path("save_gaze/",views.get_gaze_data_pic)
 ]

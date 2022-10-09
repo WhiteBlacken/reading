@@ -147,6 +147,25 @@ def get_paragraph_and_translation(request):
     )
     return JsonResponse(para_dict, json_dumps_params={"ensure_ascii": False})
 
+def get_gaze_data_pic(request):
+    image_base64 = request.POST.get("image")  # base64类型
+    x = request.POST.get("x")  # str类型
+    y = request.POST.get("y")  # str类型
+    t = request.POST.get("t")  # str类型
+    pagedata = PageData.objects.create(
+        gaze_x=str(x),
+        gaze_y=str(y),
+        gaze_t=str(t),
+        texts="",  # todo 前端发送过来
+        interventions="",
+        image=image_base64,
+        page=0,  # todo 前端发送过来
+        experiment_id=0,
+        location="",
+        is_test=0,
+    )
+    logger.info("pagedata:%d 已保存"%pagedata.id)
+    return HttpResponse(1)
 
 def get_page_data(request):
     """存储每页的数据"""
@@ -1017,7 +1036,7 @@ def get_heat_map(request):
 
     filter = request.GET.get("filter", True)
     kernel_size = 0
-    if filter:
+    if filter == "False":
         # 滤波
         kernel_size = int(request.GET.get("window"))
         list_x = preprocess_data(list_x, kernel_size)
@@ -1033,7 +1052,15 @@ def get_heat_map(request):
         coordinates.append(coordinate)
 
     # 画图
-    username = Experiment.objects.get(id=pageData.experiment_id).user
+    exp = Experiment.objects.filter(id=pageData.experiment_id)
+    if not exp:
+        username = 'test'
+    else:
+        username = exp.first().user
     draw_heat_map(coordinates, page_data_id, pageData.page, username, kernel_size)
 
     return HttpResponse(1)
+
+
+def test_motion(request):
+    return render(request,'test_motion.html')
