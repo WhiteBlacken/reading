@@ -151,6 +151,7 @@ def get_paragraph_and_translation(request):
     )
     return JsonResponse(para_dict, json_dumps_params={"ensure_ascii": False})
 
+
 def get_gaze_data_pic(request):
     image_base64 = request.POST.get("image")  # base64类型
     x = request.POST.get("x")  # str类型
@@ -168,7 +169,7 @@ def get_gaze_data_pic(request):
         location="",
         is_test=0,
     )
-    logger.info("pagedata:%d 已保存"%pagedata.id)
+    logger.info("pagedata:%d 已保存" % pagedata.id)
     return HttpResponse(1)
 
 def get_gaze_data_pic(request):
@@ -1191,4 +1192,3 @@ def get_nlp_heatmap(request):
     )
     draw_heat_map(coordinates, hit_pic_name, heatmap_name, base)
     return JsonResponse({"code": 200, "status": "success", "pic_path": heatmap_name})
-
