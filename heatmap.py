@@ -16,23 +16,19 @@ import os
 import random
 from PIL import Image
 from PIL import ImageDraw2
+from loguru import logger
 from pyheatmap.inc import cf
 
 import sys
 
-if sys.version > '3':
+if sys.version > "3":
     PY3 = True
 else:
     PY3 = False
 
 
 class HeatMap(object):
-    def __init__(self,
-                 data,
-                 base=None,
-                 width=0,
-                 height=0
-                 ):
+    def __init__(self, data, base=None, width=0, height=0):
         u""""""
 
         assert type(data) in (list, tuple)
@@ -65,7 +61,18 @@ class HeatMap(object):
             self.width = self.width or w
             self.height = self.height or h
 
+    def __mk_img(self, base=None):
+        u"""生成临时图片"""
 
+        base = base or self.base
+        self.__im0 = None
+
+        if base:
+            str_type = (str,) if PY3 else (str, unicode)
+            self.__im0 = Image.open(base) if type(base) in str_type else base
+            self.width, self.height = self.__im0.size
+
+        self.__im = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
 
     def __paint_hit(self, x, y, color):
         u"""绘制点击小叉图片"""
@@ -157,7 +164,38 @@ class HeatMap(object):
         self.__im0.paste(self.__im, mask=self.__im)
         self.__im = self.__im0
 
+    def sample(self, max_count=None, rate=None):
 
+        count = self.count
+        if count == 0:
+            return self.data
+
+        if rate and 0 < rate < 1:
+            count = int(self.count * rate)
+        if max_count and count > max_count:
+            count = max_count
+
+        if count == 0 or count >= self.count:
+            return self.data
+
+        data = []
+        _range = range if PY3 else xrange
+        for x, y, n in self.data:
+            for i in _range(n):
+                data.append((x, y))
+
+        sample = random.sample(data, count)
+        data = {}
+        for x, y in sample:
+            key = (x, y)
+            data[key] = data.get(key, 0) + 1
+
+        data2 = []
+        for key in data:
+            x, y = key
+            data2.append((x, y, data[key]))
+
+        return data2
 
     def heatmap(self, save_as=None, base=None, data=None, r=70):
         u"""绘制热图"""
@@ -214,22 +252,21 @@ def test():
     # 开始绘制
     hm = HeatMap(data)
     hm.clickmap(save_as="hit.png", base="C:\\Users\\asus\\Desktop\\background\\5.jpg")
-    hm.heatmap(save_as="page7_heat.png", base="C:\\Users\\asus\\Desktop\\background\\7.jpg")
+    hm.heatmap(
+        save_as="page7_heat.png", base="C:\\Users\\asus\\Desktop\\background\\7.jpg"
+    )
 
     print("done.")
 
-def draw_heat_map(data,page_data_id,page,username,window):
+
+def draw_heat_map(data, hit_pic_name, heatmap_name, base):
 
     # 开始绘制
     hm = HeatMap(data)
-    hit_pic_name = "static\\data\\heatmap\\"+str(username)+"\\hit_"+str(page_data_id)+"_"+str(window)+".png"
-    heatmap_name = "static\\data\\heatmap\\"+str(username)+"\\heatmap_"+str(page_data_id)+"_"+str(window)+".png"
-    # base = "static\\background\\"+str(page)+".jpg"
-    base = "static\\background\\"+"dots.jpg"
     hm.clickmap(save_as=hit_pic_name, base=base)
     hm.heatmap(save_as=heatmap_name, base=base)
 
-    print("done.")
+    logger.info("heatmap已在该路径下生成:%s"%heatmap_name)
 
 
 if __name__ == "__main__":

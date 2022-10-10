@@ -39,7 +39,10 @@ from utils import (
     get_reading_times_of_word,
     get_reading_times_and_dwell_time_of_sentence,
     get_saccade,
-    preprocess_data, get_importance, get_word_by_index, get_word_and_location,
+    preprocess_data,
+    get_importance,
+    get_word_by_index,
+    get_word_and_location,
 )
 
 
@@ -148,6 +151,7 @@ def get_paragraph_and_translation(request):
     )
     return JsonResponse(para_dict, json_dumps_params={"ensure_ascii": False})
 
+
 def get_gaze_data_pic(request):
     image_base64 = request.POST.get("image")  # base64类型
     x = request.POST.get("x")  # str类型
@@ -165,8 +169,9 @@ def get_gaze_data_pic(request):
         location="",
         is_test=0,
     )
-    logger.info("pagedata:%d 已保存"%pagedata.id)
+    logger.info("pagedata:%d 已保存" % pagedata.id)
     return HttpResponse(1)
+
 
 def get_page_data(request):
     """存储每页的数据"""
@@ -813,6 +818,7 @@ def analysis(request):
 
             if image:
                 # 输出图示
+                print("输出图")
                 fixation_image(
                     pagedata.image,
                     Experiment.objects.get(id=pagedata.experiment_id).user,
@@ -1025,31 +1031,27 @@ def analysis_1(request):
     return JsonResponse(analysis, json_dumps_params={"ensure_ascii": False})
 
 
-def get_heat_map(request):
+def get_visual_heatmap(request):
+    """
+    绘制visual attention
+    :param request:
+    :return:
+    """
+    # 1. 获取gaze点数据
     page_data_id = request.GET.get("id")
     pageData = PageData.objects.get(id=page_data_id)
     list_x = list(map(float, pageData.gaze_x.split(",")))
     list_y = list(map(float, pageData.gaze_y.split(",")))
 
-    print(list_x)
-    print(type(list_x))
-    print(type(list_x[0]))
+    # 2. 滤波处理
+    kernel_size = int(request.GET.get("window", 0))
 
-    filter = request.GET.get("filter", True)
-    print(type(filter))
-    print(filter)
-    kernel_size = 0
-<<<<<<< HEAD
-    if filter == "False":
-=======
-    if filter != "False":
->>>>>>> e7c56a9cdb5191e66eaab59a281d9ed87bdbed0b
+    if kernel_size != 0:
         # 滤波
-        print("执行了")
-        kernel_size = int(request.GET.get("window"))
         list_x = preprocess_data(list_x, kernel_size)
         list_y = preprocess_data(list_y, kernel_size)
 
+    # 3. 组合数据
     # 滤波完是浮点数，需要转成int
     list_x = list(map(int, list_x))
     list_y = list(map(int, list_y))
@@ -1059,51 +1061,114 @@ def get_heat_map(request):
         coordinate = [list_x[i], list_y[i]]
         coordinates.append(coordinate)
 
-    # 画图
+    # 4. 画图
     exp = Experiment.objects.filter(id=pageData.experiment_id)
     if not exp:
-        username = 'test'
+        username = "tmp"
+        base = "static\\background\\" + str(request.GET.get("background")) + ".jpg"
     else:
         username = exp.first().user
-    draw_heat_map(coordinates, page_data_id, pageData.page, username, kernel_size)
+        base = "static\\background\\" + str(exp.first().article_id) + "\\" + str(pageData.page) + ".jpg"
+
+    hit_pic_name = (
+        "static\\data\\heatmap\\"
+        + str(username)
+        + "\\visual"
+        + "\\hit_"
+        + str(page_data_id)
+        + "_"
+        + str(kernel_size)
+        + ".png"
+    )
+    heatmap_name = (
+        "static\\data\\heatmap\\"
+        + str(username)
+        + "\\visual"
+        + "\\heatmap_"
+        + str(page_data_id)
+        + "_"
+        + str(kernel_size)
+        + ".png"
+    )
+    draw_heat_map(coordinates, hit_pic_name, heatmap_name, base)
 
     return HttpResponse(1)
 
-<<<<<<< HEAD
 
 def test_motion(request):
-    return render(request,'test_motion.html')
-=======
-def get_heatmap_of_text(request):
+    return render(request, "test_motion.html")
+
+
+def get_nlp_heatmap(request):
+    """
+    绘制text attention
+    :param request:
+    :return:
+    """
+    # 1. 获取文本数据
     page_data_id = request.GET.get("id")
     pageData = PageData.objects.get(id=page_data_id)
-    print(pageData.texts)
-    importances = get_importance(pageData.texts)
-    print(importances)
-    print(type(importances))
 
+    # 2. 调用文本分析的接口
+    importances = get_importance(pageData.texts)
+
+    # 3. 获取单词的位置
     word_index = get_word_by_index(pageData.texts)
     word_and_location_dict = get_word_and_location(pageData.location, word_index)
 
     gaze_x = []
     gaze_y = []
-    importance_list=[]
-    for importance in importances:
-        print("执行中")
-        if importance[1]>0:
-            importance_list.append(importance)
-    for importance in importance_list:
-        loc = word_and_location_dict[importance[0]]
-        for i in range(int(importance[1]*100)):
-            gaze_x.append(random.randint(int(loc[0]),int(loc[2])))
-            gaze_y.append(random.randint(int(loc[1]),int(loc[3])))
+    importance_list = [x for x in importances if x[1] > 0]
+    importance_list.sort(reverse=True)
 
+    # 数量多为 0.000x，将其最大的数扩大至100
+    tmp = 1
+    if importance_list:
+        while importance_list[0][1] * tmp < 10:
+            tmp = tmp * 10
+    print("放大倍数是:%d" % tmp)
+
+    for importance in importance_list:
+        if importance[0].lower() in word_and_location_dict.keys():
+            loc = word_and_location_dict[importance[0].lower()]
+            for i in range(int(importance[1] * tmp)):
+                gaze_x.append(random.randint(int(loc[0]), int(loc[2])))
+                gaze_y.append(random.randint(int(loc[1]), int(loc[3])))
+
+    gaze_x = preprocess_data(gaze_x, 7)
+    gaze_y = preprocess_data(gaze_y, 7)
+    gaze_x = list(map(int, gaze_x))
+    gaze_y = list(map(int, gaze_y))
+
+    # 组合数据
     coordinates = []
     for i in range(len(gaze_x)):
         coordinate = [gaze_x[i], gaze_y[i]]
         coordinates.append(coordinate)
-    username = str(Experiment.objects.get(id=pageData.experiment_id).user)+"_text"
-    draw_heat_map(coordinates, page_data_id, pageData.page, username, 0)
-    return HttpResponse(importance_list)
 
->>>>>>> e7c56a9cdb5191e66eaab59a281d9ed87bdbed0b
+    exp = Experiment.objects.filter(id=pageData.experiment_id)
+    if not exp:
+        username = "tmp_text"
+        base = "static\\background\\" + str(request.GET.get("background")) + ".jpg"
+    else:
+        username = exp.first().user
+        base = "static\\background\\" + str(exp.first().article_id) + "\\" + str(pageData.page) + ".jpg"
+
+    hit_pic_name = (
+        "static\\data\\heatmap\\"
+        + str(username)
+        + "\\nlp"
+        + "\\hit_"
+        + str(page_data_id)
+        + ".png"
+    )
+    heatmap_name = (
+        "static\\data\\heatmap\\"
+        + str(username)
+        + "\\nlp"
+        + "\\heatmap_"
+        + str(page_data_id)
+        + ".png"
+    )
+    draw_heat_map(coordinates, hit_pic_name, heatmap_name, base)
+    return JsonResponse({"code": 200, "status": "success", "pic_path": heatmap_name})
