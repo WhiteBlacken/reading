@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reading</title>
+    <script src="/static/plugins/jquery/jquery.min.js"></script>
+    <script src="/static/plugins/vue@2/vue@2.6.10.js"></script>
+    <script src="/static/js/axios@0.18.0.min.js"></script>
+    <script src="/static/plugins/element@vue2/index.js"></script>
+    <link href="/static/plugins/element@vue2/index.css" type="text/css" rel="stylesheet" charset="utf-8">
+    <link href="/static/css/onlineReading.css" type="text/css" rel="stylesheet" charset="utf-8">
+    <!--bp5 css文件-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div id="tips_begin">
+    <div class="px-4 py-5 my-5 text-center">
+        <h1 class="display-5 fw-bold">MemXEdu</h1>
+        <div class="col-lg-6 mx-auto mt-3">
+            <p class="lead mb-4">
+                点击下方的“<strong>开始使用</strong>”按钮，即可使用本阅读软件。请注意：软件将以全屏模式运行，你可以使用“<strong>空格</strong>”键来结束使用。
+            </p>
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                <button type="button" class="btn btn-primary btn-lg px-4 gap-3" onclick="get_start()">开始使用</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="mainContent" style="display: none">
+    <div id="reading">
+        <div id="readArea">
+            <div id="para">
+                <img width="1200px" src="{% static 'images/dots.jpg' %}"/>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
+<!--bp5 js集成文件-->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!--webgazer-->
+<script src="/static/js/webgazer.js"></script>
+<!--截图相关-->
+<script src="/static/js/canvas2image.js"></script>
+<script src="/static/js/html2canvas.js"></script>
+<!--自己写的js工具包-->
+<script src="/static/js/utils.js"></script>
+
+<script>
+    let x = [];
+    let y = [];
+    let t = [];
+
+
+    function get_start() {
+        full_screen();
+        document.getElementById("mainContent").style.display = "inline";
+        document.getElementById("tips_begin").style.display = "none";
+        webgazer.setGazeListener(function (data, elapsedTime) {
+            if (data == null) {
+                return;
+            }
+            x.push(data.x);
+            y.push(data.y);
+            t.push(elapsedTime);
+        }).begin();
+    }
+
+    //监听空格事件
+    $(document).keyup(function (event) {
+
+        switch (event.keyCode) {
+            case 32: {
+                webgazer.pause();
+                get_base64_gaze();
+                break;
+            }
+
+        }
+    });
+    //截图
+    function get_base64_gaze() {
+        let opts = {
+            //scale: scale, // 添加的scale 参数
+            //canvas: canvas, //自定义 canvas
+            //logging: false, //日志开关，便于查看html2canvas的内部执行流程
+            //width: width, //dom 原始宽度
+            //height: height,
+            useCORS: true // 【重要】开启跨域配置
+        };
+        html2canvas($('body')[0], opts).then(canvas => {
+            //document.body.appendChild(canvas);
+            // canvas宽度
+            let canvasWidth = canvas.width;
+            // canvas高度
+            let canvasHeight = canvas.height;
+            console.log(canvasHeight, canvasWidth);
+            //sleep(2);
+            // 调用Canvas2Image插件
+            // let img = Canvas2Image.convertToImage(canvas, canvasWidth, canvasHeight);
+            // let image_data = $(img).attr('src');
+
+            let url = canvas.toDataURL();
+
+            // // 调用Canvas2Image插件
+            // Canvas2Image.saveAsImage(canvas, canvasWidth, canvasHeight, 'png', filename);
+
+            let formdata = new FormData();
+            formdata.append("image", url.toString());
+            formdata.append("x", x.toString());
+            formdata.append("y", y.toString());
+            formdata.append("t", t.toString());
+            $.ajax({
+                type: 'POST',
+                url: '/save_gaze/',
+                data: formdata,
+                async: false,
+                success: function () {
+                    //执行完毕后再换页
+                    alert("保存成功");
+                },
+                error: function () {
+                    console.log("error");
+                },
+                processData: false,
+                contentType: false
+            })
+        });
+    }
+</script>
