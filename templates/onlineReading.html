@@ -378,7 +378,7 @@
                 let p = "";
                 let tr = [];
                 for (let i = 0; i < this.content.length; i++) {
-                    p += this.content[i][0] + '、 ';
+                    p += this.content[i][0] + ' 、 ';
                     let j = 1;
                     while (this.content[i][j]) {
                         tr.push(this.content[i][j]);
@@ -392,8 +392,9 @@
                 let num = 0;
                 //分割出该段落的所有句子
                 var sentences = p.split('.');
-                sentences.splice(sentences.length - 1, 1);
-
+                if(sentences[sentences.length-1] == "")
+                    sentences.splice(sentences.length - 1, 1);
+                console.log(sentences)
                 let sentenceNum = 0;
                 let conPerPage = [];
                 let transPerPage = [];
@@ -434,7 +435,7 @@
                                 el.className = "word";
                                 el.id = (num + k).toString();
                                 el.innerHTML = words[k];
-                                if (k == words.length - 1)
+                                if (k == words.length - 1 && words[k].length > 1)
                                     el.innerHTML = words[k] + '.';
                                 e.appendChild(el);
                                 k++;
@@ -602,6 +603,7 @@
                 var Content = this.contentPerPage[this.page - 1];
 
                 this.contentCurPage = Content;
+                this.buttonCurLoc = this.buttonLocPerPage[this.page - 1];
 
                 {#for(let j = 0; j < this.buttonLocPerPage[this.page - 1].length; j++) {#}
                 {#    this.buttonLocPerPage[this.page - 1][j].top = this.buttonLocPerPage[this.page - 1][j].top + height;#}
@@ -614,7 +616,6 @@
                 let sentences = Content.split('.');
                 sentences.splice(sentences.length - 1, 1);
                 this.sentences = sentences;
-                console.log(this.paraLoc)
                 for (let i = 0; i < sentences.length; i++) {
                     var words = sentences[i].split(' ');
                     for (let j = 0; j < words.length; j++) {
@@ -625,14 +626,13 @@
                             el.innerHTML = words[j];
                             el.setAttribute("onclick", "getWordTranslation(" + num + ")");
                             el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
-                            if (j == words.length - 1)
+                            if (j == words.length - 1 && words[j].length > 1)
                                 el.innerHTML = words[j] + '.';
                             num += 1;
                             e.appendChild(el);
                             if(this.isInArr(num - 1,this.paraLoc[this.page-1])) {
                                 el = document.createElement("button");
                                 el.className = "fillLine";
-                                console.log(e.getBoundingClientRect().right, document.getElementById(num - 1 + '').getBoundingClientRect().right)
                                 let width = e.getBoundingClientRect().right - document.getElementById(num - 1 + '').getBoundingClientRect().right - 1;
                                 let height = document.getElementById(num - 1 + '').getBoundingClientRect().bottom -
                                             document.getElementById(num - 1 + '').getBoundingClientRect().top - 17;
@@ -765,7 +765,7 @@
                 break;
             }
             case 39: {
-                if (app._data.page < app._data.totalPage) {
+                if (app._data.page <= app._data.totalPage) {
                     get_base64_gaze_and_intervention(1);
                     break;
                 }
