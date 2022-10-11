@@ -42,7 +42,7 @@
         <div id="reading">
             <div id="readArea">
                 <div id="para">
-                    <img width="1600px" src="{% static 'images/test_dots.jpg' %}">
+{#                    <img width="1600px" src="{% static 'images/test_dots.jpg' %}">#}
                 </div>
             </div>
         </div>
@@ -85,6 +85,8 @@
             currentTransBox: [],
             currentTransSentenceBox: [],
             readSequel: [],
+            //每段末尾词的索引
+            paraLoc: [],
         },
         methods: {
 
@@ -356,61 +358,136 @@
                 interventions.push(num);
             },
 
-            {#getContent_2: async function () {#}
-            {#    let paraNum = 0;#}
-            {#    let maxLine = 14;#}
-            {#    await axios.get("/para").then((response) => {#}
-            {#        this.content = response.data;#}
-            {#    });#}
-            {##}
-            {#    this.content = Object.values(this.content);#}
-            {#    paraNum = this.content.length;#}
-            {#    for (let i = 0; i < paraNum; i++)#}
-            {#        this.paras.push(this.content[i][0]);#}
-            {#    var e = document.getElementById('para');#}
-            {##}
-            {#    // 遍历每个段落#}
-            {#    #}
-            {#    for (let i = 0; i < paraNum; i++) {#}
-            {#        let num = 0;#}
-            {#        //分割出该段落的所有句子#}
-            {#        var sentences = this.paras[i].split('.');#}
-            {#        sentences.splice(sentences.length - 1, 1);#}
-            {#        let sentencNum = 0;#}
-            {#        let conPerPage = [];#}
-            {#        let transPerPage = [];#}
-            {#        let locPerPage = [];#}
-            {#        let wordLength = 0;#}
-            {#        for (let sentenceNum = 0; sentenceNum < sentences.length; sentenceNum++) {#}
-            {#            var words = sentences[sentenceNum].split(' ');#}
-            {#            for (let p = 0; p < words.length; p++) {#}
-            {#                if (words[p] == '')#}
-            {#                    words.splice(p, 1);#}
-            {#            }#}
-            {#            let wordNum = 0;#}
-            {#            while(wordNum < words.length) {#}
-            {#                for(; wordNum < words.length; wordNum++) {#}
-            {#                    var el = document.createElement("button");#}
-            {#                    el.className = "word";#}
-            {#                    el.id = (num + wordNum).toString();#}
-            {#                    el.innerHTML = words[wordNum];#}
-            {#                    if (wordNum == words.length - 1)#}
-            {#                        el.innerHTML = words[wordNum] + '.';#}
-            {#                    e.appendChild(el);#}
-            {#                }#}
-            {#                let paraTop = document.getElementById('para').getBoundingClientRect().top;#}
-            {#                let buttonTop = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;#}
-            {#                let buttonHeight = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().bottom - document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;#}
-            {#                if (Math.trunc((buttonTop - paraTop) / buttonHeight) >= maxLine) {#}
-            {#                    while (e.children[0]) {#}
-            {#                        e.removeChild(e.children[0]);#}
-            {#                    }#}
-            {#                    break;#}
-            {#                }#}
-            {#            }#}
-            {#        }#}
-            {#    }#}
-            {# },#}
+            isInArr: function (num, arr) {
+                for (let i = 0; i < arr.length; i++) {
+                    if(arr[i] == num)
+                        return true;
+                }
+                return false;
+            },
+
+            getContent_2: async function () {
+                let maxLine = 16;
+                await axios.get("/para").then((response) => {
+                    this.content = response.data;
+                });
+
+                this.content = Object.values(this.content);
+                for (let i = 0; i < this.content.length; i++)
+                    this.paras.push(this.content[i][0]);
+                let p = "";
+                let tr = [];
+                for (let i = 0; i < this.content.length; i++) {
+                    p += this.content[i][0] + '、 ';
+                    let j = 1;
+                    while (this.content[i][j]) {
+                        tr.push(this.content[i][j]);
+                        j++;
+                    }
+                }
+                {#console.log(tr[0].zh)#}
+                {#console.log(p)#}
+                var e = document.getElementById('para');
+
+                let num = 0;
+                //分割出该段落的所有句子
+                var sentences = p.split('.');
+                sentences.splice(sentences.length - 1, 1);
+
+                let sentenceNum = 0;
+                let conPerPage = [];
+                let transPerPage = [];
+                let locPerPage = [];
+                let wordLength = 0;
+                while (sentenceNum < sentences.length) {
+                    this.paraLoc.push(new Array());
+                    num = 0;
+                    conPerPage = [];
+                    transPerPage = [];
+                    locPerPage = [];
+
+                    for (; sentenceNum < sentences.length; sentenceNum++) {
+                        var words = sentences[sentenceNum].split(' ');
+                        for (let p = 0; p < words.length; p++) {
+                            if (words[p] == '')
+                                words.splice(p, 1);
+                        }
+                        let k = 0;
+                        while(k < words.length) {
+                            var el = document.createElement("button");
+                            if(words[k] == '、' && document.getElementById(num + k - 1 + '')){
+                                el.className = "fillLine";
+                                let width = e.getBoundingClientRect().right - document.getElementById(num + k - 1 + '').getBoundingClientRect().right - 17;
+                                let height = document.getElementById(num + k - 1 + '').getBoundingClientRect().bottom -
+                                            document.getElementById(num + k - 1 + '').getBoundingClientRect().top - 1;
+                                el.style.width = width + "px";
+                                el.style.height = height + "px";
+                                el.style.marginLeft = "1px";
+                                e.appendChild(el);
+                                words.splice(k,1);
+                                this.paraLoc[this.contentPerPage.length].push(num + k - 1);
+                                console.log(this.paraLoc)
+                            }else if (words[k] == '、' && !document.getElementById(num + k - 1 + '')){
+                                words.splice(k,1);
+                            }
+                            else {
+                                el.className = "word";
+                                el.id = (num + k).toString();
+                                el.innerHTML = words[k];
+                                if (k == words.length - 1)
+                                    el.innerHTML = words[k] + '.';
+                                e.appendChild(el);
+                                k++;
+                            }
+                        }
+                        sentences[sentenceNum] = words.join(' ') + ".";
+                        let paraTop = document.getElementById('para').getBoundingClientRect().top;
+                        let buttonTop = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;
+                        let buttonHeight = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().bottom - document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;
+                        if (Math.trunc((buttonTop - paraTop) / buttonHeight) >= maxLine) {
+                            while (e.children[0]) {
+                                e.removeChild(e.children[0]);
+                            }
+                            break;
+                        } else {
+                            //这里要改遍历条件
+                            conPerPage.push(sentences[sentenceNum]);
+                            for (let k = wordLength; k < wordLength + words.length; k++) {
+                                if (tr[k]) {
+                                    transPerPage.push(tr[k]);
+                                }
+                            }
+                            for (let k = num; k < num + words.length; k++) {
+                                locPerPage.push(this.getWordLocation(k));
+                            }
+
+                            num += words.length;
+
+                            wordLength += words.length;
+
+                        }
+
+                    }
+                    this.buttonLocPerPage.push(locPerPage);
+                    this.transPerPage.push(transPerPage);
+                    this.contentPerPage.push(conPerPage.join('.') + ".");
+
+                }
+
+                console.log(this.contentPerPage[0])
+                while (e.children[0])
+                    e.removeChild(e.children[0])
+                for (let i = 0; i < this.contentPerPage.length; i++) {
+                    if (this.contentPerPage[i] == ".")
+                        this.contentPerPage.splice(i, 1);
+                    if (this.transPerPage[i].length == 0)
+                        this.transPerPage.splice(i, 1);
+                 }
+                this.totalPage = this.contentPerPage.length;
+                let tmp = this.contentPerPage;
+                let tmp_ = tmp.join('-.');
+                setCookie('contentPerPage', tmp_);
+             },
 
             getContent: async function () {
                 {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
@@ -420,7 +497,7 @@
                 {#    });});#}
                 let paraNum = 0;
 
-                let maxLine = 4;
+                let maxLine = 12;
 
 
                 await axios.get("/para").then((response) => {
@@ -497,6 +574,7 @@
                         this.transPerPage.push(transPerPage);
                         this.contentPerPage.push(conPerPage.join('.') + ".");
                     }
+
                 }
 
                 while (e.children[0])
@@ -516,50 +594,59 @@
 
             getPage: function () {
                 let num = 0;
-                let e = document.getElementById('readArea');
+                let e = document.getElementById('para');
 
                 let height = 0;
 
-                for(let i = 0; i < 3; i++) {
-                    let el = document.createElement('div');
-                    el.id = "para";
-                    e.appendChild(el);
-                    e = el;
-                    var Content = this.contentPerPage[this.page - 1 + i];
 
-                    this.contentCurPage = this.contentCurPage + Content;
+                var Content = this.contentPerPage[this.page - 1];
 
-                    for(let j = 0; j < this.buttonLocPerPage[this.page - 1 + i].length; j++) {
-                        this.buttonLocPerPage[this.page - 1 + i][j].top = this.buttonLocPerPage[this.page - 1 + i][j].top + height;
-                        this.buttonLocPerPage[this.page - 1 + i][j].bottom = this.buttonLocPerPage[this.page - 1 + i][j].bottom + height;
-                    }
+                this.contentCurPage = this.contentCurPage + Content;
 
-                    
-                    this.buttonCurLoc = this.buttonCurLoc.concat(this.buttonLocPerPage[this.page - 1 + i]);
+                {#for(let j = 0; j < this.buttonLocPerPage[this.page - 1].length; j++) {#}
+                {#    this.buttonLocPerPage[this.page - 1][j].top = this.buttonLocPerPage[this.page - 1][j].top + height;#}
+                {#    this.buttonLocPerPage[this.page - 1][j].bottom = this.buttonLocPerPage[this.page - 1][j].bottom + height;#}
+                {# }#}
+                {##}
+                {##}
+                {#this.buttonCurLoc = this.buttonCurLoc.concat(this.buttonLocPerPage[this.page - 1]);#}
 
-                    let sentences = Content.split('.');
-                    sentences.splice(sentences.length - 1, 1);
-                    this.sentences = sentences;
-                    for (let i = 0; i < sentences.length; i++) {
-                        var words = sentences[i].split(' ');
-                        for (let j = 0; j < words.length; j++) {
-                            if (words[j] != "") {
+                let sentences = Content.split('.');
+                sentences.splice(sentences.length - 1, 1);
+                this.sentences = sentences;
+                console.log(this.paraLoc)
+                for (let i = 0; i < sentences.length; i++) {
+                    var words = sentences[i].split(' ');
+                    for (let j = 0; j < words.length; j++) {
+                        if (words[j] != "") {
+                            let el = document.createElement("button");
+                            el.className = "word";
+                            el.id = num.toString();
+                            el.innerHTML = words[j];
+                            el.setAttribute("onclick", "getWordTranslation(" + num + ")");
+                            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
+                            if (j == words.length - 1)
+                                el.innerHTML = words[j] + '.';
+                            num += 1;
+                            e.appendChild(el);
+                            if(this.isInArr(num - 1,this.paraLoc[this.page-1])) {
                                 el = document.createElement("button");
-                                el.className = "word";
-                                el.id = num.toString();
-                                el.innerHTML = words[j];
-                                el.setAttribute("onclick", "getWordTranslation(" + num + ")");
-                                el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
-                                if (j == words.length - 1)
-                                    el.innerHTML = words[j] + '.';
+                                el.className = "fillLine";
+                                console.log(e.getBoundingClientRect().right, document.getElementById(num - 1 + '').getBoundingClientRect().right)
+                                let width = e.getBoundingClientRect().right - document.getElementById(num - 1 + '').getBoundingClientRect().right - 1;
+                                let height = document.getElementById(num - 1 + '').getBoundingClientRect().bottom -
+                                            document.getElementById(num - 1 + '').getBoundingClientRect().top - 17;
+                                console.log(width, height)
+                                el.style.width = width + "px";
+                                el.style.height = height + "px";
                                 e.appendChild(el);
-                                num += 1;
                             }
                         }
                     }
-
-                    height += e.getBoundingClientRect().bottom - e.getBoundingClientRect().top;
                 }
+
+                height += e.getBoundingClientRect().bottom - e.getBoundingClientRect().top;
+
 
 
                 {#this.getWanderRemind();#}
@@ -617,13 +704,7 @@
             },
         },
         created() {
-            {#document.getElementById('trans').style.display = "none";#}
-            {#this.getContent();#}
-            {#this.listen();#}
-            {#setInterval(()=>{#}
-            {#    setTimeout(this.autoRandomTranslation, 0);#}
-            {# }, 5000);#}
-            {#this.auto();#}
+
         },
         mounted() {
             window["getWordTranslation"] = (num) => {
@@ -644,7 +725,7 @@
         //隐藏提示
         document.getElementById("tips_begin").style.display = "none";
 
-        await app.getContent();
+        await app.getContent_2();
 
         //开启webgazer
         //眼动数据监听--放在getContent前面会采集很多无效数据
@@ -679,13 +760,13 @@
         switch (event.keyCode) {
             case 37: {
                 if (app._data.page > 1) {
-                    get_base64_gaze_and_intervention(-3);
+                    get_base64_gaze_and_intervention(-1);
                 }
                 break;
             }
             case 39: {
-                if (app._data.page < app._data.totalPage - 3) {
-                    get_base64_gaze_and_intervention(3);
+                if (app._data.page < app._data.totalPage) {
+                    get_base64_gaze_and_intervention(1);
                     break;
                 }
             }

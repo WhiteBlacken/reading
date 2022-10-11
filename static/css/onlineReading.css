@@ -64,8 +64,14 @@ body{
 }
 
 
+.para{
+    width: 100%;
+    height: auto;
+    vertical-align: middle;
+}
+
 .word{
-    font-size: 16pt;
+    font-size: 18pt;
     padding: 8px 8px;
     width: auto;
     height: auto;
@@ -75,7 +81,12 @@ body{
     cursor: pointer;
 }
 
-
+.fillLine{
+    display: inline;
+    background: rgba(0,0,0,0);
+    color: rgba(0,0,0,0);
+    border-width: 0;
+}
 /*.wordTranslation{*/
 /*    height: 197px;*/
 /*    display: inline;*/
