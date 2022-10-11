@@ -254,7 +254,8 @@ def paint_image(path, coordinates):
 
 # 示例:The Coral Sea reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast.
 def get_word_by_index(content):
-    text = content.replace(",", "").replace(".", "").strip()
+    text = content.replace(",", " ").replace(".", " ").strip()
+    print(text)
     contents = text.split(" ")
     index_2_word = {}
     cnt = 0

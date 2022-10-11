@@ -1130,15 +1130,25 @@ def get_nlp_heatmap(request):
     pageData = PageData.objects.get(id=page_data_id)
 
     # 2. 调用文本分析的接口
-    importances = get_importance(pageData.texts)
+    type = request.GET.get("type")
+    if type == 0:
+        attention = get_importance(pageData.texts)
+    if type == 1:
+        attention = get_importance(pageData.texts)
+    if type == 2:
+        attention = get_importance(pageData.texts)
+    if type == 3:
+        attention = get_importance(pageData.texts)
 
     # 3. 获取单词的位置
     word_index = get_word_by_index(pageData.texts)
+    print("word_index")
+    print(len(word_index))
     word_and_location_dict = get_word_and_location(pageData.location, word_index)
 
     gaze_x = []
     gaze_y = []
-    importance_list = [x for x in importances if x[1] > 0]
+    importance_list = [x for x in attention if x[1] > 0]
     importance_list.sort(reverse=True)
 
     # 数量多为 0.000x，将其最大的数扩大至100
