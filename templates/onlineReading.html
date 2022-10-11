@@ -427,7 +427,6 @@
                                 e.appendChild(el);
                                 words.splice(k,1);
                                 this.paraLoc[this.contentPerPage.length].push(num + k - 1);
-                                console.log(this.paraLoc)
                             }else if (words[k] == '、' && !document.getElementById(num + k - 1 + '')){
                                 words.splice(k,1);
                             }
@@ -472,7 +471,7 @@
                     this.buttonLocPerPage.push(locPerPage);
                     this.transPerPage.push(transPerPage);
                     this.contentPerPage.push(conPerPage.join('.') + ".");
-
+                    console.log(this.buttonLocPerPage);
                 }
 
                 console.log(this.contentPerPage[0])
@@ -636,7 +635,6 @@
                                 let width = e.getBoundingClientRect().right - document.getElementById(num - 1 + '').getBoundingClientRect().right - 1;
                                 let height = document.getElementById(num - 1 + '').getBoundingClientRect().bottom -
                                             document.getElementById(num - 1 + '').getBoundingClientRect().top - 17;
-                                console.log(width, height)
                                 el.style.width = width + "px";
                                 el.style.height = height + "px";
                                 e.appendChild(el);
@@ -646,9 +644,6 @@
                 }
 
                 height += e.getBoundingClientRect().bottom - e.getBoundingClientRect().top;
-
-
-
                 {#this.getWanderRemind();#}
             },
 
