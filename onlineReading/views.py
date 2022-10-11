@@ -1151,6 +1151,9 @@ def get_nlp_heatmap(request):
     print("attention")
     print(attention)
 
+    # 2. 调用文本分析的接口
+    importances = get_importance(pageData.texts)
+
     # 3. 获取单词的位置
     word_index = get_word_by_index(pageData.texts)
     print("word_index")
@@ -1160,6 +1163,7 @@ def get_nlp_heatmap(request):
     gaze_x = []
     gaze_y = []
     importance_list = [x for x in attention if x[1] > 0]
+
     importance_list.sort(reverse=True)
 
     # 数量多为 0.000x，将其最大的数扩大至100
