@@ -42,7 +42,6 @@
         <div id="reading">
             <div id="readArea">
                 <div id="para">
-{#                    <img width="1600px" src="{% static 'images/test_dots.jpg' %}">#}
                 </div>
             </div>
         </div>
@@ -458,7 +457,13 @@
                                 }
                             }
                             for (let k = num; k < num + words.length; k++) {
-                                locPerPage.push(this.getWordLocation(k));
+                                if(words[k-num] != '"' || words[k-num] != '”'){
+                                    locPerPage.push(this.getWordLocation(k));
+                                    console.log(words[k-num]);
+                                }
+
+                                else
+                                    console.log("xxx")
                             }
 
                             num += words.length;
@@ -474,7 +479,6 @@
                     console.log(this.buttonLocPerPage);
                 }
 
-                console.log(this.contentPerPage[0])
                 while (e.children[0])
                     e.removeChild(e.children[0])
                 for (let i = 0; i < this.contentPerPage.length; i++) {
@@ -560,7 +564,8 @@
                                     }
                                 }
                                 for (let k = num; k < num + words.length; k++) {
-                                    locPerPage.push(this.getWordLocation(k));
+                                    if(document.getElementById(k+'').innerHTML != '"' && document.getElementById(k+'').innerHTML != '“')
+                                        locPerPage.push(this.getWordLocation(k));
                                 }
 
                                 num += words.length;
