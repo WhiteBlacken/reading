@@ -34,7 +34,9 @@ urlpatterns = [
     path("dispersion/", views.get_dispersion),
     path("cm/<int:k>/", views.cm_2_pixel_test),
     path("analysis/", views.analysis),
-    path("analysis_1/",views.analysis_1),
-    path("heatmap/",views.get_heat_map),
-    path("heatmap/text/",views.get_heatmap_of_text)
+    path("analysis_1/", views.analysis_1),
+    path("heatmap/visual/", views.get_visual_heatmap),
+    path("heatmap/nlp/", views.get_nlp_heatmap),
+    path("motion/", views.test_motion),
+    path("save_gaze/", views.get_gaze_data_pic),
 ]
