@@ -25,7 +25,7 @@ from onlineReading.utils import (
     pixel_2_deg,
     cm_2_pixel,
 )
-from semantic_attention import generate_word_difficulty, generate_word_attention
+from semantic_attention import generate_word_difficulty, generate_word_attention, generate_sentence_attention
 from utils import (
     x_y_t_2_coordinate,
     get_fixations,
@@ -1140,7 +1140,9 @@ def get_nlp_heatmap(request):
         attention = generate_word_attention(pageData.texts)
     elif atention_type == 2:
         # 应该要是句子之间的attention
-        attention = get_importance(pageData.texts)
+        attention = generate_sentence_attention(pageData.texts)
+        print(attention)
+        return HttpResponse(1)
     elif atention_type == 3:
         # 难度
         attention = generate_word_difficulty(pageData.texts)
@@ -1196,7 +1198,8 @@ def get_nlp_heatmap(request):
     hit_pic_name = (
         "static\\data\\heatmap\\"
         + str(username)
-        + "\\nlp"
+        + "\\nlp_"
+        + str(atention_type)
         + "\\hit_"
         + str(page_data_id)
         + ".png"
@@ -1204,7 +1207,8 @@ def get_nlp_heatmap(request):
     heatmap_name = (
         "static\\data\\heatmap\\"
         + str(username)
-        + "\\nlp"
+        + "\\nlp_"
+        + str(atention_type)
         + "\\heatmap_"
         + str(page_data_id)
         + ".png"
