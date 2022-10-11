@@ -25,6 +25,7 @@ from onlineReading.utils import (
     pixel_2_deg,
     cm_2_pixel,
 )
+from semantic_attention import generate_word_difficulty, generate_word_attention
 from utils import (
     x_y_t_2_coordinate,
     get_fixations,
@@ -1130,15 +1131,23 @@ def get_nlp_heatmap(request):
     pageData = PageData.objects.get(id=page_data_id)
 
     # 2. 调用文本分析的接口
-    type = request.GET.get("type")
-    if type == 0:
+    atention_type = int(request.GET.get("type",0))
+    if atention_type == 0:
+        # 单词在文中的重要性
         attention = get_importance(pageData.texts)
-    if type == 1:
+    elif atention_type == 1:
+        # 单词之间的attention
+        attention = generate_word_attention(pageData.texts)
+    elif atention_type == 2:
+        # 应该要是句子之间的attention
         attention = get_importance(pageData.texts)
-    if type == 2:
-        attention = get_importance(pageData.texts)
-    if type == 3:
-        attention = get_importance(pageData.texts)
+    elif atention_type == 3:
+        # 难度
+        attention = generate_word_difficulty(pageData.texts)
+    else:
+        attention = []
+    print("attention")
+    print(attention)
 
     # 3. 获取单词的位置
     word_index = get_word_by_index(pageData.texts)
