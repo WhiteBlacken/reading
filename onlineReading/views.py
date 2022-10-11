@@ -25,7 +25,11 @@ from onlineReading.utils import (
     pixel_2_deg,
     cm_2_pixel,
 )
-from semantic_attention import generate_word_difficulty, generate_word_attention, generate_sentence_attention
+from semantic_attention import (
+    generate_word_difficulty,
+    generate_word_attention,
+    generate_sentence_attention,
+)
 from utils import (
     x_y_t_2_coordinate,
     get_fixations,
@@ -43,7 +47,11 @@ from utils import (
     preprocess_data,
     get_importance,
     get_word_by_index,
-    get_word_and_location, get_index_by_word,
+    get_word_and_location,
+    get_index_by_word,
+    topk_tuple,
+    get_word_and_sentence_from_text,
+    get_word_location, get_sentence_location,
 )
 
 
@@ -76,7 +84,7 @@ def get_all_text_available(request):
 def get_paragraph_and_translation(request):
     """根据文章id获取整篇文章的分段以及翻译"""
     # 获取整篇文章的内容和翻译
-    article_id = request.GET.get("article_id", 3)
+    article_id = request.GET.get("article_id", 2)
     paragraphs = Paragraph.objects.filter(article_id=article_id)
     print(len(paragraphs))
     para_dict = {}
@@ -87,10 +95,7 @@ def get_paragraph_and_translation(request):
         # 切成句子
         sentences = paragraph.content.split(".")
         cnt = 0
-        print(paragraph.content)
-        words_dict[0] = paragraph.content.replace('“','"')
-        print(paragraph.content.replace('“','"'))
-
+        words_dict[0] = paragraph.content
         sentence_id = 0
         for sentence in sentences:
             # 去除句子前后空格
@@ -176,6 +181,7 @@ def get_gaze_data_pic(request):
     logger.info("pagedata:%d 已保存" % pagedata.id)
     return HttpResponse(1)
 
+
 def get_gaze_data_pic(request):
     image_base64 = request.POST.get("image")  # base64类型
     x = request.POST.get("x")  # str类型
@@ -224,7 +230,7 @@ def get_page_data(request):
             location=location,
             is_test=0,
         )
-        logger.info("第%s页数据已存储,id为%s" % (page,str(pagedata.id)))
+        logger.info("第%s页数据已存储,id为%s" % (page, str(pagedata.id)))
     return HttpResponse(1)
 
 
@@ -1092,7 +1098,13 @@ def get_visual_heatmap(request):
         base = "static\\background\\" + str(request.GET.get("background")) + ".jpg"
     else:
         username = exp.first().user
-        base = "static\\background\\" + str(exp.first().article_id) + "\\" + str(pageData.page) + ".jpg"
+        base = (
+            "static\\background\\"
+            + str(exp.first().article_id)
+            + "\\"
+            + str(pageData.page)
+            + ".jpg"
+        )
 
     hit_pic_name = (
         "static\\data\\heatmap\\"
@@ -1134,7 +1146,7 @@ def get_nlp_heatmap(request):
     pageData = PageData.objects.get(id=page_data_id)
 
     # 2. 调用文本分析的接口
-    atention_type = int(request.GET.get("type",0))
+    atention_type = int(request.GET.get("type", 0))
     if atention_type == 0:
         # 单词在文中的重要性
         attention = get_importance(pageData.texts)
@@ -1149,11 +1161,11 @@ def get_nlp_heatmap(request):
     elif atention_type == 3:
         # 难度
         attention = generate_word_difficulty(pageData.texts)
-        print('hard word--')
+        print("hard word--")
         for at in attention:
             if at[1] >= 1:
                 print(at[0])
-        print('hard word end')
+        print("hard word end")
     else:
         attention = []
     print("attention")
@@ -1163,9 +1175,7 @@ def get_nlp_heatmap(request):
     word_index = get_word_by_index(pageData.texts)
     print("word_index")
     print(len(word_index))
-    word_and_location_dict = get_word_and_location(pageData.location, word_index)
-
-
+    word_and_location_dict = get_word_and_location(pageData.location)
 
     gaze_x = []
     gaze_y = []
@@ -1187,7 +1197,7 @@ def get_nlp_heatmap(request):
                 loc = word_and_location_dict[word_index]
                 for i in range(int(importance[1] * tmp)):
                     gaze_x.append(random.randint(int(loc[0]), int(loc[2])))
-                    gaze_y.append(random.randint(int(loc[1]), int(loc[3])-10))
+                    gaze_y.append(random.randint(int(loc[1]), int(loc[3]) - 10))
     # gaze_x = preprocess_data(gaze_x, 7)
     # gaze_y = preprocess_data(gaze_y, 7)
     gaze_x = list(map(int, gaze_x))
@@ -1205,7 +1215,13 @@ def get_nlp_heatmap(request):
         base = "static\\background\\" + str(request.GET.get("background")) + ".jpg"
     else:
         username = exp.first().user
-        base = "static\\background\\" + str(exp.first().article_id) + "\\" + str(pageData.page) + ".jpg"
+        base = (
+            "static\\background\\"
+            + str(exp.first().article_id)
+            + "\\"
+            + str(pageData.page)
+            + ".jpg"
+        )
 
     hit_pic_name = (
         "static\\data\\heatmap\\"
@@ -1227,3 +1243,132 @@ def get_nlp_heatmap(request):
     )
     draw_heat_map(coordinates, hit_pic_name, heatmap_name, base)
     return JsonResponse({"code": 200, "status": "success", "pic_path": heatmap_name})
+
+
+def get_heatmap(request):
+    """
+    根据page_data_id生成visual attention和nlp attention
+    :param request: id,window
+    :return:
+    """
+    page_data_id = request.GET.get("id")
+    pageData = PageData.objects.get(id=page_data_id)
+    # 准备工作，获取单词和句子的信息
+    word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
+    # 获取单词和句子的位置
+    word_locations = get_word_location(
+        pageData.location
+    )  # [(left,top,right,bottom),(left,top,right,bottom)]
+    sentence_locations = get_sentence_location(pageData.location,sentence_list)
+    # 获取图片生成的路径
+    exp = Experiment.objects.filter(id=pageData.experiment_id)
+
+    base_path = (
+        "static\\data\\heatmap\\"
+        + str(exp.first().user)
+        + "\\"
+        + str(page_data_id)
+        + "\\"
+    )
+    backgound = (
+        "static\\background\\"
+        + str(exp.first().article_id)
+        + "\\"
+        + str(pageData.page)
+        + ".jpg"
+    )
+
+    # nlp attention
+    nlp_top_dict = {}
+    nlp_attentions = ["topic_related", "word_relation", "word_difficulty"]
+    for attention in nlp_attentions:
+        data_list = [[]]
+        # 获取数据
+        if attention == "topic_related":
+            data_list = get_importance(pageData.texts)  # [('word',1)]
+        if attention == "word_relation":
+            data_list = generate_word_attention(pageData.texts)
+        if attention == "word_difficulty":
+            data_list = generate_word_difficulty(pageData.texts)
+
+        data_list = [x for x in data_list if x[1] > 0]
+        # 获取top_k
+        top_k = topk_tuple(data_list)
+
+        nlp_top_dict[attention] = top_k
+
+        loc_x = []
+        loc_y = []
+
+        # 数量多为 0.000x，将其最大的数扩大至100
+        tmp = 1
+        if data_list:
+            while top_k[0][1] * tmp < 10:
+                tmp = tmp * 10
+        print("放大倍数是:%d" % tmp)
+
+        for data in data_list:
+            # 该单词在页面上是否存在
+            index_list = []
+            for i, word in enumerate(word_list):
+                if data[0].lower() == word:
+                    index_list.append(i)
+            for index in index_list:
+                loc = word_locations[index]
+                for j in range(int(data[1] * tmp)):
+                    loc_x.append(random.randint(int(loc[0]), int(loc[2])))
+                    loc_y.append(random.randint(int(loc[1]), int(loc[3])))
+
+        loc_x = list(map(int, loc_x))
+        loc_y = list(map(int, loc_y))
+
+        # 组合数据
+        coordinates = []
+        for i in range(len(loc_x)):
+            coordinate = [loc_x[i], loc_y[i]]
+            coordinates.append(coordinate)
+
+        heatmap_name = base_path + attention + ".png"
+        draw_heat_map(coordinates, heatmap_name, heatmap_name, backgound)
+
+    # visual attention
+    list_x = list(map(float, pageData.gaze_x.split(",")))
+    list_y = list(map(float, pageData.gaze_y.split(",")))
+    list_t = list(map(float,pageData.gaze_t.split(",")))
+
+    # 滤波处理
+    kernel_size = int(request.GET.get("window", 0))
+    if kernel_size != 0:
+        # 滤波
+        list_x = preprocess_data(list_x, kernel_size)
+        list_y = preprocess_data(list_y, kernel_size)
+
+        # 3. 组合数据
+        # 滤波完是浮点数，需要转成int
+    list_x = list(map(int, list_x))
+    list_y = list(map(int, list_y))
+    # 组合
+    coordinates = []
+    for i in range(len(list_x)):
+        coordinate = [list_x[i], list_y[i]]
+        coordinates.append(coordinate)
+
+    # 生成热力图
+    heatmap_name = base_path + "visual.png"
+    draw_heat_map(coordinates, heatmap_name, heatmap_name, backgound)
+
+    # 生成fixation图示
+    coordinates = []
+    for i in range(len(list_x)):
+        coordinate = [list_x[i], list_y[i],list_t[i]]
+        coordinates.append(coordinate)
+    fixations = get_fixations(coordinates)
+    fixation_image(
+        pageData.image,
+        Experiment.objects.get(id=pageData.experiment_id).user,
+        fixations,
+        pageData.id,
+    )
+    print('result')
+    print(nlp_top_dict)
+    return JsonResponse({'status_code':200,'status':'处理完成'},json_dumps_params={"ensure_ascii": False}, safe=False)
