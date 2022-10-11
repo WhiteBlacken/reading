@@ -601,7 +601,7 @@
 
                 var Content = this.contentPerPage[this.page - 1];
 
-                this.contentCurPage = this.contentCurPage + Content;
+                this.contentCurPage = Content;
 
                 {#for(let j = 0; j < this.buttonLocPerPage[this.page - 1].length; j++) {#}
                 {#    this.buttonLocPerPage[this.page - 1][j].top = this.buttonLocPerPage[this.page - 1][j].top + height;#}
