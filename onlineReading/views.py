@@ -43,7 +43,7 @@ from utils import (
     preprocess_data,
     get_importance,
     get_word_by_index,
-    get_word_and_location,
+    get_word_and_location, get_index_by_word,
 )
 
 
@@ -87,7 +87,10 @@ def get_paragraph_and_translation(request):
         # 切成句子
         sentences = paragraph.content.split(".")
         cnt = 0
-        words_dict[0] = paragraph.content
+        print(paragraph.content)
+        words_dict[0] = paragraph.content.replace('“','"')
+        print(paragraph.content.replace('“','"'))
+
         sentence_id = 0
         for sentence in sentences:
             # 去除句子前后空格
@@ -209,7 +212,7 @@ def get_page_data(request):
     print("interventions:%s" % interventions)
     experiment_id = request.session.get("experiment_id", None)
     if experiment_id:
-        PageData.objects.create(
+        pagedata = PageData.objects.create(
             gaze_x=str(x),
             gaze_y=str(y),
             gaze_t=str(t),
@@ -221,7 +224,7 @@ def get_page_data(request):
             location=location,
             is_test=0,
         )
-    logger.info("第%s页数据已存储" % page)
+        logger.info("第%s页数据已存储,id为%s" % (page,str(pagedata.id)))
     return HttpResponse(1)
 
 
@@ -1146,19 +1149,23 @@ def get_nlp_heatmap(request):
     elif atention_type == 3:
         # 难度
         attention = generate_word_difficulty(pageData.texts)
+        print('hard word--')
+        for at in attention:
+            if at[1] >= 1:
+                print(at[0])
+        print('hard word end')
     else:
         attention = []
     print("attention")
     print(attention)
-
-    # 2. 调用文本分析的接口
-    importances = get_importance(pageData.texts)
 
     # 3. 获取单词的位置
     word_index = get_word_by_index(pageData.texts)
     print("word_index")
     print(len(word_index))
     word_and_location_dict = get_word_and_location(pageData.location, word_index)
+
+
 
     gaze_x = []
     gaze_y = []
@@ -1174,14 +1181,15 @@ def get_nlp_heatmap(request):
     print("放大倍数是:%d" % tmp)
 
     for importance in importance_list:
-        if importance[0].lower() in word_and_location_dict.keys():
-            loc = word_and_location_dict[importance[0].lower()]
-            for i in range(int(importance[1] * tmp)):
-                gaze_x.append(random.randint(int(loc[0]), int(loc[2])))
-                gaze_y.append(random.randint(int(loc[1]), int(loc[3])))
-
-    gaze_x = preprocess_data(gaze_x, 7)
-    gaze_y = preprocess_data(gaze_y, 7)
+        word_indexes = get_index_by_word(pageData.texts, importance[0].lower())  # list
+        for word_index in word_indexes:
+            if word_index in word_and_location_dict.keys():
+                loc = word_and_location_dict[word_index]
+                for i in range(int(importance[1] * tmp)):
+                    gaze_x.append(random.randint(int(loc[0]), int(loc[2])))
+                    gaze_y.append(random.randint(int(loc[1]), int(loc[3])-10))
+    # gaze_x = preprocess_data(gaze_x, 7)
+    # gaze_y = preprocess_data(gaze_y, 7)
     gaze_x = list(map(int, gaze_x))
     gaze_y = list(map(int, gaze_y))
 

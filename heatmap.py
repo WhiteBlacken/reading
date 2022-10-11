@@ -208,7 +208,7 @@ class HeatMap(object):
 
         return data2
 
-    def heatmap(self, save_as=None, base=None, data=None, r=70):
+    def heatmap(self, save_as=None, base=None, data=None, r=40):
         u"""绘制热图"""
 
         self.__mk_img(base)
