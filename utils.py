@@ -193,13 +193,21 @@ def x_y_t_2_coordinate(gaze_x, gaze_y, gaze_t):
 
     coordinates = []
     for i, item in enumerate(list_x):
-        coordinate = (
-            # int(float(list_x[i]) * 1920 / 1534),
-            # int(float(list_y[i]) * 1920 / 1534),
-            int(float(list_x[i])),
-            int(float(list_y[i])),
-            int(float(list_t[i])),
-        )
+        # coordinate = (
+        #     # int(float(list_x[i]) * 1920 / 1534),
+        #     # int(float(list_y[i]) * 1920 / 1534),
+        #     int(float(list_x[i])),
+        #     int(float(list_y[i])),
+        #     int(float(list_t[i])),
+        # )
+        if i % 2 == 0:
+            coordinate = (
+                # int(float(list_x[i]) * 1920 / 1534),
+                # int(float(list_y[i]) * 1920 / 1534),
+                int(float(list_x[i])),
+                int(float(list_y[i])),
+                int(float(list_t[i])),
+            )
         coordinates.append(coordinate)
     return coordinates
 
@@ -268,8 +276,8 @@ def paint_image(path, coordinates):
             str(cnt),
             (coordinate[0], coordinate[1]),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (0, 255, 0),
+            0.4,
+            (128, 128, 0),
             2,
         )
         pre_coordinate = coordinate
