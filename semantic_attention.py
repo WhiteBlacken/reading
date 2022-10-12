@@ -182,6 +182,7 @@ def generate_word_attention(input_text):
 
 def generate_sentence_attention(input_text):
     sentence_list = sent_tokenize(input_text)
+    print(sentence_list)
     # print(phrase_list)
     sentence_att_mat = generate_phrase_att(input_text, sentence_list)
     # print(sentence_att_mat.shape, len(sentence_list))
@@ -216,7 +217,7 @@ def generate_word_difficulty(input_text):
 if __name__ == '__main__':
     # rst = generate_word_attention(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
     texts = "It is not controversial to say that an unhealthy diet causes bad health..Nor are the basic elements of healthy eating disputed..Obesity raises susceptibility to cancer, and Britain is the six most obese country on Earth..That is a public health emergency..But naming the problem is the easy part..No one disputes the costs in quality of life and depleted health budgets of an obese population, but the quest for solutions gets diverted by ideological arguments around responsibility and choice..And the water is muddied by lobbying from the industries that profit from consumption of obesity-inducing products..Historical precedent suggests that science and politics can overcome resistance from businesses that pollute and poison but it takes time, and success often starts small..So it is heartening to note that a programme in Leeds has achieved a reduction in childhood obesity, becoming the first UK city to reverse a fattening trend..The best results were among younger children and in more deprived areas..When 28% of English children aged two to 15 are obese, a national shift on the scale achieved by Leeds would lengthen hundreds of thousands of lives..A significant factor in the Leeds experience appears to Many members of parliament are uncomfortable even with their own government's anti-obesity strategy, since it involves a 'sugar tax' and a ban on the sale of energy drinks to under-16s..Bans and taxes can be blunt instruments, but their harshest critics can rarely suggest better methods..These critics just oppose regulation itself.."
-    texts = texts.replace('..','.')
+    texts = texts.replace("..",'. ')
     rst = generate_sentence_attention(texts)
     # rst = generate_word_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
     print(rst)

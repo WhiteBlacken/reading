@@ -842,6 +842,7 @@ def topk_tuple(data_list, k=10):
     # 笨拙的top_k的方法 针对tuple [('word',num)]
     top_k = []
     data_list_copy = [x for x in data_list]
+    print(data_list)
     while k > 0:
         max_data = 0
         max_index = 0

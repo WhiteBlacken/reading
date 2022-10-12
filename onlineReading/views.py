@@ -1280,6 +1280,7 @@ def get_heatmap(request):
 
     # nlp attention
     nlp_top_dict = {}
+    """word level"""
     nlp_attentions = ["topic_related", "word_relation", "word_difficulty"]
     for attention in nlp_attentions:
         data_list = [[]]
@@ -1330,6 +1331,37 @@ def get_heatmap(request):
 
         heatmap_name = base_path + attention + ".png"
         draw_heat_map(coordinates, heatmap_name, heatmap_name, backgound)
+    """sentence level"""
+    sentence_relation = generate_sentence_attention(pageData.texts.replace("..",". "))
+    top_k = topk_tuple(sentence_relation,k=2)
+
+    loc_x = []
+    loc_y = []
+
+    # 数量多为 0.000x，将其最大的数扩大至100
+    tmp = 1
+    if sentence_relation:
+        while top_k[0][1] * tmp < 10:
+            tmp = tmp * 10
+    print("放大倍数是:%d" % tmp)
+
+    for i,sentence in enumerate(sentence_relation):
+        for loc in sentence_locations[i]:
+            for j in range(int(sentence[1] * tmp)):
+                loc_x.append(random.randint(int(loc[0]), int(loc[2])))
+                loc_y.append(random.randint(int(loc[1]), int(loc[3])))
+
+    loc_x = list(map(int, loc_x))
+    loc_y = list(map(int, loc_y))
+
+    # 组合数据
+    coordinates = []
+    for i in range(len(loc_x)):
+        coordinate = [loc_x[i], loc_y[i]]
+        coordinates.append(coordinate)
+
+    heatmap_name = base_path + "sentence_relation" + ".png"
+    draw_heat_map(coordinates, heatmap_name, heatmap_name, backgound)
 
     # visual attention
     list_x = list(map(float, pageData.gaze_x.split(",")))
