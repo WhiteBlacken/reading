@@ -226,11 +226,11 @@ def fixation_image(image_base64, username, fixations, page_data_id):
     path = "static/data/heatmap/" + str(username) + "/" + str(page_data_id) + "/"
     logger.info("fixations轨迹已在该路径下生成:%s" % (path + filename))
     # 如果目录不存在，则创建目录
-    # if not os.path.exists(path):
-    #     os.mkdir(path)
-    #
-    # with open(path + filename, "wb") as f:
-    #     f.write(image_data)
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+    with open(path + filename, "wb") as f:
+        f.write(image_data)
     paint_image(path + filename, fixations)
 
 

@@ -54,6 +54,9 @@ from utils import (
     get_sentence_location,
     get_top_k,
     get_word_by_one_gaze,
+    calculate_similarity,
+    calculate_identity,
+    paint_bar_graph,
 )
 
 
@@ -87,7 +90,7 @@ def get_paragraph_and_translation(request):
     """根据文章id获取整篇文章的分段以及翻译"""
     # 获取整篇文章的内容和翻译
 
-    article_id = request.GET.get("article_id", 5)
+    article_id = request.GET.get("article_id", 6)
 
     paragraphs = Paragraph.objects.filter(article_id=article_id)
     print(len(paragraphs))
@@ -1255,7 +1258,6 @@ def get_heatmap(request):
     :param request: id,window
     :return:
     """
-    k = request.GET.get("k",10)
     page_data_id = request.GET.get("id")
     pageData = PageData.objects.get(id=page_data_id)
     # 准备工作，获取单词和句子的信息
@@ -1309,7 +1311,7 @@ def get_heatmap(request):
             if i in data_index:
                 top_k.append(data)
 
-        top_dict[attention] = [x[0] for x in top_k][0:k]
+        top_dict[attention] = [x[0] for x in top_k]
 
         loc_x = []
         loc_y = []
@@ -1403,21 +1405,45 @@ def get_heatmap(request):
     heatmap_name = base_path + "visual.png"
     hotspot = draw_heat_map(coordinates, heatmap_name, heatmap_name, backgound)
 
-    # 获取top_k
-    data_1 = [x[2] for x in hotspot]
-    data_index = get_top_k(data_1,k=1000)
-    top_k_hotspot = []  # [(1232, 85, 240), (1233, 85, 240)]
-    for i, data in enumerate(hotspot):
-        if i in data_index:
-            top_k_hotspot.append(data)
-    top_k = []
-    for item in top_k_hotspot:
-        word_index = get_word_by_one_gaze(word_locations, item)
+    # 去计算所有的gaze点
+    words_cnt = [0 for x in word_list]
+    for coordinate in coordinates:
+        word_index = get_word_by_one_gaze(word_locations, coordinate)
         if word_index != -1:
-            top_k.append(word_list[word_index])
-    new_top_k = list(set(top_k))
-    new_top_k.sort(key=top_k.index)
-    top_dict["visual"] = new_top_k[0:k]
+            words_cnt[word_index] += 1
+
+    round = 50
+    to_be_deleted = [0 for x in word_list]
+    top_k = []
+    while round:
+        max_cnt = -1
+        max_index = -1
+        for i, cnt in enumerate(words_cnt):
+            if cnt > max_cnt and to_be_deleted[i] == 0 and word_list[i] not in top_k:
+                max_cnt = cnt
+                max_index = i
+        if max_index == -1:
+            break
+        to_be_deleted[max_index] = 1
+        top_k.append(word_list[max_index])
+        round -= 1
+
+    top_dict["visual"] = top_k
+
+    # 获取top_k
+    # data_1 = [x[2] for x in hotspot]
+    # data_index = get_top_k(data_1, k=5000)
+    # top_k_hotspot = []  # [(1232, 85, 240), (1233, 85, 240)]
+    # for i, data in enumerate(hotspot):
+    #     if i in data_index:
+    #         top_k_hotspot.append(data)
+    # top_k = []
+    # for item in top_k_hotspot:
+    #     word_index = get_word_by_one_gaze(word_locations, item)
+    #     if word_index != -1:
+    #         top_k.append(word_list[word_index])
+    # new_top_k = list(set(top_k))
+    # new_top_k.sort(key=top_k.index)
 
 
     # 生成fixation图示
@@ -1433,4 +1459,27 @@ def get_heatmap(request):
         pageData.id,
     )
 
-    return JsonResponse(top_dict, json_dumps_params={"ensure_ascii": False}, safe=False)
+    k_list = [5, 10, 15, 20, 30]
+    top_list = []
+    k_dict = {}
+    pic_list = []
+    for k in k_list:
+
+        attention_type = {}
+        for key in top_dict.keys():
+            attention_type[key] = top_dict[key][0:k]
+        k_dict[k] = attention_type
+
+        pic_dict = {
+            "k": k,
+            "similarity": calculate_similarity(attention_type),
+            "identity": calculate_identity(attention_type),
+        }
+        pic_list.append(pic_dict)
+
+    top_list.append(k_dict)
+
+    paint_bar_graph(pic_list, "similarity")
+    paint_bar_graph(pic_list, "identity")
+
+    return JsonResponse(top_list, json_dumps_params={"ensure_ascii": False}, safe=False)
