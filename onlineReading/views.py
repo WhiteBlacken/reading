@@ -11,7 +11,6 @@ from action.models import (
     Text,
     Dictionary,
     PageData,
-    WordLevelData,
     Dispersion,
     Paragraph,
     Experiment,
@@ -51,7 +50,10 @@ from utils import (
     get_index_by_word,
     topk_tuple,
     get_word_and_sentence_from_text,
-    get_word_location, get_sentence_location,
+    get_word_location,
+    get_sentence_location,
+    get_top_k,
+    get_word_by_one_gaze,
 )
 
 
@@ -1253,6 +1255,7 @@ def get_heatmap(request):
     :param request: id,window
     :return:
     """
+    k = request.GET.get("k",10)
     page_data_id = request.GET.get("id")
     pageData = PageData.objects.get(id=page_data_id)
     # 准备工作，获取单词和句子的信息
@@ -1261,7 +1264,7 @@ def get_heatmap(request):
     word_locations = get_word_location(
         pageData.location
     )  # [(left,top,right,bottom),(left,top,right,bottom)]
-    sentence_locations = get_sentence_location(pageData.location,sentence_list)
+    sentence_locations = get_sentence_location(pageData.location, sentence_list)
     # 获取图片生成的路径
     exp = Experiment.objects.filter(id=pageData.experiment_id)
 
@@ -1280,25 +1283,33 @@ def get_heatmap(request):
         + ".jpg"
     )
 
+    top_dict = {}
     # nlp attention
-    nlp_top_dict = {}
+
     """word level"""
-    nlp_attentions = ["topic_related", "word_relation", "word_difficulty"]
+    nlp_attentions = ["topic_relevant", "word_attention", "word_difficulty"]
+    # nlp_attentions = []
     for attention in nlp_attentions:
+        print("执行了")
         data_list = [[]]
         # 获取数据
-        if attention == "topic_related":
+        if attention == "topic_relevant":
             data_list = get_importance(pageData.texts)  # [('word',1)]
-        if attention == "word_relation":
+        if attention == "word_attention":
             data_list = generate_word_attention(pageData.texts)
         if attention == "word_difficulty":
             data_list = generate_word_difficulty(pageData.texts)
 
         data_list = [x for x in data_list if x[1] > 0]
         # 获取top_k
-        top_k = topk_tuple(data_list)
+        data_1 = [x[1] for x in data_list]
+        data_index = get_top_k(data_1)
+        top_k = []
+        for i, data in enumerate(data_list):
+            if i in data_index:
+                top_k.append(data)
 
-        nlp_top_dict[attention] = top_k
+        top_dict[attention] = [x[0] for x in top_k][0:k]
 
         loc_x = []
         loc_y = []
@@ -1334,9 +1345,10 @@ def get_heatmap(request):
         heatmap_name = base_path + attention + ".png"
         draw_heat_map(coordinates, heatmap_name, heatmap_name, backgound)
     """sentence level"""
-    sentence_relation = generate_sentence_attention(pageData.texts.replace("..",". "))
-    top_k = topk_tuple(sentence_relation,k=2)
+    sentence_relation = generate_sentence_attention(pageData.texts.replace("..", ". "))
+    top_k = topk_tuple(sentence_relation, k=2)
 
+    # top_dict["sentence_relation"] = top_k
     loc_x = []
     loc_y = []
 
@@ -1347,7 +1359,7 @@ def get_heatmap(request):
             tmp = tmp * 10
     print("放大倍数是:%d" % tmp)
 
-    for i,sentence in enumerate(sentence_relation):
+    for i, sentence in enumerate(sentence_relation):
         for loc in sentence_locations[i]:
             for j in range(int(sentence[1] * tmp)):
                 loc_x.append(random.randint(int(loc[0]), int(loc[2])))
@@ -1368,7 +1380,7 @@ def get_heatmap(request):
     # visual attention
     list_x = list(map(float, pageData.gaze_x.split(",")))
     list_y = list(map(float, pageData.gaze_y.split(",")))
-    list_t = list(map(float,pageData.gaze_t.split(",")))
+    list_t = list(map(float, pageData.gaze_t.split(",")))
 
     # 滤波处理
     kernel_size = int(request.GET.get("window", 0))
@@ -1389,12 +1401,29 @@ def get_heatmap(request):
 
     # 生成热力图
     heatmap_name = base_path + "visual.png"
-    draw_heat_map(coordinates, heatmap_name, heatmap_name, backgound)
+    hotspot = draw_heat_map(coordinates, heatmap_name, heatmap_name, backgound)
+
+    # 获取top_k
+    data_1 = [x[2] for x in hotspot]
+    data_index = get_top_k(data_1,k=1000)
+    top_k_hotspot = []  # [(1232, 85, 240), (1233, 85, 240)]
+    for i, data in enumerate(hotspot):
+        if i in data_index:
+            top_k_hotspot.append(data)
+    top_k = []
+    for item in top_k_hotspot:
+        word_index = get_word_by_one_gaze(word_locations, item)
+        if word_index != -1:
+            top_k.append(word_list[word_index])
+    new_top_k = list(set(top_k))
+    new_top_k.sort(key=top_k.index)
+    top_dict["visual"] = new_top_k[0:k]
+
 
     # 生成fixation图示
     coordinates = []
     for i in range(len(list_x)):
-        coordinate = [list_x[i], list_y[i],list_t[i]]
+        coordinate = [list_x[i], list_y[i], list_t[i]]
         coordinates.append(coordinate)
     fixations = get_fixations(coordinates)
     fixation_image(
@@ -1403,6 +1432,5 @@ def get_heatmap(request):
         fixations,
         pageData.id,
     )
-    print('result')
-    print(nlp_top_dict)
-    return JsonResponse({'status_code':200,'status':'处理完成'},json_dumps_params={"ensure_ascii": False}, safe=False)
+
+    return JsonResponse(top_dict, json_dumps_params={"ensure_ascii": False}, safe=False)

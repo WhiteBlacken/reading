@@ -35,8 +35,8 @@ def get_fixations(coordinates):
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if (
-                len(working_queue) < 2
-                or (working_queue[-1][2] - working_queue[0][2]) < min_duration
+            len(working_queue) < 2
+            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
         ):
             # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
             datum = remaining_gaze.popleft()
@@ -60,7 +60,7 @@ def get_fixations(coordinates):
         while remaining_gaze:
             datum = remaining_gaze[0]
             if datum[2] > working_queue[0][2] + max_duration or with_distance(
-                    working_queue[0], datum, max_distance
+                working_queue[0], datum, max_distance
             ):
                 fixations.append(from_gazes_to_fixation(list(working_queue)))
                 working_queue.clear()
@@ -170,11 +170,13 @@ def get_sentence_location(location, sentence_list):
         for j, sentence in enumerate(sentence_list):
             if sentence[2] > i >= sentence[1]:
                 if j in sentence_location.keys():
-                    sentence_location[j].append([loc["left"], loc["top"], loc["right"], loc["bottom"]])
+                    sentence_location[j].append(
+                        [loc["left"], loc["top"], loc["right"], loc["bottom"]]
+                    )
                 else:
-                    sentence_location[j] = [[loc["left"], loc["top"], loc["right"], loc["bottom"]]]
-    print("sentence_location")
-    print(sentence_location)
+                    sentence_location[j] = [
+                        [loc["left"], loc["top"], loc["right"], loc["bottom"]]
+                    ]
     return sentence_location
 
 
@@ -220,16 +222,15 @@ def fixation_image(image_base64, username, fixations, page_data_id):
     # 获取名称
 
     filename = "fixation.png"
-    print("filename:%s" % filename)
     # 存储地址
     path = "static/data/heatmap/" + str(username) + "/" + str(page_data_id) + "/"
     logger.info("fixations轨迹已在该路径下生成:%s" % (path + filename))
     # 如果目录不存在，则创建目录
-    if not os.path.exists(path):
-        os.mkdir(path)
-
-    with open(path + filename, "wb") as f:
-        f.write(image_data)
+    # if not os.path.exists(path):
+    #     os.mkdir(path)
+    #
+    # with open(path + filename, "wb") as f:
+    #     f.write(image_data)
     paint_image(path + filename, fixations)
 
 
@@ -269,7 +270,7 @@ def paint_image(path, coordinates):
             (coordinate[0], coordinate[1]),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.7,
-            (0, 255, 0),
+            (0, 0, 0),
             2,
         )
         pre_coordinate = coordinate
@@ -389,9 +390,9 @@ def translate(content):
         sign = Encry.hexdigest()
         # 3. 发送请求
         url = (
-                "http://api.fanyi.baidu.com/api/trans/vip/translate?"
-                + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
-                % (content, appid, salt, sign)
+            "http://api.fanyi.baidu.com/api/trans/vip/translate?"
+            + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
+            % (content, appid, salt, sign)
         )
         # 4. 解析结果
         response = requests.get(url)
@@ -449,13 +450,13 @@ def get_saccade_info(fixations):
     sum_angle = 0
     for i in range(len(fixations) - 1):
         if (
-                get_euclid_distance(
-                    fixations[i][0],
-                    fixations[i + 1][0],
-                    fixations[i][1],
-                    fixations[i + 1][1],
-                )
-                > 500
+            get_euclid_distance(
+                fixations[i][0],
+                fixations[i + 1][0],
+                fixations[i][1],
+                fixations[i + 1][1],
+            )
+            > 500
         ):
             saccade_times = saccade_times + 1
             sum_angle = sum_angle + get_saccade_angle(fixations[i], fixations[i + 1])
@@ -498,7 +499,7 @@ def get_reading_times_of_word(fixations, locations):
 
 
 def get_reading_times_and_dwell_time_of_sentence(
-        fixations, buttons_location, sentence_dict
+    fixations, buttons_location, sentence_dict
 ):
     pre_fixations = [-2 for x in range(0, len(sentence_dict))]
     fixation_cnt = 0
@@ -550,9 +551,9 @@ def get_sentence_by_word(word_index, sentences):
     index = 0
     for key in sentences:
         if (
-                sentences[key]["end_word_index"]
-                > word_index
-                >= sentences[key]["begin_word_index"]
+            sentences[key]["end_word_index"]
+            > word_index
+            >= sentences[key]["begin_word_index"]
         ):
             return index
         index = index + 1
@@ -860,35 +861,43 @@ def topk_tuple(data_list, k=10):
 
 
 def calculate_similarity(word_dict, level="word"):
-    visual = word_dict.get('visual')
-    topic = word_dict.get('topic_relevant')
-    word_attention = word_dict.get('word_attention')
-    sentence_attention = word_dict.get('sentence_attention')
-    difficulty_word = word_dict.get('word_difficulty')
-    difficulty_sentence = word_dict.get('sentence_difficulty')
+    visual = word_dict.get("visual")
+    topic = word_dict.get("topic_relevant")
+    word_attention = word_dict.get("word_attention")
+    sentence_attention = word_dict.get("sentence_attention")
+    difficulty_word = word_dict.get("word_difficulty")
+    difficulty_sentence = word_dict.get("sentence_difficulty")
 
     result = []
 
     if level == "word":
-        result = [len(set(visual).intersection(set(topic))) / len(set(visual).union(set(topic))),
-                  len(set(visual).intersection(set(word_attention))) / len(set(visual).union(set(word_attention))),
-                  len(set(visual).intersection(set(difficulty_word))) / len(set(visual).union(set(difficulty_word)))]
+        result = [
+            len(set(visual).intersection(set(topic)))
+            / len(set(visual).union(set(topic))),
+            len(set(visual).intersection(set(word_attention)))
+            / len(set(visual).union(set(word_attention))),
+            len(set(visual).intersection(set(difficulty_word)))
+            / len(set(visual).union(set(difficulty_word))),
+        ]
     elif level == "sentence":
-        result = [len(set(visual).intersection(set(topic))) / len(set(visual).union(set(topic))),
-                  len(set(visual).intersection(set(sentence_attention))) / len(
-                      set(visual).union(set(sentence_attention))),
-                  len(set(visual).intersection(set(difficulty_sentence))) / len(
-                      set(visual).union(set(difficulty_sentence)))]
+        result = [
+            len(set(visual).intersection(set(topic)))
+            / len(set(visual).union(set(topic))),
+            len(set(visual).intersection(set(sentence_attention)))
+            / len(set(visual).union(set(sentence_attention))),
+            len(set(visual).intersection(set(difficulty_sentence)))
+            / len(set(visual).union(set(difficulty_sentence))),
+        ]
     return result
 
 
 def calculate_identity(word_dict, level="word"):
-    visual = word_dict.get('visual')
-    topic = word_dict.get('topic_relevant')
-    word_attention = word_dict.get('word_attention')
-    sentence_attention = word_dict.get('sentence_attention')
-    difficulty_word = word_dict.get('word_difficulty')
-    difficulty_sentence = word_dict.get('sentence_difficulty')
+    visual = word_dict.get("visual")
+    topic = word_dict.get("topic_relevant")
+    word_attention = word_dict.get("word_attention")
+    sentence_attention = word_dict.get("sentence_attention")
+    difficulty_word = word_dict.get("word_difficulty")
+    difficulty_sentence = word_dict.get("sentence_difficulty")
 
     result = []
 
@@ -917,7 +926,11 @@ def paint_bar_graph(data_dict, attribute="similarity"):
     # 收集visual attention与topic-relavant word、word attention以及difficult word之间的相似性或一致性
     datalist = []
 
-    x_labels = ['viusal&topic-relevant', 'visual&word attention', 'visual&difficult word']
+    x_labels = [
+        "viusal&topic-relevant",
+        "visual&word attention",
+        "visual&difficult word",
+    ]
 
     # 有array_num种类型的数据，n设置为array_num
     total_width, n = 0.8, array_num
@@ -930,23 +943,27 @@ def paint_bar_graph(data_dict, attribute="similarity"):
     fig, ax = plt.subplots()
 
     for data in data_dict:
-        data_ = [data.get('k')]
+        data_ = [data.get("k")]
         if attribute == "similarity":
-            data_.append(data.get('similarity'))
+            data_.append(data.get("similarity"))
         else:
-            data_.append(data.get('identity'))
+            data_.append(data.get("identity"))
         datalist.append(data_)
-
 
     # haul柱状图
     for i in range(len(datalist)):
 
-        ax.bar(x + width * (i + 1 - array_num / 2), [j for i in datalist[i][1:] for j in i], width=width, label="k=" + str(datalist[i][0]))
+        ax.bar(
+            x + width * (i + 1 - array_num / 2),
+            [j for i in datalist[i][1:] for j in i],
+            width=width,
+            label="k=" + str(datalist[i][0]),
+        )
 
     ax.set_xticks(x + width / 2)
     ax.set_xticklabels(x_labels)
 
-    plt.ylim(0,1)
+    plt.ylim(0, 1)
 
     # 标注X轴，标注Y轴
     # plt.xlabel("groups")
@@ -958,54 +975,50 @@ def paint_bar_graph(data_dict, attribute="similarity"):
     plt.show()
 
 
+def get_top_k(data_list, k=50):
+    tag = [0 for x in data_list]
+    top_k_index = []
+    while k > 0:
+        max_data = -1
+        max_index = -1
+        for i, data in enumerate(data_list):
+            if tag[i] == 0 and data > max_data:
+                max_data = data
+                max_index = i
+        if max_index == -1:
+            break
+        tag[max_index] = 1
+        top_k_index.append(max_index)
+        k -= 1
+    return top_k_index
+
+
+def get_word_by_one_gaze(word_locations, gaze):
+    for i, loc in enumerate(word_locations):
+        if loc[0] < gaze[0] < loc[2] and loc[1] < gaze[1] < loc[3]:
+            return i
+    return -1
+
+
 if __name__ == "__main__":
     import re
 
-    # texts = "It is not controversial to say that an unhealthy diet causes bad health..Nor are the basic elements of healthy eating disputed..Obesity raises susceptibility to cancer, and Britain is the six most obese country on Earth..That is a public health emergency..But naming the problem is the easy part..No one disputes the costs in quality of life and depleted health budgets of an obese population, but the quest for solutions gets diverted by ideological arguments around responsibility and choice..And the water is muddied by lobbying from the industries that profit from consumption of obesity-inducing products..Historical precedent suggests that science and politics can overcome resistance from businesses that pollute and poison but it takes time, and success often starts small..So it is heartening to note that a programme in Leeds has achieved a reduction in childhood obesity, becoming the first UK city to reverse a fattening trend..The best results were among younger children and in more deprived areas..When 28% of English children aged two to 15 are obese, a national shift on the scale achieved by Leeds would lengthen hundreds of thousands of lives..A significant factor in the Leeds experience appears to Many members of parliament are uncomfortable even with their own government's anti-obesity strategy, since it involves a 'sugar tax' and a ban on the sale of energy drinks to under-16s..Bans and taxes can be blunt instruments, but their harshest critics can rarely suggest better methods..These critics just oppose regulation itself.."
-    #
-    # word_list, sentence_list = get_word_and_sentence_from_text(texts)
-    # print(word_list)
-    # print(sentence_list)
-    # print(len(word_list))
-    # location = '[{"left":330,"top":95,"right":362,"bottom":147},{"left":362,"top":95,"right":395.5,"bottom":147},{"left":395.5,"top":95,"right":450.5,"bottom":147},{"left":450.5,"top":95,"right":614.15625,"bottom":147},{"left":614.15625,"top":95,"right":654.15625,"bottom":147},{"left":654.15625,"top":95,"right":707.234375,"bottom":147},{"left":707.234375,"top":95,"right":769.171875,"bottom":147},{"left":769.171875,"top":95,"right":813.234375,"bottom":147},{"left":813.234375,"top":95,"right":943.28125,"bottom":147},{"left":943.28125,"top":95,"right":1003.578125,"bottom":147},{"left":1003.578125,"top":95,"right":1095.515625,"bottom":147},{"left":1095.515625,"top":95,"right":1155.125,"bottom":147},{"left":1155.125,"top":95,"right":1248.671875,"bottom":147},{"left":1248.671875,"top":95,"right":1308.609375,"bottom":147},{"left":1308.609375,"top":95,"right":1360.328125,"bottom":147},{"left":1360.328125,"top":95,"right":1413.671875,"bottom":147},{"left":1413.671875,"top":95,"right":1487.46875,"bottom":147},{"left":1487.46875,"top":95,"right":1608.046875,"bottom":147},{"left":1608.046875,"top":95,"right":1647.15625,"bottom":147},{"left":1647.15625,"top":95,"right":1747.625,"bottom":147},{"left":330,"top":147,"right":418.359375,"bottom":199},{"left":418.359375,"top":147,"right":540.8125,"bottom":199},{"left":540.8125,"top":147,"right":644.46875,"bottom":199},{"left":644.46875,"top":147,"right":725.125,"bottom":199},{"left":725.125,"top":147,"right":890.578125,"bottom":199},{"left":890.578125,"top":147,"right":930.578125,"bottom":199},{"left":930.578125,"top":147,"right":1025.265625,"bottom":199},{"left":1025.265625,"top":147,"right":1084.671875,"bottom":199},{"left":1084.671875,"top":147,"right":1174.671875,"bottom":199},{"left":1174.671875,"top":147,"right":1208.171875,"bottom":199},{"left":1208.171875,"top":147,"right":1261.515625,"bottom":199},{"left":1261.515625,"top":147,"right":1307.1875,"bottom":199},{"left":1307.1875,"top":147,"right":1380.984375,"bottom":199},{"left":1380.984375,"top":147,"right":1465.921875,"bottom":199},{"left":1465.921875,"top":147,"right":1570.65625,"bottom":199},{"left":1570.65625,"top":147,"right":1616.703125,"bottom":199},{"left":1616.703125,"top":147,"right":1698.578125,"bottom":199},{"left":1698.578125,"top":147,"right":1765.328125,"bottom":199},{"left":330,"top":199,"right":363.5,"bottom":251},{"left":363.5,"top":199,"right":392.765625,"bottom":251},{"left":392.765625,"top":199,"right":479.03125,"bottom":251},{"left":479.03125,"top":199,"right":566.796875,"bottom":251},{"left":566.796875,"top":199,"right":714.015625,"bottom":251},{"left":714.015625,"top":199,"right":768.8125,"bottom":251},{"left":768.8125,"top":199,"right":871.890625,"bottom":251},{"left":871.890625,"top":199,"right":925.234375,"bottom":251},{"left":925.234375,"top":199,"right":1038.46875,"bottom":251},{"left":1038.46875,"top":199,"right":1071.96875,"bottom":251},{"left":1071.96875,"top":199,"right":1125.3125,"bottom":251},{"left":1125.3125,"top":199,"right":1192.015625,"bottom":251},{"left":1192.015625,"top":199,"right":1260.90625,"bottom":251},{"left":1260.90625,"top":199,"right":1311.6875,"bottom":251},{"left":1311.6875,"top":199,"right":1371.359375,"bottom":251},{"left":1371.359375,"top":199,"right":1483.796875,"bottom":251},{"left":1483.796875,"top":199,"right":1537.140625,"bottom":251},{"left":1537.140625,"top":199,"right":1611.59375,"bottom":251},{"left":1611.59375,"top":199,"right":1648.78125,"bottom":251},{"left":1648.78125,"top":199,"right":1742.609375,"bottom":251},{"left":1742.609375,"top":199,"right":1781.71875,"bottom":251},{"left":330,"top":251,"right":380.71875,"bottom":303},{"left":380.71875,"top":251,"right":440.125,"bottom":303},{"left":440.125,"top":251,"right":558.140625,"bottom":303},{"left":558.140625,"top":251,"right":645.90625,"bottom":303},{"left":645.90625,"top":251,"right":756.40625,"bottom":303},{"left":756.40625,"top":251,"right":795.515625,"bottom":303},{"left":795.515625,"top":251,"right":839.578125,"bottom":303},{"left":839.578125,"top":251,"right":924.515625,"bottom":303},{"left":924.515625,"top":251,"right":1072.03125,"bottom":303},{"left":1072.03125,"top":251,"right":1127.09375,"bottom":303},{"left":1127.09375,"top":251,"right":1180.4375,"bottom":303},{"left":1180.4375,"top":251,"right":1260.25,"bottom":303},{"left":1260.25,"top":251,"right":1309,"bottom":303},{"left":1309,"top":251,"right":1429.03125,"bottom":303},{"left":1429.03125,"top":251,"right":1494.0625,"bottom":303},{"left":1494.0625,"top":251,"right":1605.5,"bottom":303},{"left":1605.5,"top":251,"right":1649.53125,"bottom":303},{"left":330,"top":303,"right":471.6875,"bottom":355},{"left":471.6875,"top":303,"right":610.875,"bottom":355},{"left":610.875,"top":303,"right":709.15625,"bottom":355},{"left":709.15625,"top":303,"right":877.71875,"bottom":355},{"left":877.71875,"top":303,"right":937.125,"bottom":355},{"left":937.125,"top":303,"right":1033.015625,"bottom":355},{"left":1033.015625,"top":303,"right":1096.046875,"bottom":355},{"left":1096.046875,"top":303,"right":1149.390625,"bottom":355},{"left":1149.390625,"top":303,"right":1229.140625,"bottom":355},{"left":1229.140625,"top":303,"right":1262.640625,"bottom":355},{"left":1262.640625,"top":303,"right":1381.984375,"bottom":355},{"left":1381.984375,"top":303,"right":1426.015625,"bottom":355},{"left":1426.015625,"top":303,"right":1543.546875,"bottom":355},{"left":1543.546875,"top":303,"right":1614.4375,"bottom":355},{"left":1614.4375,"top":303,"right":1667.78125,"bottom":355},{"left":330,"top":355,"right":457.65625,"bottom":407},{"left":457.65625,"top":355,"right":519.59375,"bottom":407},{"left":519.59375,"top":355,"right":598.1875,"bottom":407},{"left":598.1875,"top":355,"right":669.078125,"bottom":407},{"left":669.078125,"top":355,"right":836.25,"bottom":407},{"left":836.25,"top":355,"right":875.359375,"bottom":407},{"left":875.359375,"top":355,"right":1084.96875,"bottom":407},{"left":1084.96875,"top":355,"right":1208.390625,"bottom":407},{"left":330,"top":422,"right":453.296875,"bottom":474},{"left":453.296875,"top":422,"right":585.421875,"bottom":474},{"left":585.421875,"top":422,"right":702.8125,"bottom":474},{"left":702.8125,"top":422,"right":764.75,"bottom":474},{"left":764.75,"top":422,"right":864.34375,"bottom":474},{"left":864.34375,"top":422,"right":923.75,"bottom":474},{"left":923.75,"top":422,"right":1021.59375,"bottom":474},{"left":1021.59375,"top":422,"right":1077.6875,"bottom":474},{"left":1077.6875,"top":422,"right":1207.234375,"bottom":474},{"left":1207.234375,"top":422,"right":1336.9375,"bottom":474},{"left":1336.9375,"top":422,"right":1407.828125,"bottom":474},{"left":1407.828125,"top":422,"right":1546.796875,"bottom":474},{"left":1546.796875,"top":422,"right":1608.734375,"bottom":474},{"left":1608.734375,"top":422,"right":1705.25,"bottom":474},{"left":1705.25,"top":422,"right":1764.65625,"bottom":474},{"left":330,"top":474,"right":424.140625,"bottom":526},{"left":424.140625,"top":474,"right":479.203125,"bottom":526},{"left":479.203125,"top":474,"right":510.53125,"bottom":526},{"left":510.53125,"top":474,"right":586.015625,"bottom":526},{"left":586.015625,"top":474,"right":659.234375,"bottom":526},{"left":659.234375,"top":474,"right":718.640625,"bottom":526},{"left":718.640625,"top":474,"right":820.453125,"bottom":526},{"left":820.453125,"top":474,"right":897.1875,"bottom":526},{"left":897.1875,"top":474,"right":976.46875,"bottom":526},{"left":976.46875,"top":474,"right":1057.890625,"bottom":526},{"left":1057.890625,"top":474,"right":1103,"bottom":526},{"left":1103,"top":474,"right":1134.328125,"bottom":526},{"left":1134.328125,"top":474,"right":1167.828125,"bottom":526},{"left":1167.828125,"top":474,"right":1309.078125,"bottom":526},{"left":1309.078125,"top":474,"right":1349.078125,"bottom":526},{"left":1349.078125,"top":474,"right":1417.484375,"bottom":526},{"left":1417.484375,"top":474,"right":1479.421875,"bottom":526},{"left":1479.421875,"top":474,"right":1508.6875,"bottom":526},{"left":1508.6875,"top":474,"right":1660.484375,"bottom":526},{"left":1660.484375,"top":474,"right":1697.671875,"bottom":526},{"left":1697.671875,"top":474,"right":1779.6875,"bottom":526},{"left":330,"top":526,"right":385.15625,"bottom":578},{"left":385.15625,"top":526,"right":502.65625,"bottom":578},{"left":502.65625,"top":526,"right":531.921875,"bottom":578},{"left":531.921875,"top":526,"right":657.921875,"bottom":578},{"left":657.921875,"top":526,"right":695.109375,"bottom":578},{"left":695.109375,"top":526,"right":826.703125,"bottom":578},{"left":826.703125,"top":526,"right":930.546875,"bottom":578},{"left":930.546875,"top":526,"right":1061.8125,"bottom":578},{"left":1061.8125,"top":526,"right":1115.15625,"bottom":578},{"left":1115.15625,"top":526,"right":1175.265625,"bottom":578},{"left":1175.265625,"top":526,"right":1224.421875,"bottom":578},{"left":1224.421875,"top":526,"right":1280.5,"bottom":578},{"left":1280.5,"top":526,"right":1320.5,"bottom":578},{"left":1320.5,"top":526,"right":1419.078125,"bottom":578},{"left":1419.078125,"top":526,"right":1448.34375,"bottom":578},{"left":1448.34375,"top":526,"right":1568.546875,"bottom":578},{"left":1568.546875,"top":526,"right":1651.859375,"bottom":578},{"left":1651.859375,"top":526,"right":1710.015625,"bottom":578},{"left":1710.015625,"top":526,"right":1775.015625,"bottom":578},{"left":330,"top":578,"right":420.78125,"bottom":630},{"left":420.78125,"top":578,"right":491.671875,"bottom":630},{"left":491.671875,"top":578,"right":588.828125,"bottom":630},{"left":588.828125,"top":578,"right":700.375,"bottom":630},{"left":700.375,"top":578,"right":808.546875,"bottom":630},{"left":808.546875,"top":578,"right":867.953125,"bottom":630},{"left":867.953125,"top":578,"right":905.140625,"bottom":630},{"left":905.140625,"top":578,"right":981.328125,"bottom":630},{"left":981.328125,"top":578,"right":1098.59375,"bottom":630},{"left":1098.59375,"top":578,"right":1180.453125,"bottom":630},{"left":1180.453125,"top":578,"right":1264.0625,"bottom":630},{"left":1264.0625,"top":578,"right":1329.5625,"bottom":630},{"left":1329.5625,"top":578,"right":1368.671875,"bottom":630},{"left":1368.671875,"top":578,"right":1466.671875,"bottom":630},{"left":1466.671875,"top":578,"right":1574.84375,"bottom":630},{"left":1574.84375,"top":578,"right":1648.4375,"bottom":630},{"left":1648.4375,"top":578,"right":1707.515625,"bottom":630},{"left":1707.515625,"top":578,"right":1747.515625,"bottom":630},{"left":330,"top":630,"right":374.15625,"bottom":682},{"left":374.15625,"top":630,"right":425.875,"bottom":682},{"left":425.875,"top":630,"right":516.59375,"bottom":682},{"left":516.59375,"top":630,"right":545.859375,"bottom":682},{"left":545.859375,"top":630,"right":654.953125,"bottom":682},{"left":654.953125,"top":630,"right":720.96875,"bottom":682},{"left":720.96875,"top":630,"right":767.015625,"bottom":682},{"left":767.015625,"top":630,"right":820.359375,"bottom":682},{"left":820.359375,"top":630,"right":892.78125,"bottom":682},{"left":892.78125,"top":630,"right":1010.28125,"bottom":682},{"left":1010.28125,"top":630,"right":1054.3125,"bottom":682},{"left":1054.3125,"top":630,"right":1136.328125,"bottom":682},{"left":1136.328125,"top":630,"right":1223,"bottom":682},{"left":1223,"top":630,"right":1341.28125,"bottom":682},{"left":1341.28125,"top":630,"right":1465.890625,"bottom":682},{"left":1465.890625,"top":630,"right":1505,"bottom":682},{"left":1505,"top":630,"right":1640.390625,"bottom":682},{"left":1640.390625,"top":630,"right":1679.5,"bottom":682},{"left":1679.5,"top":630,"right":1751.234375,"bottom":682},{"left":1751.234375,"top":630,"right":1784.125,"bottom":682},{"left":330,"top":697,"right":463.765625,"bottom":749},{"left":463.765625,"top":697,"right":546.5625,"bottom":749},{"left":546.5625,"top":697,"right":583.75,"bottom":749},{"left":583.75,"top":697,"right":637.09375,"bottom":749},{"left":637.09375,"top":697,"right":719.109375,"bottom":749},{"left":719.109375,"top":697,"right":859.453125,"bottom":749},{"left":859.453125,"top":697,"right":966.71875,"bottom":749},{"left":966.71875,"top":697,"right":1006.71875,"bottom":749},{"left":330,"top":749,"right":410.21875,"bottom":801},{"left":410.21875,"top":749,"right":534.21875,"bottom":801},{"left":534.21875,"top":749,"right":573.328125,"bottom":801},{"left":573.328125,"top":749,"right":712.625,"bottom":801},{"left":712.625,"top":749,"right":764.34375,"bottom":801},{"left":764.34375,"top":749,"right":950.734375,"bottom":801},{"left":950.734375,"top":749,"right":1021.203125,"bottom":801},{"left":1021.203125,"top":749,"right":1086.265625,"bottom":801},{"left":1086.265625,"top":749,"right":1155.15625,"bottom":801},{"left":1155.15625,"top":749,"right":1220.15625,"bottom":801},{"left":1220.15625,"top":749,"right":1393,"bottom":801},{"left":1393,"top":749,"right":1546.109375,"bottom":801},{"left":1546.109375,"top":749,"right":1659.5,"bottom":801},{"left":1659.5,"top":749,"right":1733.4375,"bottom":801},{"left":1733.4375,"top":749,"right":1764.765625,"bottom":801},{"left":330,"top":801,"right":438.4375,"bottom":853},{"left":438.4375,"top":801,"right":467.703125,"bottom":853},{"left":467.703125,"top":801,"right":557.015625,"bottom":853},{"left":557.015625,"top":801,"right":617.84375,"bottom":853},{"left":617.84375,"top":801,"right":677.25,"bottom":853},{"left":677.25,"top":801,"right":706.515625,"bottom":853},{"left":706.515625,"top":801,"right":765.5625,"bottom":853},{"left":765.5625,"top":801,"right":811.609375,"bottom":853},{"left":811.609375,"top":801,"right":864.953125,"bottom":853},{"left":864.953125,"top":801,"right":925.34375,"bottom":853},{"left":925.34375,"top":801,"right":964.453125,"bottom":853},{"left":964.453125,"top":801,"right":1059.359375,"bottom":853},{"left":1059.359375,"top":801,"right":1145.234375,"bottom":853},{"left":1145.234375,"top":801,"right":1185.234375,"bottom":853},{"left":1185.234375,"top":801,"right":1322.734375,"bottom":853},{"left":1322.734375,"top":801,"right":1392.96875,"bottom":853},{"left":1392.96875,"top":801,"right":1452.375,"bottom":853},{"left":1452.375,"top":801,"right":1527.28125,"bottom":853},{"left":1527.28125,"top":801,"right":1583.375,"bottom":853},{"left":1583.375,"top":801,"right":1628.328125,"bottom":853},{"left":1628.328125,"top":801,"right":1704.5625,"bottom":853},{"left":330,"top":853,"right":487.90625,"bottom":905},{"left":487.90625,"top":853,"right":542.96875,"bottom":905},{"left":542.96875,"top":853,"right":611.859375,"bottom":905},{"left":611.859375,"top":853,"right":724.796875,"bottom":905},{"left":724.796875,"top":853,"right":806.859375,"bottom":905},{"left":806.859375,"top":853,"right":862.953125,"bottom":905},{"left":862.953125,"top":853,"right":942.921875,"bottom":905},{"left":942.921875,"top":853,"right":1049.203125,"bottom":905},{"left":1049.203125,"top":853,"right":1134.625,"bottom":905},{"left":1134.625,"top":853,"right":1257.953125,"bottom":905},{"left":1257.953125,"top":853,"right":1340.84375,"bottom":905},{"left":1340.84375,"top":853,"right":1422.90625,"bottom":905},{"left":1422.90625,"top":853,"right":1480.15625,"bottom":905},{"left":1480.15625,"top":853,"right":1582.0625,"bottom":905},{"left":1582.0625,"top":853,"right":1715.671875,"bottom":905},{"left":330,"top":905,"right":404.921875,"bottom":957}]'
-    # location = json.loads(location)
-    # print("length of location:%d" % len(location))
     word_dict = {
-        "visual": ['a', 'b', 'c', 'd'],
-        "topic_relevant": ['a', 'f', 'e', 'c'],
-        "word_attention": ['b', 'e', 'c', 'd'],
-        "word_difficulty": ['b', 'e', 'c', 'd'],
+        "visual": ["a", "b", "c", "d"],
+        "topic_relevant": ["a", "f", "e", "c"],
+        "word_attention": ["b", "e", "c", "d"],
+        "word_difficulty": ["b", "e", "c", "d"],
     }
     similarity = calculate_similarity(word_dict=word_dict, level="word")
     identity = calculate_identity(word_dict=word_dict, level="word")
     # print(calculate_similarity(word_dict=word_dict, level="word"))
     # print(calculate_identity(word_dict=word_dict, level="word"))
     data_dict = [
-        {
-            "k": 5,
-            "similarity": similarity,
-            "identity": identity
-        },
-        {
-            "k": 10,
-            "similarity": similarity,
-            "identity": identity
-        },
-        {
-            "k": 20,
-            "similarity": similarity,
-            "identity": identity
-        },
-        {
-            "k": 30,
-            "similarity": similarity,
-            "identity": identity
-        },
-        {
-            "k": 40,
-            "similarity": similarity,
-            "identity": identity
-        },
+        {"k": 5, "similarity": similarity, "identity": identity},
+        {"k": 10, "similarity": similarity, "identity": identity},
+        {"k": 20, "similarity": similarity, "identity": identity},
+        {"k": 30, "similarity": similarity, "identity": identity},
+        {"k": 40, "similarity": similarity, "identity": identity},
     ]
     paint_bar_graph(data_dict=data_dict, attribute="identity")
     pass
