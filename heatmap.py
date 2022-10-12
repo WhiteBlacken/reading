@@ -10,7 +10,7 @@ pyHeatMap
 @link https://github.com/oldj/pyheatmap
 
 """
-
+import math
 from email import charset
 import os
 import random
@@ -142,12 +142,21 @@ class HeatMap(object):
 
         r = 240.0 / max_v
         heat_data2 = [int(i * r) - 1 for i in heat_data]
-
+        # heat_data2 = heat_data
         size = width * height
         _range = range if PY3 else xrange
+        max_1 = 0
         for p in _range(size):
             v = heat_data2[p]
+            if v > max_1:
+                max_1 = v
             if v > 0:
+                # """
+                # 新增
+                # """
+                # v = int(math.log(v, 2))
+                # '''
+                # '''
                 x, y = p % width, p // width
                 color = colors[v]
                 alpha = int(rr.findall(color)[0])
@@ -156,6 +165,8 @@ class HeatMap(object):
                     im.putpixel((x, y), (0, 0, 255, al))
                 else:
                     dr.point((x, y), fill=color)
+        print("max_1")
+        print(max_1)
 
     def __add_base(self):
         if not self.__im0:
@@ -197,7 +208,7 @@ class HeatMap(object):
 
         return data2
 
-    def heatmap(self, save_as=None, base=None, data=None, r=70):
+    def heatmap(self, save_as=None, base=None, data=None, r=40):
         u"""绘制热图"""
 
         self.__mk_img(base)
@@ -260,13 +271,12 @@ def test():
 
 
 def draw_heat_map(data, hit_pic_name, heatmap_name, base):
-
     # 开始绘制
     hm = HeatMap(data)
-    hm.clickmap(save_as=hit_pic_name, base=base)
+    # hm.clickmap(save_as=hit_pic_name, base=base)
     hm.heatmap(save_as=heatmap_name, base=base)
 
-    logger.info("heatmap已在该路径下生成:%s"%heatmap_name)
+    logger.info("heatmap已在该路径下生成:%s" % heatmap_name)
 
 
 if __name__ == "__main__":
