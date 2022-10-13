@@ -1042,12 +1042,11 @@ def apply_heatmap(background, data, heatmap_name, alpha, title):
 
 def find_threshold(df):
     d = df['color']
-    # Percentile = np.percentile(d, [0, 25, 50, 75, 100])
-    Percentile = np.percentile(d, [0, 40, 60, 70, 100])
+    Percentile = np.percentile(d, [0, 25, 50, 75, 100])
     IQR = Percentile[3] - Percentile[1]
     UpLimit = Percentile[3] + IQR * 1.5
     DownLimit = Percentile[1] - IQR * 1.5
-    return Percentile[1], Percentile[2], DownLimit, UpLimit
+    return Percentile[1], Percentile[3], Percentile[1], UpLimit
 
 
 # 处理两个图片的拼接

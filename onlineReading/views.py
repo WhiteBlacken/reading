@@ -1197,6 +1197,75 @@ def get_heatmap(request):
     heatmap_img = base_path + "visual.png"
     fixation_img = base_path + "fixation.png"
     join_two_image(heatmap_img, fixation_img, save_path)
+
+    """
+    将单词不懂和句子不懂输出
+    """
+    image = cv2.imread(background)
+    blk = np.zeros(image.shape, np.uint8)
+    alpha = 0.4  # 设置覆盖图片的透明度
+    # 走神与否
+    cv2.putText(
+        blk,
+        "is wander "+str(pageData.wanderLabels),  # text内容必须是str格式的
+        (300,30),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (0, 255, 0),
+        2,
+    )
+    # 单词 TODO 将这些整理为函数，复用
+    words_not_understand = json.loads(pageData.wordLabels)
+    color = 255
+    for word_index in words_not_understand:
+        loc = word_locations[word_index]
+        cv2.rectangle(
+            blk,
+            (int(loc[0]), int(loc[1])),
+            (int(loc[2]), int(loc[3])),
+            (color, 0, 0),
+            -1,
+        )
+    image = cv2.addWeighted(blk, alpha, image, 1 - alpha, 0)
+
+    import matplotlib.pyplot as plt
+
+    title = str(page_data_id) + "-" + exp.first().user + "-" + "words_not_understand"
+    plt.imshow(image)
+    plt.title(title)
+    plt.show()
+    heatmap_name = base_path + "words_not_understand" + ".png"
+    cv2.imwrite(heatmap_name, image)
+    logger.info("heatmap已经生成:%s" % heatmap_name)
+
+    # 句子
+    image = cv2.imread(background)
+    color = 255
+    alpha = 0.4  # 设置覆盖图片的透明度
+    blk = np.zeros(image.shape, np.uint8)
+    sentences_not_understand = json.loads(pageData.sentenceLabels)
+    for sentence in sentences_not_understand:
+        for i in range(sentence[0], sentence[1]):
+            # 此处i代表的是单词
+            loc = word_locations[i]
+            cv2.rectangle(
+                blk,
+                (int(loc[0]), int(loc[1])),
+                (int(loc[2]), int(loc[3])),
+                (color, 0, 0),
+                -1,
+            )
+    image = cv2.addWeighted(blk, alpha, image, 1 - alpha, 0)
+    import matplotlib.pyplot as plt
+
+    title = str(page_data_id) + "-" + str(exp.first().user) + "-" + "sentences_not_understand"
+    plt.imshow(image)
+    plt.title(title)
+    plt.show()
+    heatmap_name = base_path + "sentences_not_understand" + ".png"
+    cv2.imwrite(heatmap_name, image)
+    logger.info("heatmap已经生成:%s" % heatmap_name)
+
     """
     不同k值下similarity和identity的计算以及图示
     """
@@ -1529,7 +1598,7 @@ def get_visual_attention(
                 word_txt = word["word"]
                 min_dis = word["distance_to_heatspot"]
         top_dict["visual"].append(word_txt)
-
+    top_dict['visual'] = list(set(top_dict["visual"]))
     print(top_dict["visual"])
 
     # 将排序后的结果更换为word
