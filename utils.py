@@ -280,8 +280,8 @@ def paint_image(path, coordinates):
             (coordinate[0], coordinate[1]),
             cv2.FONT_HERSHEY_SIMPLEX,
 
-            0.4,
-            (128, 128, 0),
+            0.7,
+            (0, 255, 0),
 
             2,
         )

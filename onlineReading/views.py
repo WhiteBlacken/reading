@@ -1189,37 +1189,37 @@ def get_heatmap(request):
     top_dict = {}
     # nlp attention
     """
-    word level
-    1. 生成3张图片
-    2. 填充top_k
-    存在问题：图片不清晰
-    """
-    get_word_level_nlp_attention(
-        pageData.texts,
-        page_data_id,
-        top_dict,
-        background,
-        word_list,
-        word_locations,
-        exp.first().user,
-        base_path,
-    )
-    """
-    sentence level
-    --暂时没有内容，占个位置
-    """
-    top_sentence_dict = {}
-    # 生成图片
-    get_sentence_level_nlp_attention(
-        pageData.texts,
-        sentence_list,
-        background,
-        word_locations,
-        page_data_id,
-        top_sentence_dict,
-        exp.first().user,
-        base_path,
-    )
+    # word level
+    # 1. 生成3张图片
+    # 2. 填充top_k
+    # 存在问题：图片不清晰
+    # """
+    # get_word_level_nlp_attention(
+    #     pageData.texts,
+    #     page_data_id,
+    #     top_dict,
+    #     background,
+    #     word_list,
+    #     word_locations,
+    #     exp.first().user,
+    #     base_path,
+    # )
+    # """
+    # sentence level
+    # --暂时没有内容，占个位置
+    # """
+    # top_sentence_dict = {}
+    # # 生成图片
+    # get_sentence_level_nlp_attention(
+    #     pageData.texts,
+    #     sentence_list,
+    #     background,
+    #     word_locations,
+    #     page_data_id,
+    #     top_sentence_dict,
+    #     exp.first().user,
+    #     base_path,
+    # )
 
 
     """
@@ -1467,9 +1467,11 @@ def get_visual_attention(
         if row[2] < ther_low:
             hotpixel.append(np.array(row).tolist())
 
-    width = 1920
+    img = Image.open(background)
 
-    height = 1080
+    width = img.width
+
+    height = img.height
 
     # 搜索热斑的范围
     heatspots = []
@@ -1538,7 +1540,7 @@ def get_visual_attention(
         for pix in heat:
             for word in words:
                 word['distance_to_heatspot'].append(get_euclid_distance(word.get('x'), pix[0], word.get('y'), pix[1]))
-        min_dis = 0
+        min_dis = 100000
         word_id = -1
         word_txt = ""
         for word in words:
@@ -1546,8 +1548,10 @@ def get_visual_attention(
             if word['distance_to_heatspot'] < min_dis:
                 word_id = word['idx']
                 word_txt = word['word']
+                min_dis = word['distance_to_heatspot']
         top_dict['visual'].append(word_txt)
-        print(words)
+
+    print(top_dict['visual'])
 
     # 将排序后的结果更换为word
 
