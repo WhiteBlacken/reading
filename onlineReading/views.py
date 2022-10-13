@@ -1432,6 +1432,7 @@ def get_heatmap(request):
         'color': [x[2] for x in hotspot]
     })
     df.sort_values(by=['color'])
+
     # data_index = get_top_k(data_1, k=5000)
     top_k_hotspot = []  # [(1232, 85, 240), (1233, 85, 240)]
     for ind, row in df.iterrows():
@@ -1447,7 +1448,6 @@ def get_heatmap(request):
         word_index = get_word_by_one_gaze(word_locations, item)
         if word_index != -1:
             top_k.append(word_list[word_index])
-    print(top_k)
     new_top_k = list(set(top_k))
     new_top_k.sort(key=top_k.index)
 
@@ -1577,14 +1577,11 @@ def visual_attention(request):
         'y': [x[1] for x in hotspot],
         'color': [x[2] for x in hotspot]
     })
-    df.sort_values(by=['color'])
+    df = df.sort_values(by=['color'])
     # data_index = get_top_k(data_1, k=5000)
     top_k_hotspot = []  # [(1232, 85, 240), (1233, 85, 240)]
     for ind, row in df.iterrows():
-        if ind == 5000:
-            break
         top_k_hotspot.append(row)
-
     # for i, data in enumerate(hotspot):
     #     if i in data_index:
     #         top_k_hotspot.append(data)
@@ -1593,7 +1590,7 @@ def visual_attention(request):
         word_index = get_word_by_one_gaze(word_locations, item)
         if word_index != -1:
             top_k.append(word_list[word_index])
-    print(top_k)
+    # print(top_k)
     new_top_k = list(set(top_k))
     new_top_k.sort(key=top_k.index)
 

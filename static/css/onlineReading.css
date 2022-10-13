@@ -75,7 +75,7 @@ body{
     padding: 8px 8px;
     width: auto;
     height: auto;
-    border: 1px solid blue;
+    border-width: 0;
     display: inline;
     background: rgba(0,0,0,0);
     cursor: pointer;
