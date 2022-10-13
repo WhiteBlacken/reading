@@ -3,7 +3,7 @@ import json
 import math
 import os
 import datetime
-
+import cv2
 import numpy as np
 import requests
 from loguru import logger
@@ -1008,6 +1008,33 @@ def get_word_by_one_gaze(word_locations, gaze):
         if loc[0] < gaze[0] < loc[2] and loc[1] < gaze[1] < loc[3]:
             return i
     return -1
+
+
+def apply_heatmap(background, save_path, data):
+    import numpy as np
+    from PIL import Image
+    from pyheatmap.heatmap import HeatMap
+    import matplotlib.pyplot as plt
+
+    image = cv2.imread(background)
+    background = Image.new("RGB", (image.shape[1], image.shape[0]), color=0)
+    # 开始绘制热度图
+    hm = HeatMap(data)
+    hit_img = hm.heatmap(base=background, r=50)  # background为背景图片，r是半径，默认为10
+    hit_img = cv2.cvtColor(np.asarray(hit_img), cv2.COLOR_RGB2BGR)  # Image格式转换成cv2格式
+    overlay = image.copy()
+    alpha = 0.3  # 设置覆盖图片的透明度
+    cv2.rectangle(
+        overlay, (0, 0), (image.shape[1], image.shape[0]), (0, 0, 255), -1
+    )  # 设置蓝色为热度图基本色蓝色
+    image = cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0)  # 将背景热度图覆盖到原图
+    image = cv2.addWeighted(hit_img, alpha, image, 1 - alpha, 0)  # 将热度图覆盖到原图
+    logger.info("heatmap已在该路径下生成:%s" % save_path)
+    plt.imshow(image)
+    plt.show()
+    cv2.imwrite(save_path, image)
+
+
 
 
 if __name__ == "__main__":
