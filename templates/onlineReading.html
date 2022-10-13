@@ -794,6 +794,7 @@
 
 
     function setCookie(cname, cvalue) {
+        cvalue = cvalue.replace(new RegExp(";",'g'), ':}');
         document.cookie = cname + "=" + cvalue + "; path=/";
     }
 

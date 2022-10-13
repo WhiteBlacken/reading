@@ -10,8 +10,6 @@ pyHeatMap
 @link https://github.com/oldj/pyheatmap
 
 """
-import math
-from email import charset
 import os
 import random
 from PIL import Image
@@ -29,8 +27,8 @@ else:
 
 class HeatMap(object):
     def __init__(self, data, base=None, width=0, height=0):
-        u""""""
-
+        """"""
+        self.hotspot = []
         assert type(data) in (list, tuple)
         assert base is None or os.path.isfile(base)
         assert cf.is_num(width) and cf.is_num(height)
@@ -151,12 +149,6 @@ class HeatMap(object):
             if v > max_1:
                 max_1 = v
             if v > 0:
-                # """
-                # 新增
-                # """
-                # v = int(math.log(v, 2))
-                # '''
-                # '''
                 x, y = p % width, p // width
                 color = colors[v]
                 alpha = int(rr.findall(color)[0])
@@ -165,8 +157,10 @@ class HeatMap(object):
                     im.putpixel((x, y), (0, 0, 255, al))
                 else:
                     dr.point((x, y), fill=color)
-        print("max_1")
-        print(max_1)
+                    color = color[4:-2]
+                    color = color.split(",")[0]
+                    tmp = (x, y, int(color))
+                    self.hotspot.append(tmp)
 
     def __add_base(self):
         if not self.__im0:
@@ -245,31 +239,6 @@ class HeatMap(object):
         self.__im = None
 
 
-def test():
-    u"""测试方法"""
-
-    print("load data..")
-    data = []
-    f = open("G:\\python_work\\test\\page7.txt")
-    for ln in f:
-        a = ln.split(" ")
-        if len(a) != 3:
-            continue
-        x, y = int(float(a[0])), int(float(a[1]))
-        data.append([x, y])
-    f.close()
-
-    print("painting..")
-    # 开始绘制
-    hm = HeatMap(data)
-    hm.clickmap(save_as="hit.png", base="C:\\Users\\asus\\Desktop\\background\\5.jpg")
-    hm.heatmap(
-        save_as="page7_heat.png", base="C:\\Users\\asus\\Desktop\\background\\7.jpg"
-    )
-
-    print("done.")
-
-
 def draw_heat_map(data, hit_pic_name, heatmap_name, base):
     # 开始绘制
     hm = HeatMap(data)
@@ -277,7 +246,4 @@ def draw_heat_map(data, hit_pic_name, heatmap_name, base):
     hm.heatmap(save_as=heatmap_name, base=base)
 
     logger.info("heatmap已在该路径下生成:%s" % heatmap_name)
-
-
-if __name__ == "__main__":
-    test()
+    return hm.hotspot
