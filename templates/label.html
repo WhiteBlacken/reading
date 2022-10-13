@@ -73,6 +73,7 @@
             misUnderstandWordsLabel: [],
             wordLocation: 0,
             radio: 0,
+            paraLoc: [],
         },
         methods: {
             getWordLocation: function (num) {
@@ -173,6 +174,14 @@
                 console.log(this.labels[this.page-1].wanderLabels)
             },
 
+            isInArr: function (num, arr) {
+                for (let i = 0; i < arr.length; i++) {
+                    if(arr[i] == num)
+                        return true;
+                }
+                return false;
+            },
+
             getPage: function () {
                 let num = 0;
                 var e = document.getElementById('para');
@@ -195,6 +204,16 @@
                                 el.innerHTML = sentence[j] + '.';
                             }
                             num += 1;
+                            if(this.isInArr(num - 1,this.paraLoc[this.page-1])) {
+                                el = document.createElement("button");
+                                el.className = "fillLine";
+                                let width = e.getBoundingClientRect().right - document.getElementById(num - 1 + '').getBoundingClientRect().right - 1;
+                                let height = document.getElementById(num - 1 + '').getBoundingClientRect().bottom -
+                                            document.getElementById(num - 1 + '').getBoundingClientRect().top - 17;
+                                el.style.width = width + "px";
+                                el.style.height = height + "px";
+                                e.appendChild(el);
+                            }
                         }
                     }
                 }
@@ -281,7 +300,11 @@
         },
         created() {
             this.content = getCookie('contentPerPage').replace(new RegExp(":}","g"), ";").split('-.');
-            console.log(this.content)
+            let paraLoc = getCookie('paraLoc').split('|');
+            for(let i = 0; i < paraLoc.length; i++) {
+                this.paraLoc.push(paraLoc[i].split(','));
+            }
+            console.log(this.paraLoc)
             this.totalPage = this.content.length;
             this.getPage();
         },
