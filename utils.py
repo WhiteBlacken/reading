@@ -258,7 +258,7 @@ def paint_image(path, coordinates):
     img = cv2.imread(path)
     cnt = 0
     pre_coordinate = (0, 0, 0)
-    for coordinate in coordinates:
+    for i,coordinate in enumerate(coordinates):
         cv2.circle(
             img,
             (coordinate[0], coordinate[1]),
@@ -275,18 +275,19 @@ def paint_image(path, coordinates):
                 2,
             )
         cnt = cnt + 1
-        # 标序号
-        cv2.putText(
-            img,
-            str(cnt),
-            (coordinate[0], coordinate[1]),
-            cv2.FONT_HERSHEY_SIMPLEX,
+        if cnt%5 == 0:
+            # 标序号 间隔着标序号
+            cv2.putText(
+                img,
+                str(cnt),
+                (coordinate[0], coordinate[1]),
+                cv2.FONT_HERSHEY_SIMPLEX,
 
-            0.7,
-            (0, 255, 0),
+                0.7,
+                (0, 255, 0),
 
-            2,
-        )
+                2,
+            )
         pre_coordinate = coordinate
     cv2.imwrite(path, img)
 
@@ -977,7 +978,7 @@ def paint_bar_graph(data_dict, attribute="similarity"):
     ax.set_xticks(x + width / 2)
     ax.set_xticklabels(x_labels)
 
-    plt.ylim(0, 1)
+    plt.ylim(0, 0.5)
 
     # 标注X轴，标注Y轴
     # plt.xlabel("groups")
@@ -1045,11 +1046,11 @@ def find_threshold(df):
     IQR = Percentile[3] - Percentile[1]
     UpLimit = Percentile[3] + IQR * 1.5
     DownLimit = Percentile[1] - IQR * 1.5
-    return Percentile[1], Percentile[2], DownLimit, UpLimit
+    return Percentile[1], Percentile[3], Percentile[1], UpLimit
 
 
 # 处理两个图片的拼接
-def join_two_image(img_1, img_2, save_path, save_name, flag='horizontal'):  # 默认是水平参数
+def join_two_image(img_1, img_2, save_path, flag='horizontal'):  # 默认是水平参数
     # 1、首先使用open创建Image对象，open()需要图片的路径作为参数
     # 2、然后获取size，size[0]代表宽，size[1]代表长，分别代表坐标轴的x,y
     # 3、使用Image.new创建一个新的对象
@@ -1063,7 +1064,7 @@ def join_two_image(img_1, img_2, save_path, save_name, flag='horizontal'):  # �
         loc1, loc2 = (0, 0), (size1[0], 0)
         joint.paste(img1, loc1)
         joint.paste(img2, loc2)
-        joint.save(save_path + '/' + save_name)
+        joint.save(save_path)
 
 
 if __name__ == "__main__":
