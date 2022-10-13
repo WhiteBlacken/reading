@@ -3,6 +3,7 @@ import json
 import random
 
 import cv2
+from PIL import Image
 from django.core import serializers
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
@@ -61,7 +62,8 @@ from utils import (
     get_word_by_one_gaze,
     calculate_similarity,
     calculate_identity,
-    paint_bar_graph, apply_heatmap
+    paint_bar_graph,
+    apply_heatmap,
 )
 
 
@@ -118,8 +120,8 @@ def get_paragraph_and_translation(request):
                 starttime = datetime.datetime.now()
                 translations = (
                     Translation.objects.filter(article_id=article_id)
-                        .filter(para_id=para)
-                        .filter(sentence_id=sentence_id)
+                    .filter(para_id=para)
+                    .filter(sentence_id=sentence_id)
                 )
                 if translations:
                     sentence_zh = translations.first().txt
@@ -1109,32 +1111,32 @@ def get_visual_heatmap(request):
     else:
         username = exp.first().user
         base = (
-                "static\\background\\"
-                + str(exp.first().article_id)
-                + "\\"
-                + str(pageData.page)
-                + ".jpg"
+            "static\\background\\"
+            + str(exp.first().article_id)
+            + "\\"
+            + str(pageData.page)
+            + ".jpg"
         )
 
     hit_pic_name = (
-            "static\\data\\heatmap\\"
-            + str(username)
-            + "\\visual"
-            + "\\hit_"
-            + str(page_data_id)
-            + "_"
-            + str(kernel_size)
-            + ".png"
+        "static\\data\\heatmap\\"
+        + str(username)
+        + "\\visual"
+        + "\\hit_"
+        + str(page_data_id)
+        + "_"
+        + str(kernel_size)
+        + ".png"
     )
     heatmap_name = (
-            "static\\data\\heatmap\\"
-            + str(username)
-            + "\\visual"
-            + "\\heatmap_"
-            + str(page_data_id)
-            + "_"
-            + str(kernel_size)
-            + ".png"
+        "static\\data\\heatmap\\"
+        + str(username)
+        + "\\visual"
+        + "\\heatmap_"
+        + str(page_data_id)
+        + "_"
+        + str(kernel_size)
+        + ".png"
     )
     draw_heat_map(coordinates, hit_pic_name, heatmap_name, base)
 
@@ -1145,117 +1147,9 @@ def test_motion(request):
     return render(request, "test_motion.html")
 
 
-def get_nlp_heatmap(request):
-    """
-    绘制text attention
-    :param request:
-    :return:
-    """
-    # 1. 获取文本数据
-    page_data_id = request.GET.get("id")
-    pageData = PageData.objects.get(id=page_data_id)
-
-    # 2. 调用文本分析的接口
-    atention_type = int(request.GET.get("type", 0))
-    if atention_type == 0:
-        # 单词在文中的重要性
-        attention = get_importance(pageData.texts)
-    elif atention_type == 1:
-        # 单词之间的attention
-        attention = generate_word_attention(pageData.texts)
-    elif atention_type == 2:
-        # 应该要是句子之间的attention
-        attention = generate_sentence_attention(pageData.texts)
-        print(attention)
-        return HttpResponse(1)
-    elif atention_type == 3:
-        # 难度
-        attention = generate_word_difficulty(pageData.texts)
-        print("hard word--")
-        for at in attention:
-            if at[1] >= 1:
-                print(at[0])
-        print("hard word end")
-    else:
-        attention = []
-    print("attention")
-    print(attention)
-
-    # 3. 获取单词的位置
-    word_index = get_word_by_index(pageData.texts)
-    print("word_index")
-    print(len(word_index))
-    word_and_location_dict = get_word_and_location(pageData.location)
-
-    gaze_x = []
-    gaze_y = []
-    importance_list = [x for x in attention if x[1] > 0]
-
-    importance_list.sort(reverse=True)
-
-    # 数量多为 0.000x，将其最大的数扩大至100
-    tmp = 1
-    if importance_list:
-        while importance_list[0][1] * tmp < 10:
-            tmp = tmp * 10
-    print("放大倍数是:%d" % tmp)
-
-    for importance in importance_list:
-        word_indexes = get_index_by_word(pageData.texts, importance[0].lower())  # list
-        for word_index in word_indexes:
-            if word_index in word_and_location_dict.keys():
-                loc = word_and_location_dict[word_index]
-                for i in range(int(importance[1] * tmp)):
-                    gaze_x.append(random.randint(int(loc[0]), int(loc[2])))
-                    gaze_y.append(random.randint(int(loc[1]), int(loc[3]) - 10))
-    # gaze_x = preprocess_data(gaze_x, 7)
-    # gaze_y = preprocess_data(gaze_y, 7)
-    gaze_x = list(map(int, gaze_x))
-    gaze_y = list(map(int, gaze_y))
-
-    # 组合数据
-    coordinates = []
-    for i in range(len(gaze_x)):
-        coordinate = [gaze_x[i], gaze_y[i]]
-        coordinates.append(coordinate)
-
-    exp = Experiment.objects.filter(id=pageData.experiment_id)
-    if not exp:
-        username = "tmp_text"
-        base = "static\\background\\" + str(request.GET.get("background")) + ".jpg"
-    else:
-        username = exp.first().user
-        base = (
-                "static\\background\\"
-                + str(exp.first().article_id)
-                + "\\"
-                + str(pageData.page)
-                + ".jpg"
-        )
-
-    hit_pic_name = (
-            "static\\data\\heatmap\\"
-            + str(username)
-            + "\\nlp_"
-            + str(atention_type)
-            + "\\hit_"
-            + str(page_data_id)
-            + ".png"
-    )
-    heatmap_name = (
-            "static\\data\\heatmap\\"
-            + str(username)
-            + "\\nlp_"
-            + str(atention_type)
-            + "\\heatmap_"
-            + str(page_data_id)
-            + ".png"
-    )
-    draw_heat_map(coordinates, hit_pic_name, heatmap_name, base)
-    return JsonResponse({"code": 200, "status": "success", "pic_path": heatmap_name})
-
 def takeSecond(elem):
     return elem[1]
+
 
 def get_heatmap(request):
     """
@@ -1276,68 +1170,151 @@ def get_heatmap(request):
     exp = Experiment.objects.filter(id=pageData.experiment_id)
 
     base_path = (
-            "static\\data\\heatmap\\"
-            + str(exp.first().user)
-            + "\\"
-            + str(page_data_id)
-            + "\\"
+        "static\\data\\heatmap\\"
+        + str(exp.first().user)
+        + "\\"
+        + str(page_data_id)
+        + "\\"
     )
-    backgound = (
-            "static\\background\\"
-            + str(exp.first().article_id)
-            + "\\"
-            + str(pageData.page)
-            + ".jpg"
+    background = (
+        "static\\background\\"
+        + str(exp.first().article_id)
+        + "\\"
+        + str(pageData.page)
+        + ".jpg"
     )
 
     top_dict = {}
     # nlp attention
 
-    """word level"""
+    """
+    word level
+    1. 生成3张图片
+    2. 填充top_k
+    存在问题：图片不清晰
+    """
+    get_word_level_nlp_attention(
+        pageData.texts,
+        page_data_id,
+        top_dict,
+        background,
+        word_list,
+        word_locations,
+        exp.first().user,
+        base_path
+    )
+    """
+    sentence level
+    --暂时没有内容，占个位置
+    """
+    get_sentence_level_nlp_attention()
+    """
+    visual attention
+    1. 生成2张图片：heatmap + fixation
+    2. 填充top_k
+    存在问题：个别top不对应、生成top和展示图片实际上做了两个heatmap
+    """
+    # 滤波处理
+    kernel_size = int(request.GET.get("window", 0))
+    get_visual_attention(
+        page_data_id,
+        exp.first().user,
+        pageData.gaze_x,
+        pageData.gaze_y,
+        pageData.gaze_t,
+        kernel_size,
+        background,
+        base_path,
+        word_list,
+        word_locations,
+        top_dict,
+    )
+
+    """
+    不同k值下similarity和identity的计算以及图示
+    """
+    k_list = [5, 10, 15, 20, 30]
+    top_list = []
+    k_dict = {}
+    pic_list = []
+    for k in k_list:
+
+        attention_type = {}
+        for key in top_dict.keys():
+            attention_type[key] = top_dict[key][0:k]
+        k_dict[k] = attention_type
+
+        pic_dict = {
+            "k": k,
+            # "similarity": calculate_similarity(attention_type),
+            # "identity": calculate_identity(attention_type),
+        }
+        pic_list.append(pic_dict)
+
+    top_list.append(k_dict)
+
+    # paint_bar_graph(pic_list, "similarity")
+    # paint_bar_graph(pic_list, "identity")
+    return JsonResponse(top_list, json_dumps_params={"ensure_ascii": False}, safe=False)
+
+
+def get_word_level_nlp_attention(
+    texts, page_data_id, top_dict, background, word_list, word_locations, username,base_path
+):
+    logger.info("word level attention正在分析....")
     nlp_attentions = ["topic_relevant", "word_attention", "word_difficulty"]
-    # nlp_attentions = []
     for attention in nlp_attentions:
         data_list = [[]]
         # 获取数据
         if attention == "topic_relevant":
-            data_list = get_importance(pageData.texts)  # [('word',1)]
+            data_list = get_importance(texts)  # [('word',1)]
         if attention == "word_attention":
-            data_list = generate_word_attention(pageData.texts)
+            data_list = generate_word_attention(texts)
         if attention == "word_difficulty":
-            data_list = generate_word_difficulty(pageData.texts)
+            data_list = generate_word_difficulty(texts)
 
-        data_list.sort(reverse=True,key=takeSecond)
+        data_list.sort(reverse=True, key=takeSecond)
 
         print(data_list)
         top_dict[attention] = [x[0] for x in data_list]
 
-        image = cv2.imread(backgound)
+        image = cv2.imread(background)
         color = 255
-        print(word_list)
+        alpha = 0.2  # 设置覆盖图片的透明度
+        blk = np.zeros(image.shape, np.uint8)
         for data in data_list:
             # 该单词在页面上是否存在
             index_list = []
             for i, word in enumerate(word_list):
                 if data[0].lower() == word.lower():
-                    if attention == "word_attention":
-                        print(word)
                     index_list.append(i)
             for index in index_list:
                 loc = word_locations[index]
-                cv2.rectangle(image, (int(loc[0]), int(loc[1])), (int(loc[2]), int(loc[3])),(color,0,0), 10)
+                cv2.rectangle(
+                    blk,
+                    (int(loc[0]), int(loc[1])),
+                    (int(loc[2]), int(loc[3])),
+                    (color, 0, 0),
+                    -1,
+                )
             color = color - 15
             if color - 5 < 50:
                 break
+        image = cv2.addWeighted(blk, alpha, image, 1 - alpha, 0)
 
         import matplotlib.pyplot as plt
 
-        heatmap_name = base_path + str(attention) + ".png"
+        title = str(page_data_id) + "-" + str(username) + "-" + str(attention)
         plt.imshow(image)
-        plt.title(heatmap_name)
+        plt.title(title)
         plt.show()
-        logger.info("heatmap已在该路径下生成:%s" % heatmap_name)
+        heatmap_name = base_path + str(attention) +".png"
+        cv2.imwrite(heatmap_name,image)
+        logger.info("heatmap已经生成:%s" % heatmap_name)
 
 
+def get_sentence_level_nlp_attention():
+    logger.info("sentence level attention正在分析....")
     # """sentence level"""
     # sentence_relation = generate_sentence_attention(pageData.texts.replace("..", ". "))
     # top_k = topk_tuple(sentence_relation, k=2)
@@ -1370,22 +1347,37 @@ def get_heatmap(request):
     #
     # heatmap_name = base_path + "sentence_relation" + ".png"
     # apply_heatmap(backgound, heatmap_name, coordinates)
-    '''
->>>>>>> d6715d8 (save work)
-    # visual attention
-    list_x = list(map(float, pageData.gaze_x.split(",")))
-    list_y = list(map(float, pageData.gaze_y.split(",")))
-    list_t = list(map(float, pageData.gaze_t.split(",")))
+    pass
 
-    # 滤波处理
-    kernel_size = int(request.GET.get("window", 0))
+
+def get_visual_attention(
+    page_data_id,
+    username,
+    gaze_x,
+    gaze_y,
+    gaze_t,
+    kernel_size,
+    background,
+    base_path,
+    word_list,
+    word_locations,
+    top_dict,
+):
+    logger.info("visual attention正在分析....")
+
+    """
+    1. 清洗数据
+    """
+    list_x = list(map(float, gaze_x.split(",")))
+    list_y = list(map(float, gaze_y.split(",")))
+    list_t = list(map(float, gaze_t.split(",")))
+
     if kernel_size != 0:
         # 滤波
         list_x = preprocess_data(list_x, kernel_size)
         list_y = preprocess_data(list_y, kernel_size)
 
-        # 3. 组合数据
-        # 滤波完是浮点数，需要转成int
+    # 滤波完是浮点数，需要转成int
     list_x = list(map(int, list_x))
     list_y = list(map(int, list_y))
     # 组合
@@ -1393,201 +1385,30 @@ def get_heatmap(request):
     for i in range(len(list_x)):
         coordinate = [list_x[i], list_y[i]]
         coordinates.append(coordinate)
-
-    # 生成热力图
+    """
+    2. 计算top_k
+    为了拿到热斑的位置，生成了一次heatmap
+    """
     heatmap_name = base_path + "visual.png"
-    apply_heatmap(backgound,heatmap_name,coordinates)
+    # 计算top_k
+    hotspot = draw_heat_map(coordinates, heatmap_name, background)
 
-    hotspot = draw_heat_map(coordinates,heatmap_name,heatmap_name,backgound)
-    # 去计算所有的gaze点
-    words_cnt = [0 for x in word_list]
-    for coordinate in coordinates:
-        word_index = get_word_by_one_gaze(word_locations, coordinate)
-        if word_index != -1:
-            words_cnt[word_index] += 1
-
-    round = 50
-    to_be_deleted = [0 for x in word_list]
-    top_k = []
-    # while round:
-    #     max_cnt = -1
-    #     max_index = -1
-    #     for i, cnt in enumerate(words_cnt):
-    #         if cnt > max_cnt and to_be_deleted[i] == 0 and word_list[i] not in top_k:
-    #             max_cnt = cnt
-    #             max_index = i
-    #     if max_index == -1:
-    #         break
-    #     to_be_deleted[max_index] = 1
-    #     top_k.append(word_list[max_index])
-    #     round -= 1
-    #
-    # top_dict["visual"] = top_k
-
-    # 获取top_k
-    # data_1 = [x for x in hotspot]
-    df = pd.DataFrame({
-        'x': [x[0] for x in hotspot],
-        'y': [x[1] for x in hotspot],
-        'color': [x[2] for x in hotspot]
-    })
-    df.sort_values(by=['color'])
-
-    # data_index = get_top_k(data_1, k=5000)
-    top_k_hotspot = []  # [(1232, 85, 240), (1233, 85, 240)]
-
-    for ind, row in df.iterrows():
-        if ind == 5000:
-            break
-        top_k_hotspot.append(row)
-
-    # for i, data in enumerate(hotspot):
-    #     if i in data_index:
-    #         top_k_hotspot.append(data)
-    top_k = []
-    for item in top_k_hotspot:
-        word_index = get_word_by_one_gaze(word_locations, item)
-        if word_index != -1:
-            top_k.append(word_list[word_index])
-    print(top_k)
-    new_top_k = list(set(top_k))
-    new_top_k.sort(key=top_k.index)
-
-    top_dict['visual'] = new_top_k
-    # 生成fixation图示
-    coordinates = []
-    for i in range(len(list_x)):
-        coordinate = [list_x[i], list_y[i], list_t[i]]
-        coordinates.append(coordinate)
-    fixations = get_fixations(coordinates)
-    fixation_image(
-        pageData.image,
-        Experiment.objects.get(id=pageData.experiment_id).user,
-        fixations,
-        pageData.id,
-    )
-    '''
-    k_list = [5, 10, 15, 20, 30]
-    top_list = []
-    k_dict = {}
-    pic_list = []
-    for k in k_list:
-
-        attention_type = {}
-        for key in top_dict.keys():
-            attention_type[key] = top_dict[key][0:k]
-        k_dict[k] = attention_type
-
-        pic_dict = {
-            "k": k,
-            # "similarity": calculate_similarity(attention_type),
-            # "identity": calculate_identity(attention_type),
+    df = pd.DataFrame(
+        {
+            "x": [x[0] for x in hotspot],
+            "y": [x[1] for x in hotspot],
+            "color": [x[2] for x in hotspot],
         }
-        pic_list.append(pic_dict)
-
-    top_list.append(k_dict)
-
-    # paint_bar_graph(pic_list, "similarity")
-    # paint_bar_graph(pic_list, "identity")
-
-    return JsonResponse(top_list, json_dumps_params={"ensure_ascii": False}, safe=False)
-
-def visual_attention(request):
-    page_data_id = request.GET.get("id")
-    pageData = PageData.objects.get(id=page_data_id)
-    # 准备工作，获取单词和句子的信息
-    word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
-    # 获取单词和句子的位置
-    word_locations = get_word_location(
-        pageData.location
-    )  # [(left,top,right,bottom),(left,top,right,bottom)]
-    sentence_locations = get_sentence_location(pageData.location, sentence_list)
-    # 获取图片生成的路径
-    exp = Experiment.objects.filter(id=pageData.experiment_id)
-
-    base_path = (
-            "static\\data\\heatmap\\"
-            + str(exp.first().user)
-            + "\\"
-            + str(page_data_id)
-            + "\\"
     )
-    backgound = (
-            "static\\background\\"
-            + str(exp.first().article_id)
-            + "\\"
-            + str(pageData.page)
-            + ".jpg"
-    )
-    top_dict = {}
-    # visual attention
-    list_x = list(map(float, pageData.gaze_x.split(",")))
-    list_y = list(map(float, pageData.gaze_y.split(",")))
-    list_t = list(map(float, pageData.gaze_t.split(",")))
 
-    # 滤波处理
-    kernel_size = int(request.GET.get("window", 0))
-    if kernel_size != 0:
-        # 滤波
-        list_x = preprocess_data(list_x, kernel_size)
-        list_y = preprocess_data(list_y, kernel_size)
+    # 将坐标按color排序
+    df = df.sort_values(by=["color"])
 
-        # 3. 组合数据
-        # 滤波完是浮点数，需要转成int
-    list_x = list(map(int, list_x))
-    list_y = list(map(int, list_y))
-    # 组合
-    coordinates = []
-    for i in range(len(list_x)):
-        coordinate = [list_x[i], list_y[i]]
-        coordinates.append(coordinate)
-
-    # 生成热力图
-    heatmap_name = base_path + "visual.png"
-    # apply_heatmap(backgound, heatmap_name, coordinates)
-
-    hotspot = draw_heat_map(coordinates, heatmap_name, heatmap_name, backgound)
-    # 去计算所有的gaze点
-    words_cnt = [0 for x in word_list]
-    for coordinate in coordinates:
-        word_index = get_word_by_one_gaze(word_locations, coordinate)
-        if word_index != -1:
-            words_cnt[word_index] += 1
-
-    round = 50
-    to_be_deleted = [0 for x in word_list]
-    top_k = []
-    # while round:
-    #     max_cnt = -1
-    #     max_index = -1
-    #     for i, cnt in enumerate(words_cnt):
-    #         if cnt > max_cnt and to_be_deleted[i] == 0 and word_list[i] not in top_k:
-    #             max_cnt = cnt
-    #             max_index = i
-    #     if max_index == -1:
-    #         break
-    #     to_be_deleted[max_index] = 1
-    #     top_k.append(word_list[max_index])
-    #     round -= 1
-    #
-    # top_dict["visual"] = top_k
-
-    # 获取top_k
-    # data_1 = [x for x in hotspot]
-    df = pd.DataFrame({
-        'x': [x[0] for x in hotspot],
-        'y': [x[1] for x in hotspot],
-        'color': [x[2] for x in hotspot]
-    })
-
-    df = df.sort_values(by=['color'])
-    # data_index = get_top_k(data_1, k=5000)
     top_k_hotspot = []  # [(1232, 85, 240), (1233, 85, 240)]
     for ind, row in df.iterrows():
         top_k_hotspot.append(row)
-    # for i, data in enumerate(hotspot):
-    #     if i in data_index:
-    #         top_k_hotspot.append(data)
+
+    # 将排序后的结果更换为word
     top_k = []
     for item in top_k_hotspot:
         word_index = get_word_by_one_gaze(word_locations, item)
@@ -1597,41 +1418,26 @@ def visual_attention(request):
     new_top_k = list(set(top_k))
     new_top_k.sort(key=top_k.index)
 
-    top_dict['visual'] = new_top_k
+    top_dict["visual"] = new_top_k
+
+    """
+    3. 生成热力图
+    为了半透明，再次生成了一次heatmap
+    """
+    # 生成热力图
+    heatmap_name = base_path + "visual.png"
+    title = str(page_data_id) + "-" + str(username) + "-" + "visual"
+    apply_heatmap(background, coordinates, heatmap_name, 0.3, title)
+
     # 生成fixation图示
-    coordinates = []
-    for i in range(len(list_x)):
-        coordinate = [list_x[i], list_y[i], list_t[i]]
-        coordinates.append(coordinate)
-    fixations = get_fixations(coordinates)
-    fixation_image(
-        pageData.image,
-        Experiment.objects.get(id=pageData.experiment_id).user,
-        fixations,
-        pageData.id,
-    )
-
-    k_list = [5, 10, 15, 20, 30]
-    top_list = []
-    k_dict = {}
-    pic_list = []
-    for k in k_list:
-
-        attention_type = {}
-        for key in top_dict.keys():
-            attention_type[key] = top_dict[key][0:k]
-        k_dict[k] = attention_type
-
-        pic_dict = {
-            "k": k,
-            # "similarity": calculate_similarity(attention_type),
-            # "identity": calculate_identity(attention_type),
-        }
-        pic_list.append(pic_dict)
-
-    top_list.append(k_dict)
-
-    # paint_bar_graph(pic_list, "similarity")
-    # paint_bar_graph(pic_list, "identity")
-
-    return JsonResponse(top_list, json_dumps_params={"ensure_ascii": False}, safe=False)
+    # coordinates = []
+    # for i in range(len(list_x)):
+    #     coordinate = [list_x[i], list_y[i], list_t[i]]
+    #     coordinates.append(coordinate)
+    # fixations = get_fixations(coordinates)
+    # fixation_image(
+    #     pageData.image,
+    #     Experiment.objects.get(id=pageData.experiment_id).user,
+    #     fixations,
+    #     pageData.id,
+    # )
