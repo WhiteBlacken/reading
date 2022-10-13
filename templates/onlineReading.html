@@ -419,10 +419,9 @@
                                 el.className = "fillLine";
                                 let width = e.getBoundingClientRect().right - document.getElementById(num + k - 1 + '').getBoundingClientRect().right - 17;
                                 let height = document.getElementById(num + k - 1 + '').getBoundingClientRect().bottom -
-                                            document.getElementById(num + k - 1 + '').getBoundingClientRect().top - 1;
+                                            document.getElementById(num + k - 1 + '').getBoundingClientRect().top - 3;
                                 el.style.width = width + "px";
                                 el.style.height = height + "px";
-                                el.style.marginLeft = "1px";
                                 e.appendChild(el);
                                 words.splice(k,1);
                                 this.paraLoc[this.contentPerPage.length].push(num + k - 1);
@@ -456,27 +455,15 @@
                                     transPerPage.push(tr[k]);
                                 }
                             }
-                            for (let k = num; k < num + words.length; k++) {
-                                if(words[k-num] != '"' || words[k-num] != '”'){
-                                    locPerPage.push(this.getWordLocation(k));
-                                    console.log(words[k-num]);
-                                }
-
-                                else
-                                    console.log("xxx")
-                            }
-
                             num += words.length;
-
                             wordLength += words.length;
 
                         }
 
                     }
-                    this.buttonLocPerPage.push(locPerPage);
                     this.transPerPage.push(transPerPage);
                     this.contentPerPage.push(conPerPage.join('.') + ".");
-                    console.log(this.buttonLocPerPage);
+
                 }
 
                 while (e.children[0])
@@ -647,8 +634,17 @@
                         }
                     }
                 }
-
-                height += e.getBoundingClientRect().bottom - e.getBoundingClientRect().top;
+                let i = 0;
+                let buttonLocCurPage = [];
+                while(document.getElementsByClassName('word')[i]) {
+                    if(document.getElementsByClassName('word')[i].innerHTML != '"' && document.getElementsByClassName('word')[i].innerHTML != '“')
+                        buttonLocCurPage.push(this.getWordLocation(i));
+                    i++;
+                }
+                this.buttonCurLoc = buttonLocCurPage;
+                if(!this.buttonLocPerPage[this.page-1])
+                    this.buttonLocPerPage.push(buttonLocCurPage);
+                {#height += e.getBoundingClientRect().bottom - e.getBoundingClientRect().top;#}
                 {#this.getWanderRemind();#}
             },
 
