@@ -1329,7 +1329,6 @@ def get_heatmap(request):
             if color - 5 < 50:
                 break
 
-
         import matplotlib.pyplot as plt
 
         heatmap_name = base_path + str(attention) + ".png"
@@ -1338,39 +1337,38 @@ def get_heatmap(request):
         plt.show()
         logger.info("heatmap已在该路径下生成:%s" % heatmap_name)
 
-
     """sentence level"""
-    sentence_relation = generate_sentence_attention(pageData.texts.replace("..", ". "))
-    top_k = topk_tuple(sentence_relation, k=2)
-
-    # top_dict["sentence_relation"] = top_k
-    loc_x = []
-    loc_y = []
-
-    # 数量多为 0.000x，将其最大的数扩大至100
-    tmp = 1
-    if sentence_relation:
-        while top_k[0][1] * tmp < 10:
-            tmp = tmp * 10
-    print("放大倍数是:%d" % tmp)
-
-    for i, sentence in enumerate(sentence_relation):
-        for loc in sentence_locations[i]:
-            for j in range(int(sentence[1] * tmp)):
-                loc_x.append(random.randint(int(loc[0]), int(loc[2])))
-                loc_y.append(random.randint(int(loc[1]), int(loc[3])))
-
-    loc_x = list(map(int, loc_x))
-    loc_y = list(map(int, loc_y))
-
-    # 组合数据
-    coordinates = []
-    for i in range(len(loc_x)):
-        coordinate = [loc_x[i], loc_y[i]]
-        coordinates.append(coordinate)
-
-    heatmap_name = base_path + "sentence_relation" + ".png"
-    apply_heatmap(backgound, heatmap_name, coordinates)
+    # sentence_relation = generate_sentence_attention(pageData.texts.replace("..", ". "))
+    # top_k = topk_tuple(sentence_relation, k=2)
+    #
+    # # top_dict["sentence_relation"] = top_k
+    # loc_x = []
+    # loc_y = []
+    #
+    # # 数量多为 0.000x，将其最大的数扩大至100
+    # tmp = 1
+    # if sentence_relation:
+    #     while top_k[0][1] * tmp < 10:
+    #         tmp = tmp * 10
+    # print("放大倍数是:%d" % tmp)
+    #
+    # for i, sentence in enumerate(sentence_relation):
+    #     for loc in sentence_locations[i]:
+    #         for j in range(int(sentence[1] * tmp)):
+    #             loc_x.append(random.randint(int(loc[0]), int(loc[2])))
+    #             loc_y.append(random.randint(int(loc[1]), int(loc[3])))
+    #
+    # loc_x = list(map(int, loc_x))
+    # loc_y = list(map(int, loc_y))
+    #
+    # # 组合数据
+    # coordinates = []
+    # for i in range(len(loc_x)):
+    #     coordinate = [loc_x[i], loc_y[i]]
+    #     coordinates.append(coordinate)
+    #
+    # heatmap_name = base_path + "sentence_relation" + ".png"
+    # apply_heatmap(backgound, heatmap_name, coordinates)
 
     # visual attention
     list_x = list(map(float, pageData.gaze_x.split(",")))
@@ -1435,6 +1433,7 @@ def get_heatmap(request):
 
     # data_index = get_top_k(data_1, k=5000)
     top_k_hotspot = []  # [(1232, 85, 240), (1233, 85, 240)]
+
     for ind, row in df.iterrows():
         if ind == 5000:
             break
