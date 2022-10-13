@@ -15,6 +15,8 @@ from onlineReading import settings
 
 import matplotlib.pyplot as plt
 
+from sklearn.cluster import KMeans
+
 
 def get_fixations(coordinates):
     """
@@ -1035,6 +1037,29 @@ def apply_heatmap(background, save_path, data):
     cv2.imwrite(save_path, image)
 
 
+def find_threshold(K=20, dutyCycle=[]):
+    # clustering, test with kmeans first, then GMM
+    clusters = KMeans(n_clusters=K, random_state=0).fit(dutyCycle)
+    print('clusters', clusters)
+    centroids = clusters.cluster_centers_
+    # fault identification - sort centroids
+    sortedIdx = np.argsort(centroids, axis=0, kind='mergesort')
+    sortedCentroids = centroids[sortedIdx]
+    # fault identification - find gap
+    diff2 = np.diff(sortedCentroids, n=2, axis=0)
+    diff2 = diff2.reshape((1, K - 2))
+    peakind = signal.find_peaks_cwt(diff2[0], np.arange(1, totalVString))
+    # if works, why this parameter
+    gap = sortedCentroids[peakind[0] + 2]  # offset by 1
+    # for all dutyCycle greater than gap, reported as fault
+    fault = np.greater(dutyCycle, gap)
+    # construct table and report day by day
+    dayStrings['stringName'] = stringName
+    dayStrings['dt'] = dutyCycle
+    dayStrings['cluster'] = clusters.labels_
+    dayStrings['fault'] = fault
+    # write to file report
+    dayStrings.to_csv(reportPath + dayId + '.csv')
 
 
 if __name__ == "__main__":

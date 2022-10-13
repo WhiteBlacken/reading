@@ -72,6 +72,7 @@
             transPerPage: [],
             buttonLocPerPage: [],
             buttonCurLoc: [],
+            wordTextLocPerPage: [],
             words: [],
             page: 1,
             totalPage: 1,
@@ -100,10 +101,10 @@
 
             getWordTextLocation: function (num) {
                 return {
-                    left: document.getElementsByClassName('word')[num].getBoundingClientRect().left + 7,
-                    top: document.getElementsByClassName('word')[num].getBoundingClientRect().top + 98,
-                    right: document.getElementsByClassName('word')[num].getBoundingClientRect().right - 7,
-                    bottom: document.getElementsByClassName('word')[num].getBoundingClientRect().bottom - 98,
+                    left: document.getElementsByClassName('word')[num].getBoundingClientRect().left + document.getElementsByClassName('word')[num].style.paddingLeft.match(/\d+/g),
+                    top: document.getElementsByClassName('word')[num].getBoundingClientRect().top + document.getElementsByClassName('word')[num].style.paddingTop.match(/\d+/g),
+                    right: document.getElementsByClassName('word')[num].getBoundingClientRect().right - document.getElementsByClassName('word')[num].style.paddingRight.match(/\d+/g),
+                    bottom: document.getElementsByClassName('word')[num].getBoundingClientRect().bottom - document.getElementsByClassName('word')[num].style.paddingBottom.match(/\d+/g),
                 }
             },
 
@@ -636,14 +637,18 @@
                 }
                 let i = 0;
                 let buttonLocCurPage = [];
+                let wordTextLocCurPage = [];
                 while(document.getElementsByClassName('word')[i]) {
                     if(document.getElementsByClassName('word')[i].innerHTML != '"' && document.getElementsByClassName('word')[i].innerHTML != '“')
                         buttonLocCurPage.push(this.getWordLocation(i));
+                        wordTextLocCurPage.push(this.getWordTextLocation(i));
                     i++;
                 }
                 this.buttonCurLoc = buttonLocCurPage;
                 if(!this.buttonLocPerPage[this.page-1])
                     this.buttonLocPerPage.push(buttonLocCurPage);
+                if(!this.wordTextLocPerPage[this.page-1])
+                    this.wordTextLocPerPage.push(wordTextLocCurPage);
                 {#height += e.getBoundingClientRect().bottom - e.getBoundingClientRect().top;#}
                 {#this.getWanderRemind();#}
             },
@@ -863,6 +868,7 @@
             formdata.append("page", app._data.page);
             formdata.append("text", app._data.contentCurPage);
             formdata.append("location", JSON.stringify(app._data.buttonCurLoc));
+            formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page-1]));
             $.ajax({
                 type: 'POST',
                 url: '/data/',

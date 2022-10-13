@@ -1590,8 +1590,9 @@ def visual_attention(request):
         word_index = get_word_by_one_gaze(word_locations, item)
         if word_index != -1:
             top_k.append(word_list[word_index])
-    # print(top_k)
+    print(top_k)
     new_top_k = list(set(top_k))
+    # print(top_k)
     new_top_k.sort(key=top_k.index)
 
     top_dict['visual'] = new_top_k
