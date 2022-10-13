@@ -977,7 +977,7 @@ def paint_bar_graph(data_dict, attribute="similarity"):
     ax.set_xticks(x + width / 2)
     ax.set_xticklabels(x_labels)
 
-    plt.ylim(0, 1)
+    plt.ylim(0, 0.5)
 
     # 标注X轴，标注Y轴
     # plt.xlabel("groups")

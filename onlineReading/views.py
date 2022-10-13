@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 import random
 
 import cv2
@@ -34,6 +35,7 @@ from semantic_attention import (
     generate_word_difficulty,
     generate_word_attention,
     generate_sentence_attention,
+    generate_sentence_difficulty,
     # generate_sentence_difficulty,
 )
 from utils import (
@@ -1164,11 +1166,11 @@ def get_heatmap(request):
     pageData = PageData.objects.get(id=page_data_id)
     # 准备工作，获取单词和句子的信息
     word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
-    # 获取单词和句子的位置
+    # 获取单词的位置
     word_locations = get_word_location(
         pageData.location
     )  # [(left,top,right,bottom),(left,top,right,bottom)]
-    sentence_locations = get_sentence_location(pageData.location, sentence_list)
+
     # 获取图片生成的路径
     exp = Experiment.objects.filter(id=pageData.experiment_id)
 
@@ -1187,40 +1189,55 @@ def get_heatmap(request):
             + ".jpg"
     )
 
-    top_dict = {}
+    # 创建图片存储的目录
+    # 如果目录不存在，则创建目录
+    path_levels = [
+        "static\\data\\heatmap\\" + str(exp.first().user) + "\\",
+        "static\\data\\heatmap\\"
+        + str(exp.first().user)
+        + "\\"
+        + str(page_data_id)
+        + "\\",
+    ]
+    for path in path_levels:
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+    top_dict = {}  # 实际上是word的top dict
     # nlp attention
+
     """
-    # word level
-    # 1. 生成3张图片
-    # 2. 填充top_k
-    # 存在问题：图片不清晰
-    # """
-    # get_word_level_nlp_attention(
-    #     pageData.texts,
-    #     page_data_id,
-    #     top_dict,
-    #     background,
-    #     word_list,
-    #     word_locations,
-    #     exp.first().user,
-    #     base_path,
-    # )
-    # """
-    # sentence level
-    # --暂时没有内容，占个位置
-    # """
-    # top_sentence_dict = {}
-    # # 生成图片
-    # get_sentence_level_nlp_attention(
-    #     pageData.texts,
-    #     sentence_list,
-    #     background,
-    #     word_locations,
-    #     page_data_id,
-    #     top_sentence_dict,
-    #     exp.first().user,
-    #     base_path,
-    # )
+    word level
+    1. 生成3张图片
+    2. 填充top_k
+    存在问题：图片不清晰
+    """
+    get_word_level_nlp_attention(
+        pageData.texts,
+        page_data_id,
+        top_dict,
+        background,
+        word_list,
+        word_locations,
+        exp.first().user,
+        base_path,
+    )
+    """
+    sentence level
+    """
+
+    top_sentence_dict = {}
+    # 生成图片
+    get_sentence_level_nlp_attention(
+        pageData.texts,
+        sentence_list,
+        background,
+        word_locations,
+        page_data_id,
+        top_sentence_dict,
+        exp.first().user,
+        base_path,
+    )
 
 
     """
@@ -1249,7 +1266,7 @@ def get_heatmap(request):
     不同k值下similarity和identity的计算以及图示
     """
     k_list = [5, 10, 15, 20, 30]
-    top_list = []
+
     k_dict = {}
     pic_list = []
     for k in k_list:
@@ -1261,16 +1278,19 @@ def get_heatmap(request):
 
         pic_dict = {
             "k": k,
-            # "similarity": calculate_similarity(attention_type),
-            # "identity": calculate_identity(attention_type),
+            "similarity": calculate_similarity(attention_type),
+            "identity": calculate_identity(attention_type),
         }
         pic_list.append(pic_dict)
 
-    top_list.append(k_dict)
 
-    # paint_bar_graph(pic_list, "similarity")
-    # paint_bar_graph(pic_list, "identity")
-    return JsonResponse(top_list, json_dumps_params={"ensure_ascii": False}, safe=False)
+    paint_bar_graph(pic_list, "similarity")
+    paint_bar_graph(pic_list, "identity")
+
+    result_dict = {"word level": k_dict, "sentence level": top_sentence_dict}
+    return JsonResponse(
+        result_dict, json_dumps_params={"ensure_ascii": False}, safe=False
+    )
 
 
 def get_word_level_nlp_attention(
@@ -1346,68 +1366,69 @@ def get_sentence_level_nlp_attention(
     username,
     base_path,
 ):
-    # logger.info("sentence level attention正在分析....")
-    # sentence_attentions = ["sentence_attention", "sentence_difficulty"]
-    #
-    # for attention in sentence_attentions:
-    #     sentence_attention = [[]]
-    #     # TODO 切割句子需要 '. ' 可能之后出现问题
-    #     if attention == "sentence_attention":
-    #         sentence_attention = generate_sentence_attention(
-    #             texts.replace("..", ". ")
-    #         )  # [('xx',数值),('xx',数值)]
-    #     if attention == "sentence_difficulty":
-    #         sentence_attention = generate_sentence_difficulty(
-    #             texts.replace("..", ". ")
-    #         )  # [('xx',数值),('xx',数值)]
-    #     # 确保句子长度是正确的
-    #     assert len(sentence_attention) == len(sentence_list)
-    #     # 获得句子的index
-    #     index_list_by_weight = []  # 按照index排序
-    #     for i in range(len(sentence_attention)):
-    #         max_weight = -1
-    #         max_index = -1
-    #         for j, sentence in enumerate(sentence_attention):
-    #             if sentence[1] > max_weight and j not in index_list_by_weight:
-    #                 max_weight = sentence[1]
-    #                 max_index = j
-    #         index_list_by_weight.append(max_index)
-    #     image = cv2.imread(background)
-    #     color = 255
-    #     alpha = 0.4  # 设置覆盖图片的透明度
-    #     blk = np.zeros(image.shape, np.uint8)
-    #
-    #     for index in index_list_by_weight:
-    #         sentence = sentence_list[index]
-    #         for i in range(sentence[1], sentence[2]):
-    #             # 此处i代表的是单词
-    #             loc = word_locations[i]
-    #             cv2.rectangle(
-    #                 blk,
-    #                 (int(loc[0]), int(loc[1])),
-    #                 (int(loc[2]), int(loc[3])),
-    #                 (color, 0, 0),
-    #                 -1,
-    #             )
-    #         color = color - 30
-    #         if color - 5 < 50:
-    #             break
-    #     image = cv2.addWeighted(blk, alpha, image, 1 - alpha, 0)
-    #     import matplotlib.pyplot as plt
-    #
-    #     title = str(page_data_id) + "-" + str(username) + "-" + attention
-    #     plt.imshow(image)
-    #     plt.title(title)
-    #     plt.show()
-    #     heatmap_name = base_path + attention + ".png"
-    #     cv2.imwrite(heatmap_name, image)
-    #     logger.info("heatmap已经生成:%s" % heatmap_name)
-    #
-    #     # 生成top_k
-    #     sentence_attention.sort(reverse=True, key=takeSecond)
-    #     top_sentence_dict["sentence_attention"] = [x[0] for x in sentence_attention]
-    #     print(sentence_attention)
+    logger.info("sentence level attention正在分析....")
+    sentence_attentions = ["sentence_attention", "sentence_difficulty"]
+
+    for attention in sentence_attentions:
+        sentence_attention = [[]]
+        # TODO 切割句子需要 '. ' 可能之后出现问题
+        if attention == "sentence_attention":
+            sentence_attention = generate_sentence_attention(
+                texts.replace("..", ". ")
+            )  # [('xx',数值),('xx',数值)]
+        if attention == "sentence_difficulty":
+            sentence_attention = generate_sentence_difficulty(
+                texts.replace("..", ". ")
+            )  # [('xx',数值),('xx',数值)]
+        # 确保句子长度是正确的
+        assert len(sentence_attention) == len(sentence_list)
+        # 获得句子的index
+        index_list_by_weight = []  # 按照index排序
+        for i in range(len(sentence_attention)):
+            max_weight = -1
+            max_index = -1
+            for j, sentence in enumerate(sentence_attention):
+                if sentence[1] > max_weight and j not in index_list_by_weight:
+                    max_weight = sentence[1]
+                    max_index = j
+            index_list_by_weight.append(max_index)
+        image = cv2.imread(background)
+        color = 255
+        alpha = 0.4  # 设置覆盖图片的透明度
+        blk = np.zeros(image.shape, np.uint8)
+
+        for index in index_list_by_weight:
+            sentence = sentence_list[index]
+            for i in range(sentence[1], sentence[2]):
+                # 此处i代表的是单词
+                loc = word_locations[i]
+                cv2.rectangle(
+                    blk,
+                    (int(loc[0]), int(loc[1])),
+                    (int(loc[2]), int(loc[3])),
+                    (color, 0, 0),
+                    -1,
+                )
+            color = color - 30
+            if color - 5 < 50:
+                break
+        image = cv2.addWeighted(blk, alpha, image, 1 - alpha, 0)
+        import matplotlib.pyplot as plt
+
+        title = str(page_data_id) + "-" + str(username) + "-" + attention
+        plt.imshow(image)
+        plt.title(title)
+        plt.show()
+        heatmap_name = base_path + attention + ".png"
+        cv2.imwrite(heatmap_name, image)
+        logger.info("heatmap已经生成:%s" % heatmap_name)
+
+        # 生成top_k
+        sentence_attention.sort(reverse=True, key=takeSecond)
+        top_sentence_dict[attention] = [x[0] for x in sentence_attention]
+        print(sentence_attention)
     pass
+
 
 def get_visual_attention(
         page_data_id,
@@ -1573,24 +1594,6 @@ def get_visual_attention(
         if word_index != -1:
             words_cnt[word_index] += 1
 
-    round = 50
-    to_be_deleted = [0 for x in word_list]
-    top_k = []
-    # while round:
-    #     max_cnt = -1
-    #     max_index = -1
-    #     for i, cnt in enumerate(words_cnt):
-    #         if cnt > max_cnt and to_be_deleted[i] == 0 and word_list[i] not in top_k:
-    #             max_cnt = cnt
-    #             max_index = i
-    #     if max_index == -1:
-    #         break
-    #     to_be_deleted[max_index] = 1
-    #     top_k.append(word_list[max_index])
-    #     round -= 1
-    #
-    # top_dict["visual"] = top_k
-
     # 获取top_k
     # data_1 = [x for x in hotspot]
     df = pd.DataFrame({
@@ -1631,4 +1634,3 @@ def get_visual_attention(
     #     fixations,
     #     pageData.id,
     # )
-
