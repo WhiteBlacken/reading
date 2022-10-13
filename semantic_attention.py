@@ -1,13 +1,16 @@
 from docx import Document
 from nltk.tokenize import sent_tokenize
 from textstat import textstat
-from transformers import XLNetTokenizerFast, XLNetModel
-import spacy
+from transformers import XLNetTokenizerFast, XLNetModel, BertTokenizer, BertForMaskedLM
 import numpy as np
+import spacy
+import torch
 
 nlp = spacy.load("en_core_web_lg")
 tokenizer = XLNetTokenizerFast.from_pretrained("xlnet-base-cased")
 model = XLNetModel.from_pretrained("xlnet-base-cased", output_attentions=True)
+# bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+# bert_model = BertForMaskedLM.from_pretrained('bert-base-uncased')
 
 f = open('mrc2.dct', 'r')
 word_fam_map = {}
@@ -182,7 +185,6 @@ def generate_word_attention(input_text):
 
 def generate_sentence_attention(input_text):
     sentence_list = sent_tokenize(input_text)
-    print(sentence_list)
     # print(phrase_list)
     sentence_att_mat = generate_phrase_att(input_text, sentence_list)
     # print(sentence_att_mat.shape, len(sentence_list))
@@ -214,10 +216,33 @@ def generate_word_difficulty(input_text):
     return word_difficulty_list
 
 
+# def generate_sentence_difficulty(input_text):
+#     bert_model.eval()
+#     sentence_list = sent_tokenize(input_text)
+#     sentence_difficulty_list = []
+#     for sentence in sentence_list:
+#         tokenize_input = bert_tokenizer.tokenize(sentence)
+#         tensor_input = torch.tensor([bert_tokenizer.convert_tokens_to_ids(tokenize_input)])
+#         sen_len = len(tokenize_input)
+#         sent_loss = 0.
+#         for i, word in enumerate(tokenize_input):
+#             tokenize_input[i] = bert_tokenizer.mask_token
+#             mask_input = torch.tensor([bert_tokenizer.convert_tokens_to_ids(tokenize_input)])
+#             output = bert_model(mask_input)
+#             pred_scores = output[0]
+#             ps = torch.log_softmax(pred_scores[0, i], dim=0)
+#             word_loss = ps[tensor_input[0, i]]
+#             sent_loss += word_loss.item()
+#             tokenize_input[i] = word   # restore
+#         ppl = np.exp(-sent_loss / sen_len)
+#         sentence_difficulty_list.append((sentence, ppl))
+#     return sentence_difficulty_list
+
+
 if __name__ == '__main__':
     # rst = generate_word_attention(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
-    texts = "It is not controversial to say that an unhealthy diet causes bad health..Nor are the basic elements of healthy eating disputed..Obesity raises susceptibility to cancer, and Britain is the six most obese country on Earth..That is a public health emergency..But naming the problem is the easy part..No one disputes the costs in quality of life and depleted health budgets of an obese population, but the quest for solutions gets diverted by ideological arguments around responsibility and choice..And the water is muddied by lobbying from the industries that profit from consumption of obesity-inducing products..Historical precedent suggests that science and politics can overcome resistance from businesses that pollute and poison but it takes time, and success often starts small..So it is heartening to note that a programme in Leeds has achieved a reduction in childhood obesity, becoming the first UK city to reverse a fattening trend..The best results were among younger children and in more deprived areas..When 28% of English children aged two to 15 are obese, a national shift on the scale achieved by Leeds would lengthen hundreds of thousands of lives..A significant factor in the Leeds experience appears to Many members of parliament are uncomfortable even with their own government's anti-obesity strategy, since it involves a 'sugar tax' and a ban on the sale of energy drinks to under-16s..Bans and taxes can be blunt instruments, but their harshest critics can rarely suggest better methods..These critics just oppose regulation itself.."
-    texts = texts.replace("..",'. ')
-    rst = generate_sentence_attention(texts)
+    # rst = generate_sentence_attention(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
     # rst = generate_word_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
-    print(rst)
+    # rst = generate_sentence_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
+    # print(rst)
+    pass
