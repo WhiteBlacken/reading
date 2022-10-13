@@ -40,4 +40,5 @@ urlpatterns = [
     path("motion/", views.test_motion),
     path("save_gaze/", views.get_gaze_data_pic),
     path("heatmap/",views.get_heatmap),
+    path("visual/attention/",views.visual_attention),
 ]
