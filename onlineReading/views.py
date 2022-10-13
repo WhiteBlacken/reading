@@ -66,6 +66,7 @@ from utils import (
     paint_bar_graph,
     apply_heatmap,
     find_threshold,
+    join_two_image,
 )
 
 

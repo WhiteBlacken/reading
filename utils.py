@@ -11,6 +11,8 @@ from paddleocr import PaddleOCR
 from paddleocr.tools.infer.utility import draw_ocr
 from scipy import signal
 
+from PIL import Image
+
 from onlineReading import settings
 
 import matplotlib.pyplot as plt
@@ -37,8 +39,8 @@ def get_fixations(coordinates):
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if (
-            len(working_queue) < 2
-            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
+                len(working_queue) < 2
+                or (working_queue[-1][2] - working_queue[0][2]) < min_duration
         ):
             # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
             datum = remaining_gaze.popleft()
@@ -62,7 +64,7 @@ def get_fixations(coordinates):
         while remaining_gaze:
             datum = remaining_gaze[0]
             if datum[2] > working_queue[0][2] + max_duration or with_distance(
-                working_queue[0], datum, max_distance
+                    working_queue[0], datum, max_distance
             ):
                 fixations.append(from_gazes_to_fixation(list(working_queue)))
                 working_queue.clear()
@@ -402,9 +404,9 @@ def translate(content):
         sign = Encry.hexdigest()
         # 3. 发送请求
         url = (
-            "http://api.fanyi.baidu.com/api/trans/vip/translate?"
-            + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
-            % (content, appid, salt, sign)
+                "http://api.fanyi.baidu.com/api/trans/vip/translate?"
+                + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
+                % (content, appid, salt, sign)
         )
         # 4. 解析结果
         response = requests.get(url)
@@ -462,13 +464,13 @@ def get_saccade_info(fixations):
     sum_angle = 0
     for i in range(len(fixations) - 1):
         if (
-            get_euclid_distance(
-                fixations[i][0],
-                fixations[i + 1][0],
-                fixations[i][1],
-                fixations[i + 1][1],
-            )
-            > 500
+                get_euclid_distance(
+                    fixations[i][0],
+                    fixations[i + 1][0],
+                    fixations[i][1],
+                    fixations[i + 1][1],
+                )
+                > 500
         ):
             saccade_times = saccade_times + 1
             sum_angle = sum_angle + get_saccade_angle(fixations[i], fixations[i + 1])
@@ -511,7 +513,7 @@ def get_reading_times_of_word(fixations, locations):
 
 
 def get_reading_times_and_dwell_time_of_sentence(
-    fixations, buttons_location, sentence_dict
+        fixations, buttons_location, sentence_dict
 ):
     pre_fixations = [-2 for x in range(0, len(sentence_dict))]
     fixation_cnt = 0
@@ -563,9 +565,9 @@ def get_sentence_by_word(word_index, sentences):
     index = 0
     for key in sentences:
         if (
-            sentences[key]["end_word_index"]
-            > word_index
-            >= sentences[key]["begin_word_index"]
+                sentences[key]["end_word_index"]
+                > word_index
+                >= sentences[key]["begin_word_index"]
         ):
             return index
         index = index + 1
@@ -845,7 +847,7 @@ def get_word_and_sentence_from_text(content):
             for word in words:
                 if len(word) > 0:
                     # 根据实际情况补充，或者更改为正则表达式（是否有去除数字的风险？）
-                    word = word.strip().lower().replace('"', "").replace(',','')
+                    word = word.strip().lower().replace('"', "").replace(',', '')
                     word_list.append(word)
                     cnt += 1
             end = cnt
@@ -965,7 +967,6 @@ def paint_bar_graph(data_dict, attribute="similarity"):
 
     # haul柱状图
     for i in range(len(datalist)):
-
         ax.bar(
             x + width * (i + 1 - array_num / 2),
             [j for i in datalist[i][1:] for j in i],
@@ -1013,7 +1014,7 @@ def get_word_by_one_gaze(word_locations, gaze):
     return -1
 
 
-def apply_heatmap(background, data,heatmap_name,alpha,title):
+def apply_heatmap(background, data, heatmap_name, alpha, title):
     import numpy as np
     from PIL import Image
     from pyheatmap.heatmap import HeatMap
@@ -1034,8 +1035,8 @@ def apply_heatmap(background, data,heatmap_name,alpha,title):
     plt.imshow(image)
     plt.title(title)
     plt.show()
-    cv2.imwrite(heatmap_name,image)
-    logger.info("heatmap已经生成:%s"%heatmap_name)
+    cv2.imwrite(heatmap_name, image)
+    logger.info("heatmap已经生成:%s" % heatmap_name)
 
 
 def find_threshold(df):
@@ -1047,6 +1048,22 @@ def find_threshold(df):
     return Percentile[1], Percentile[2], DownLimit, UpLimit
 
 
+# 处理两个图片的拼接
+def join_two_image(img_1, img_2, save_path, save_name, flag='horizontal'):  # 默认是水平参数
+    # 1、首先使用open创建Image对象，open()需要图片的路径作为参数
+    # 2、然后获取size，size[0]代表宽，size[1]代表长，分别代表坐标轴的x,y
+    # 3、使用Image.new创建一个新的对象
+    # 4、设置地点，两个图片分别在大图的什么位置粘贴
+    # 5、粘贴进大图，使用save()保存图像
+    img1 = Image.open(img_1)
+    img2 = Image.open(img_2)
+    size1, size2 = img1.size, img2.size
+    if flag == 'horizontal':
+        joint = Image.new("RGB", (size1[0] + size2[0], size1[1]))
+        loc1, loc2 = (0, 0), (size1[0], 0)
+        joint.paste(img1, loc1)
+        joint.paste(img2, loc2)
+        joint.save(save_path + '/' + save_name)
 
 
 if __name__ == "__main__":
