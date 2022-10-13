@@ -842,7 +842,8 @@ def get_word_and_sentence_from_text(content):
             words = sentence.split(" ")
             for word in words:
                 if len(word) > 0:
-                    word = word.strip().lower().replace('"', "")
+                    # 根据实际情况补充，或者更改为正则表达式（是否有去除数字的风险？）
+                    word = word.strip().lower().replace('"', "").replace(',','')
                     word_list.append(word)
                     cnt += 1
             end = cnt
@@ -1010,7 +1011,7 @@ def get_word_by_one_gaze(word_locations, gaze):
     return -1
 
 
-def apply_heatmap(background, save_path, data):
+def apply_heatmap(background, data,heatmap_name,alpha,title):
     import numpy as np
     from PIL import Image
     from pyheatmap.heatmap import HeatMap
@@ -1023,16 +1024,17 @@ def apply_heatmap(background, save_path, data):
     hit_img = hm.heatmap(base=background, r=50)  # background为背景图片，r是半径，默认为10
     hit_img = cv2.cvtColor(np.asarray(hit_img), cv2.COLOR_RGB2BGR)  # Image格式转换成cv2格式
     overlay = image.copy()
-    alpha = 0.3  # 设置覆盖图片的透明度
     cv2.rectangle(
-        overlay, (0, 0), (image.shape[1], image.shape[0]), (0, 0, 255), -1
+        overlay, (0, 0), (image.shape[1], image.shape[0]), (255, 255, 255), -1
     )  # 设置蓝色为热度图基本色蓝色
     image = cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0)  # 将背景热度图覆盖到原图
     image = cv2.addWeighted(hit_img, alpha, image, 1 - alpha, 0)  # 将热度图覆盖到原图
-    logger.info("heatmap已在该路径下生成:%s" % save_path)
     plt.imshow(image)
+    plt.title(title)
     plt.show()
-    cv2.imwrite(save_path, image)
+    cv2.imwrite(heatmap_name,image)
+    logger.info("heatmap已经生成:%s"%heatmap_name)
+
 
 
 

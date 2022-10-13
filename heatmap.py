@@ -239,11 +239,8 @@ class HeatMap(object):
         self.__im = None
 
 
-def draw_heat_map(data, hit_pic_name, heatmap_name, base):
+def draw_heat_map(data,heatmap_name, base):
     # 开始绘制
     hm = HeatMap(data)
-    # hm.clickmap(save_as=hit_pic_name, base=base)
-    hm.heatmap(save_as=heatmap_name, base=base)
-
-    logger.info("heatmap已在该路径下生成:%s" % heatmap_name)
+    hm.heatmap(base=base)
     return hm.hotspot
