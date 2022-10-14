@@ -1240,7 +1240,7 @@ def get_heatmap(request):
             words_to_be_painted.append(i)
 
     title = str(page_data_id) + "-" + exp.first().user + "-" + "para_wander"
-    pic_path = base_path + "words_not_understand" + ".png"
+    pic_path = base_path + "para_wander" + ".png"
     # 画图
     paint_on_word(image, words_to_be_painted, word_locations, title, pic_path)
 
