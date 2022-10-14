@@ -847,8 +847,9 @@ def get_word_and_sentence_from_text(content):
                 if len(word) > 0:
                     # 根据实际情况补充，或者更改为正则表达式（是否有去除数字的风险？）
                     word = word.strip().lower().replace('"', "").replace(",", "")
-                    word_list.append(word)
-                    cnt += 1
+                    if len(word)>0:
+                        word_list.append(word)
+                        cnt += 1
             end = cnt
             sentence_list.append((sentence, begin, end))
             begin = cnt

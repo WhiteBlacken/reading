@@ -1125,6 +1125,8 @@ def get_heatmap(request):
         pageData.location
     )  # [(left,top,right,bottom),(left,top,right,bottom)]
 
+    # 确保单词长度是正确的
+    assert len(word_locations) == len(word_list)
     # 获取图片生成的路径
     exp = Experiment.objects.filter(id=pageData.experiment_id)
 
@@ -1630,6 +1632,8 @@ def get_visual_attention(
                 for word in words:
                     if word["distance_to_heatspot"] == d:
                         top_dict["visual"].append(word["word"])
+    print("top visual")
+    print(top_dict["visual"])
     list2 = list(set(top_dict["visual"]))
     list2.sort(key=top_dict["visual"].index)
     top_dict["visual"] = list2
