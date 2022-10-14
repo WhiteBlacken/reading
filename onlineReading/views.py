@@ -102,7 +102,7 @@ def get_paragraph_and_translation(request):
     """根据文章id获取整篇文章的分段以及翻译"""
     # 获取整篇文章的内容和翻译
 
-    article_id = request.GET.get("article_id", 6)
+    article_id = request.GET.get("article_id", 7)
 
     paragraphs = Paragraph.objects.filter(article_id=article_id)
     print(len(paragraphs))
@@ -1588,15 +1588,22 @@ def get_visual_attention(
         min_dis = 100000
         word_id = -1
         word_txt = ""
+        dis = []
         for word in words:
             word["distance_to_heatspot"] = sum(word["distance_to_heatspot"]) / len(
                 word["distance_to_heatspot"]
             )
-            if word["distance_to_heatspot"] < min_dis:
-                word_id = word["idx"]
-                word_txt = word["word"]
-                min_dis = word["distance_to_heatspot"]
-        top_dict["visual"].append(word_txt)
+            dis.append(word["distance_to_heatspot"])
+        dis.sort()
+        theta = 10
+        for word in words:
+            if word['distance_to_heat'] == dis[0]:
+                top_dict["visual"].append(word['word'])
+        for d in dis[1:]:
+            if d - dis[0] < theta:
+                for word in words:
+                    if word['distance_to_heat'] == d:
+                        top_dict["visual"].append(word['word'])
     top_dict['visual'] = list(set(top_dict["visual"]))
     print(top_dict["visual"])
 
