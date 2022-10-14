@@ -444,6 +444,10 @@
                         let buttonTop = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;
                         let buttonHeight = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().bottom - document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;
                         if (Math.trunc((buttonTop - paraTop) / buttonHeight) >= maxLine) {
+                            for(let re = 0 ;re < words.length; re++)
+                                e.removeChild(e.lastChild);
+                            if (this.paraLoc[this.contentPerPage.length] && e.children[e.children.length - 1].id.match(/d+/g) < this.paraLoc[this.contentPerPage.length][this.paraLoc[this.contentPerPage.length].length - 1])
+                                this.paraLoc[this.contentPerPage.length].splice(this.paraLoc[this.contentPerPage.length].length - 1, 1);
                             while (e.children[0]) {
                                 e.removeChild(e.children[0]);
                             }
@@ -462,9 +466,10 @@
                         }
 
                     }
+                    if (this.paraLoc[this.contentPerPage.length][this.paraLoc[this.contentPerPage.length].length - 1] < num - 1)
+                        this.paraLoc[this.contentPerPage.length].push(num - 1);
                     this.transPerPage.push(transPerPage);
                     this.contentPerPage.push(conPerPage.join('.') + ".");
-
                 }
 
                 while (e.children[0])

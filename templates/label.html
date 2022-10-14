@@ -155,8 +155,10 @@
             },
 
             changeWanderSelect: function (num) {
-                let start = this.paraLoc[num-1][0];
-                let end = this.paraLoc[num-1][1];
+                let start = 0;
+                if(num > 1)
+                    start = parseInt(this.paraLoc[this.page-1][num-2])+1;
+                let end = parseInt(this.paraLoc[this.page-1][num-1]);
                 for(let i = 0; i < this.labels[this.page-1].wanderLabels.length; i++) {
                     if(this.labels[this.page-1].wanderLabels[i][0] == start && this.labels[this.page-1].wanderLabels[i][1] == end) {
                         this.labels[this.page-1].wanderLabels.splice(i, 1);
@@ -227,10 +229,12 @@
                         start = document.getElementsByClassName('word')[0].getBoundingClientRect().top;
                     }
                     else {
-                        start = document.getElementsByClassName('word')[this.paraLoc[this.page-1][i-1]+1].getBoundingClientRect().top();
+                        console.log(this.paraLoc)
+                        console.log(parseInt(this.paraLoc[this.page-1][i-1])+1)
+                        start = document.getElementsByClassName('word')[parseInt(this.paraLoc[this.page-1][i-1])+1].getBoundingClientRect().top;
                     }
-                    let end = document.getElementsByClassName('word')[this.paraLoc[this.page-1][i]].getBoundingClientRect().bottom();
-                    el.style.top = (end - start) / 2 + start - document.getElementsByClassName('wander')[i].style.width.match(/d+/g) / 2 + "px";
+                    let end = document.getElementsByClassName('word')[parseInt(this.paraLoc[this.page-1][i])].getBoundingClientRect().bottom;
+                    el.style.top = (end - start) / 2 + start - 17 + "px";
                     document.getElementById('labelArea').appendChild(el);
                 }
                 {#let buttonNum = 0;#}
@@ -315,8 +319,10 @@
                 {#    this.radio = this.labels[this.page-1].wanderLabels;#}
                 {#else#}
                 {#    this.radio = 0;#}
-                while(e.children[2])
-                    e.removeChild(e.children[2])
+                let start = 1;
+                {#if (this.page == this.totalPage) start = 2;#}
+                while(e.children[start])
+                    e.removeChild(e.children[start])
             },
 
         },

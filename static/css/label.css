@@ -42,15 +42,15 @@ body{
 }
 
 .wander{
-    height: 24px;
-    width: 24px;
+    height: 34px;
+    width: 34px;
     border-radius: 50%;
     cursor: pointer;
     background: rgba(0,0,0,0);
     position: absolute;
-    font-size: 6px;
+    font-size: 8px;
     border: 1px solid black;
-    left: 93%;
+    left: 275px;
 }
 
 #pageBox{
