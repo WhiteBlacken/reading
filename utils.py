@@ -39,8 +39,8 @@ def get_fixations(coordinates):
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if (
-                len(working_queue) < 2
-                or (working_queue[-1][2] - working_queue[0][2]) < min_duration
+            len(working_queue) < 2
+            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
         ):
             # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
             datum = remaining_gaze.popleft()
@@ -64,7 +64,7 @@ def get_fixations(coordinates):
         while remaining_gaze:
             datum = remaining_gaze[0]
             if datum[2] > working_queue[0][2] + max_duration or with_distance(
-                    working_queue[0], datum, max_distance
+                working_queue[0], datum, max_distance
             ):
                 fixations.append(from_gazes_to_fixation(list(working_queue)))
                 working_queue.clear()
@@ -233,20 +233,20 @@ def fixation_image(image_base64, username, fixations, page_data_id):
     image_data = base64.b64decode(data)
     # 获取名称
 
-    filename = "fixation.png"
+    filename = "background.png"
     # 存储地址
     path = "static/data/heatmap/" + str(username) + "/" + str(page_data_id) + "/"
     logger.info("fixations轨迹已在该路径下生成:%s" % (path + filename))
     # 如果目录不存在，则创建目录
-    if not os.path.exists(path):
-        os.mkdir(path)
+    # if not os.path.exists(path):
+    #     os.mkdir(path)
+    #
+    # with open(path + filename, "wb") as f:
+    #     f.write(image_data)
+    paint_image(path, filename, fixations)
 
-    with open(path + filename, "wb") as f:
-        f.write(image_data)
-    paint_image(path + filename, fixations)
 
-
-def paint_image(path, coordinates):
+def paint_image(path, filename, coordinates):
     """
     在图片上绘画
     :param path: 图片的路径
@@ -255,10 +255,10 @@ def paint_image(path, coordinates):
     """
     import cv2
 
-    img = cv2.imread(path)
+    img = cv2.imread(path + filename)
     cnt = 0
     pre_coordinate = (0, 0, 0)
-    for i,coordinate in enumerate(coordinates):
+    for i, coordinate in enumerate(coordinates):
         cv2.circle(
             img,
             (coordinate[0], coordinate[1]),
@@ -275,21 +275,19 @@ def paint_image(path, coordinates):
                 2,
             )
         cnt = cnt + 1
-        if cnt%5 == 0:
+        if cnt % 5 == 0:
             # 标序号 间隔着标序号
             cv2.putText(
                 img,
                 str(cnt),
                 (coordinate[0], coordinate[1]),
                 cv2.FONT_HERSHEY_SIMPLEX,
-
                 0.7,
                 (0, 255, 0),
-
                 2,
             )
         pre_coordinate = coordinate
-    cv2.imwrite(path, img)
+    cv2.imwrite(path + "fixation.png", img)
 
 
 # 示例:The Coral Sea reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast.
@@ -405,9 +403,9 @@ def translate(content):
         sign = Encry.hexdigest()
         # 3. 发送请求
         url = (
-                "http://api.fanyi.baidu.com/api/trans/vip/translate?"
-                + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
-                % (content, appid, salt, sign)
+            "http://api.fanyi.baidu.com/api/trans/vip/translate?"
+            + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
+            % (content, appid, salt, sign)
         )
         # 4. 解析结果
         response = requests.get(url)
@@ -465,13 +463,13 @@ def get_saccade_info(fixations):
     sum_angle = 0
     for i in range(len(fixations) - 1):
         if (
-                get_euclid_distance(
-                    fixations[i][0],
-                    fixations[i + 1][0],
-                    fixations[i][1],
-                    fixations[i + 1][1],
-                )
-                > 500
+            get_euclid_distance(
+                fixations[i][0],
+                fixations[i + 1][0],
+                fixations[i][1],
+                fixations[i + 1][1],
+            )
+            > 500
         ):
             saccade_times = saccade_times + 1
             sum_angle = sum_angle + get_saccade_angle(fixations[i], fixations[i + 1])
@@ -514,7 +512,7 @@ def get_reading_times_of_word(fixations, locations):
 
 
 def get_reading_times_and_dwell_time_of_sentence(
-        fixations, buttons_location, sentence_dict
+    fixations, buttons_location, sentence_dict
 ):
     pre_fixations = [-2 for x in range(0, len(sentence_dict))]
     fixation_cnt = 0
@@ -566,9 +564,9 @@ def get_sentence_by_word(word_index, sentences):
     index = 0
     for key in sentences:
         if (
-                sentences[key]["end_word_index"]
-                > word_index
-                >= sentences[key]["begin_word_index"]
+            sentences[key]["end_word_index"]
+            > word_index
+            >= sentences[key]["begin_word_index"]
         ):
             return index
         index = index + 1
@@ -848,9 +846,10 @@ def get_word_and_sentence_from_text(content):
             for word in words:
                 if len(word) > 0:
                     # 根据实际情况补充，或者更改为正则表达式（是否有去除数字的风险？）
-                    word = word.strip().lower().replace('"', "").replace(',', '')
-                    word_list.append(word)
-                    cnt += 1
+                    word = word.strip().lower().replace('"', "").replace(",", "")
+                    if len(word)>0:
+                        word_list.append(word)
+                        cnt += 1
             end = cnt
             sentence_list.append((sentence, begin, end))
             begin = cnt
@@ -932,7 +931,7 @@ def calculate_identity(word_dict, level="word"):
     return result
 
 
-def paint_bar_graph(data_dict, attribute="similarity"):
+def paint_bar_graph(data_dict, base_path,attribute="similarity"):
     size = 3
     # x轴坐标
     x = np.arange(1, size + 1)
@@ -986,6 +985,8 @@ def paint_bar_graph(data_dict, attribute="similarity"):
     fig.tight_layout()
     # 显示图例
     plt.legend()
+    # 保存图片
+    plt.savefig(base_path+attribute+".png")
     # 显示柱状图
     plt.show()
 
@@ -1041,7 +1042,7 @@ def apply_heatmap(background, data, heatmap_name, alpha, title):
 
 
 def find_threshold(df):
-    d = df['color']
+    d = df["color"]
     Percentile = np.percentile(d, [0, 25, 50, 75, 100])
     IQR = Percentile[3] - Percentile[1]
     UpLimit = Percentile[3] + IQR * 1.5
@@ -1050,7 +1051,7 @@ def find_threshold(df):
 
 
 # 处理两个图片的拼接
-def join_two_image(img_1, img_2, save_path, flag='horizontal'):  # 默认是水平参数
+def join_two_image(img_1, img_2, save_path, flag="horizontal"):  # 默认是水平参数
     # 1、首先使用open创建Image对象，open()需要图片的路径作为参数
     # 2、然后获取size，size[0]代表宽，size[1]代表长，分别代表坐标轴的x,y
     # 3、使用Image.new创建一个新的对象
@@ -1059,7 +1060,7 @@ def join_two_image(img_1, img_2, save_path, flag='horizontal'):  # 默认是水�
     img1 = Image.open(img_1)
     img2 = Image.open(img_2)
     size1, size2 = img1.size, img2.size
-    if flag == 'horizontal':
+    if flag == "horizontal":
         joint = Image.new("RGB", (size1[0] + size2[0], size1[1]))
         loc1, loc2 = (0, 0), (size1[0], 0)
         joint.paste(img1, loc1)

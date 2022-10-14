@@ -1,3 +1,4 @@
+import base64
 import datetime
 import json
 import os
@@ -9,6 +10,7 @@ from django.core import serializers
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from loguru import logger
+from matplotlib import pyplot as plt
 
 from action.models import (
     Text,
@@ -1086,6 +1088,28 @@ def takeSecond(elem):
     return elem[1]
 
 
+def paint_on_word(
+    image, target_words_index, word_locations, title, pic_path, alpha=0.4, color=255
+):
+    blk = np.zeros(image.shape, np.uint8)
+    set_title(blk, title)
+    for word_index in target_words_index:
+        loc = word_locations[word_index]
+        cv2.rectangle(
+            blk,
+            (int(loc[0]), int(loc[1])),
+            (int(loc[2]), int(loc[3])),
+            (color, 0, 0),
+            -1,
+        )
+    image = cv2.addWeighted(blk, alpha, image, 1 - alpha, 0)
+    plt.imshow(image)
+    plt.title(title)
+    plt.show()
+    cv2.imwrite(pic_path, image)
+    logger.info("heatmap已经生成:%s" % pic_path)
+
+
 def get_heatmap(request):
     """
     根据page_data_id生成visual attention和nlp attention
@@ -1101,6 +1125,8 @@ def get_heatmap(request):
         pageData.location
     )  # [(left,top,right,bottom),(left,top,right,bottom)]
 
+    # 确保单词长度是正确的
+    assert len(word_locations) == len(word_list)
     # 获取图片生成的路径
     exp = Experiment.objects.filter(id=pageData.experiment_id)
 
@@ -1110,13 +1136,6 @@ def get_heatmap(request):
         + "\\"
         + str(page_data_id)
         + "\\"
-    )
-    background = (
-        "static\\background\\"
-        + str(exp.first().article_id)
-        + "\\"
-        + str(pageData.page)
-        + ".jpg"
     )
 
     # 创建图片存储的目录
@@ -1132,6 +1151,15 @@ def get_heatmap(request):
     for path in path_levels:
         if not os.path.exists(path):
             os.mkdir(path)
+
+    # 创建背景图片
+    background = base_path + "background.png"
+    # 使用数据库的base64直接生成background
+    data = pageData.image.split(",")[1]
+    # 将str解码为byte
+    image_data = base64.b64decode(data)
+    with open(background, "wb") as f:
+        f.write(image_data)
 
     top_dict = {}  # 实际上是word的top dict
     # nlp attention
@@ -1189,7 +1217,7 @@ def get_heatmap(request):
         word_list,
         word_locations,
         top_dict,
-        pageData.image
+        pageData.image,
     )
 
     # 将spatial和temporal结合
@@ -1199,79 +1227,54 @@ def get_heatmap(request):
     join_two_image(heatmap_img, fixation_img, save_path)
 
     """
-    将单词不懂和句子不懂输出
+    将单词不懂和句子不懂输出,走神的图示输出
     """
     image = cv2.imread(background)
-    blk = np.zeros(image.shape, np.uint8)
-    alpha = 0.4  # 设置覆盖图片的透明度
     # 走神与否
-    cv2.putText(
-        blk,
-        "is wander "+str(pageData.wanderLabels),  # text内容必须是str格式的
-        (300,30),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.7,
-        (0, 255, 0),
-        2,
-    )
+    words_to_be_painted = []
+    if pageData.wanderLabels:
+        paras_wander = json.loads(pageData.wanderLabels)
+    else:
+        paras_wander = []
+
+    for para in paras_wander:
+        for i in range(para[0], para[1] + 1):  # wander label是到一段结尾，不是到下一段
+            words_to_be_painted.append(i)
+
+    title = str(page_data_id) + "-" + exp.first().user + "-" + "para_wander"
+    pic_path = base_path + "para_wander" + ".png"
+    # 画图
+    paint_on_word(image, words_to_be_painted, word_locations, title, pic_path)
+
     # 单词 TODO 将这些整理为函数，复用
+    # 找需要画的单词
     if pageData.wordLabels:
         words_not_understand = json.loads(pageData.wordLabels)
     else:
         words_not_understand = []
-    color = 255
-    for word_index in words_not_understand:
-        loc = word_locations[word_index]
-        cv2.rectangle(
-            blk,
-            (int(loc[0]), int(loc[1])),
-            (int(loc[2]), int(loc[3])),
-            (color, 0, 0),
-            -1,
-        )
-    image = cv2.addWeighted(blk, alpha, image, 1 - alpha, 0)
-
-    import matplotlib.pyplot as plt
-
     title = str(page_data_id) + "-" + exp.first().user + "-" + "words_not_understand"
-    plt.imshow(image)
-    plt.title(title)
-    plt.show()
-    heatmap_name = base_path + "words_not_understand" + ".png"
-    cv2.imwrite(heatmap_name, image)
-    logger.info("heatmap已经生成:%s" % heatmap_name)
+    pic_path = base_path + "words_not_understand" + ".png"
+    # 画图
+    paint_on_word(image, words_not_understand, word_locations, title, pic_path)
 
     # 句子
-    image = cv2.imread(background)
-    color = 255
-    alpha = 0.4  # 设置覆盖图片的透明度
-    blk = np.zeros(image.shape, np.uint8)
     if pageData.sentenceLabels:
         sentences_not_understand = json.loads(pageData.sentenceLabels)
     else:
         sentences_not_understand = []
 
+    words_to_painted = []
     for sentence in sentences_not_understand:
         for i in range(sentence[0], sentence[1]):
             # 此处i代表的是单词
-            loc = word_locations[i]
-            cv2.rectangle(
-                blk,
-                (int(loc[0]), int(loc[1])),
-                (int(loc[2]), int(loc[3])),
-                (color, 0, 0),
-                -1,
-            )
-    image = cv2.addWeighted(blk, alpha, image, 1 - alpha, 0)
-    import matplotlib.pyplot as plt
+            words_to_painted.append(i)
 
-    title = str(page_data_id) + "-" + str(exp.first().user) + "-" + "sentences_not_understand"
-    plt.imshow(image)
-    plt.title(title)
-    plt.show()
-    heatmap_name = base_path + "sentences_not_understand" + ".png"
-    cv2.imwrite(heatmap_name, image)
-    logger.info("heatmap已经生成:%s" % heatmap_name)
+    title = (
+        str(page_data_id) + "-" + exp.first().user + "-" + "sentences_not_understand"
+    )
+    pic_path = base_path + "sentences_not_understand" + ".png"
+    # 画图
+    paint_on_word(image, words_to_painted, word_locations, title, pic_path)
 
     """
     不同k值下similarity和identity的计算以及图示
@@ -1296,12 +1299,25 @@ def get_heatmap(request):
         }
         pic_list.append(pic_dict)
 
-    paint_bar_graph(pic_list, "similarity")
-    paint_bar_graph(pic_list, "identity")
+    paint_bar_graph(pic_list, base_path, "similarity")
+    paint_bar_graph(pic_list, base_path, "identity")
 
     result_dict = {"word level": k_dict, "sentence level": top_sentence_dict}
     return JsonResponse(
         result_dict, json_dumps_params={"ensure_ascii": False}, safe=False
+    )
+
+
+def set_title(blk, title):
+    """设置图片标题"""
+    cv2.putText(
+        blk,
+        str(title),  # text内容必须是str格式的
+        (600, 60),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1.5,
+        (189, 252, 201),
+        2,
     )
 
 
@@ -1337,6 +1353,9 @@ def get_word_level_nlp_attention(
         color = 255
         alpha = 0.4  # 设置覆盖图片的透明度
         blk = np.zeros(image.shape, np.uint8)
+        title = str(page_data_id) + "-" + str(username) + "-" + str(attention)
+        # 设置标题
+        set_title(blk, title)
         for data in data_list:
             # 该单词在页面上是否存在
             index_list = []
@@ -1359,7 +1378,6 @@ def get_word_level_nlp_attention(
 
         import matplotlib.pyplot as plt
 
-        title = str(page_data_id) + "-" + str(username) + "-" + str(attention)
         plt.imshow(image)
         plt.title(title)
         plt.show()
@@ -1408,10 +1426,11 @@ def get_sentence_level_nlp_attention(
         color = 255
         alpha = 0.4  # 设置覆盖图片的透明度
         blk = np.zeros(image.shape, np.uint8)
-
-        for j,index in enumerate(index_list_by_weight):
+        title = str(page_data_id) + "-" + str(username) + "-" + attention
+        set_title(blk, title)
+        for j, index in enumerate(index_list_by_weight):
             sentence = sentence_list[index]
-            q = 0 # 标志句首
+            q = 0  # 标志句首
             for i in range(sentence[1], sentence[2]):
                 # 此处i代表的是单词
                 loc = word_locations[i]
@@ -1426,21 +1445,20 @@ def get_sentence_level_nlp_attention(
                 if q == 0:
                     cv2.putText(
                         blk,
-                        str(j), # text内容必须是str格式的
+                        str(j),  # text内容必须是str格式的
                         (int(loc[0]), int(loc[1])),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.7,
                         (0, 255, 0),
                         2,
                     )
-                q = q+1
+                q = q + 1
             color = color - 30
             if color - 5 < 50:
                 break
         image = cv2.addWeighted(blk, alpha, image, 1 - alpha, 0)
         import matplotlib.pyplot as plt
 
-        title = str(page_data_id) + "-" + str(username) + "-" + attention
         plt.imshow(image)
         plt.title(title)
         plt.show()
@@ -1467,7 +1485,7 @@ def get_visual_attention(
     word_list,
     word_locations,
     top_dict,
-    image
+    image,
 ):
     logger.info("visual attention正在分析....")
 
@@ -1607,18 +1625,19 @@ def get_visual_attention(
         dis.sort()
         theta = 10
         for word in words:
-            if word['distance_to_heatspot'] == dis[0]:
-                top_dict["visual"].append(word['word'])
+            if word["distance_to_heatspot"] == dis[0]:
+                top_dict["visual"].append(word["word"])
         for d in dis[1:]:
             if d - dis[0] < theta:
                 for word in words:
-                    if word['distance_to_heatspot'] == d:
-                        top_dict["visual"].append(word['word'])
+                    if word["distance_to_heatspot"] == d:
+                        top_dict["visual"].append(word["word"])
+    print("top visual")
+    print(top_dict["visual"])
     list2 = list(set(top_dict["visual"]))
     list2.sort(key=top_dict["visual"].index)
     top_dict["visual"] = list2
     print(top_dict["visual"])
-
 
     # 将排序后的结果更换为word
 
