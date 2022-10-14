@@ -9,8 +9,8 @@ import torch
 nlp = spacy.load("en_core_web_lg")
 tokenizer = XLNetTokenizerFast.from_pretrained("xlnet-base-cased")
 model = XLNetModel.from_pretrained("xlnet-base-cased", output_attentions=True)
-# bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-# bert_model = BertForMaskedLM.from_pretrained('bert-base-uncased')
+bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+bert_model = BertForMaskedLM.from_pretrained('bert-base-uncased')
 
 f = open('mrc2.dct', 'r')
 word_fam_map = {}
@@ -216,33 +216,34 @@ def generate_word_difficulty(input_text):
     return word_difficulty_list
 
 
-# def generate_sentence_difficulty(input_text):
-#     bert_model.eval()
-#     sentence_list = sent_tokenize(input_text)
-#     sentence_difficulty_list = []
-#     for sentence in sentence_list:
-#         tokenize_input = bert_tokenizer.tokenize(sentence)
-#         tensor_input = torch.tensor([bert_tokenizer.convert_tokens_to_ids(tokenize_input)])
-#         sen_len = len(tokenize_input)
-#         sent_loss = 0.
-#         for i, word in enumerate(tokenize_input):
-#             tokenize_input[i] = bert_tokenizer.mask_token
-#             mask_input = torch.tensor([bert_tokenizer.convert_tokens_to_ids(tokenize_input)])
-#             output = bert_model(mask_input)
-#             pred_scores = output[0]
-#             ps = torch.log_softmax(pred_scores[0, i], dim=0)
-#             word_loss = ps[tensor_input[0, i]]
-#             sent_loss += word_loss.item()
-#             tokenize_input[i] = word   # restore
-#         ppl = np.exp(-sent_loss / sen_len)
-#         sentence_difficulty_list.append((sentence, ppl))
-#     return sentence_difficulty_list
+def generate_sentence_difficulty(input_text):
+    bert_model.eval()
+    sentence_list = sent_tokenize(input_text)
+    sentence_difficulty_list = []
+    for sentence in sentence_list:
+        tokenize_input = bert_tokenizer.tokenize(sentence)
+        tensor_input = torch.tensor([bert_tokenizer.convert_tokens_to_ids(tokenize_input)])
+        sen_len = len(tokenize_input)
+        sent_loss = 0.
+        for i, word in enumerate(tokenize_input):
+            tokenize_input[i] = bert_tokenizer.mask_token
+            mask_input = torch.tensor([bert_tokenizer.convert_tokens_to_ids(tokenize_input)])
+            output = bert_model(mask_input)
+            pred_scores = output[0]
+            ps = torch.log_softmax(pred_scores[0, i], dim=0)
+            word_loss = ps[tensor_input[0, i]]
+            sent_loss += word_loss.item()
+            tokenize_input[i] = word   # restore
+        ppl = np.exp(-sent_loss / sen_len)
+        sentence_difficulty_list.append((sentence, ppl))
+    return sentence_difficulty_list
 
 
 if __name__ == '__main__':
     # rst = generate_word_attention(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
-    # rst = generate_sentence_attention(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
+    texts = 'hello word; this is cisl.That is he.'
+    rst = generate_sentence_attention(texts)
     # rst = generate_word_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
     # rst = generate_sentence_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
-    # print(rst)
+    print(rst)
     pass
