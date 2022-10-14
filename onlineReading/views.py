@@ -1465,7 +1465,7 @@ def get_visual_attention(
     Q1, Q3, ther_low, ther_up = find_threshold(df)
     hotpixel = []  # [(1232, 85, 240), (1233, 85, 240)]
     for ind, row in df.iterrows():
-        if row[2] < ther_low:
+        if row[2] < Q1:
             hotpixel.append(np.array(row).tolist())
 
     img = Image.open(background)
@@ -1515,7 +1515,6 @@ def get_visual_attention(
                                     break
                 visit[y][x] = True
         heatspots.append(U)
-
     # 计算每个热斑到附近单词的距离
     top_dict['visual'] = []
 
@@ -1551,6 +1550,7 @@ def get_visual_attention(
                 word_txt = word['word']
                 min_dis = word['distance_to_heatspot']
         top_dict['visual'].append(word_txt)
+        print(words)
 
     print(top_dict['visual'])
 
