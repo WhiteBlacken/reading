@@ -1215,7 +1215,10 @@ def get_heatmap(request):
         2,
     )
     # 单词 TODO 将这些整理为函数，复用
-    words_not_understand = json.loads(pageData.wordLabels)
+    if pageData.wordLabels:
+        words_not_understand = json.loads(pageData.wordLabels)
+    else:
+        words_not_understand = []
     color = 255
     for word_index in words_not_understand:
         loc = word_locations[word_index]
@@ -1243,7 +1246,11 @@ def get_heatmap(request):
     color = 255
     alpha = 0.4  # 设置覆盖图片的透明度
     blk = np.zeros(image.shape, np.uint8)
-    sentences_not_understand = json.loads(pageData.sentenceLabels)
+    if pageData.sentenceLabels:
+        sentences_not_understand = json.loads(pageData.sentenceLabels)
+    else:
+        sentences_not_understand = []
+
     for sentence in sentences_not_understand:
         for i in range(sentence[0], sentence[1]):
             # 此处i代表的是单词
@@ -1315,6 +1322,7 @@ def get_word_level_nlp_attention(
         # 获取数据
         if attention == "topic_relevant":
             data_list = get_importance(texts)  # [('word',1)]
+            print(data_list)
         if attention == "word_attention":
             data_list = generate_word_attention(texts)
         if attention == "word_difficulty":
@@ -1558,6 +1566,8 @@ def get_visual_attention(
                                     break
                 visit[y][x] = True
         heatspots.append(U)
+    print("heatspot")
+    print(heatspots[0])
     # 计算每个热斑到附近单词的距离
     top_dict["visual"] = []
 
@@ -1597,14 +1607,16 @@ def get_visual_attention(
         dis.sort()
         theta = 10
         for word in words:
-            if word['distance_to_heat'] == dis[0]:
+            if word['distance_to_heatspot'] == dis[0]:
                 top_dict["visual"].append(word['word'])
         for d in dis[1:]:
             if d - dis[0] < theta:
                 for word in words:
-                    if word['distance_to_heat'] == d:
+                    if word['distance_to_heatspot'] == d:
                         top_dict["visual"].append(word['word'])
-    top_dict['visual'] = list(set(top_dict["visual"]))
+    list2 = list(set(top_dict["visual"]))
+    list2.sort(key=top_dict["visual"].index)
+    top_dict["visual"] = list2
     print(top_dict["visual"])
 
 
