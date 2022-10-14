@@ -1597,12 +1597,12 @@ def get_visual_attention(
         dis.sort()
         theta = 10
         for word in words:
-            if word['distance_to_heat'] == dis[0]:
+            if word['distance_to_heatspot'] == dis[0]:
                 top_dict["visual"].append(word['word'])
         for d in dis[1:]:
             if d - dis[0] < theta:
                 for word in words:
-                    if word['distance_to_heat'] == d:
+                    if word['distance_to_heatspot'] == d:
                         top_dict["visual"].append(word['word'])
     top_dict['visual'] = list(set(top_dict["visual"]))
     print(top_dict["visual"])

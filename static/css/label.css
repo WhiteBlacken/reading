@@ -50,6 +50,7 @@ body{
     position: absolute;
     font-size: 6px;
     border: 1px solid black;
+    left: 93%;
 }
 
 #pageBox{

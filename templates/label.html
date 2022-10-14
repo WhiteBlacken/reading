@@ -38,19 +38,19 @@
     </div>
     <div id="labeling">
         <div id="labelArea">
-                <div id="para">
+            <div id="para">
 
-                </div>
-                <div id="wanderLabeling">
-                    <div style="font-size: 14pt">你在这一页是否走神了？</div>
-                    <el-radio-group v-model="radio" @change="changeWanderSelect">
-                        <el-radio :label="1">是</el-radio>
-                        <el-radio :label="0">不是</el-radio>
-                    </el-radio-group>
-                </div>
-                <el-button type="primary" style="position: fixed;bottom: 5rem;right: 5rem;" v-if="page == totalPage"
-                           v-on:click="collect_labels">标注完成
-                </el-button>
+            </div>
+{#                <div id="wanderLabeling">#}
+{#                    <div style="font-size: 14pt">你在这一页是否走神了？</div>#}
+{#                    <el-radio-group v-model="radio" @change="changeWanderSelect">#}
+{#                        <el-radio :label="1">是</el-radio>#}
+{#                        <el-radio :label="0">不是</el-radio>#}
+{#                    </el-radio-group>#}
+{#                </div>#}
+            <el-button type="primary" style="position: fixed;bottom: 5rem;right: 5rem;" v-if="page == totalPage"
+                       v-on:click="collect_labels">标注完成
+            </el-button>
             </div>
         </div>
     </div>
@@ -154,24 +154,24 @@
                 console.log(this.labels);
             },
 
-            changeWanderSelect: function () {
-                {#let start = this.lines[num-1][0];#}
-                {#let end = this.lines[num-1][1];#}
-                {#for(let i = 0; i < this.labels[this.page-1].wanderLabels.length; i++) {#}
-                {#    if(this.labels[this.page-1].wanderLabels[i][0] == start && this.labels[this.page-1].wanderLabels[i][1] == end) {#}
-                {#        this.labels[this.page-1].wanderLabels.splice(i, 1);#}
-                {#        document.getElementsByClassName('wander')[num-1].style.borderColor = "black";#}
-                {#        document.getElementsByClassName('wander')[num-1].style.color = "black";#}
-                {#        console.log(this.labels);#}
-                {#        return;#}
-                {#    }#}
-                {# }#}
-                {#document.getElementsByClassName('wander')[num-1].style.borderColor = "orange";#}
-                {#document.getElementsByClassName('wander')[num-1].style.color = "orange";#}
-                {#this.labels[this.page-1].wanderLabels.push(new Array(start,end));#}
-                {#console.log(this.labels);#}
-                this.labels[this.page-1].wanderLabels = this.radio;
-                console.log(this.labels[this.page-1].wanderLabels)
+            changeWanderSelect: function (num) {
+                let start = this.paraLoc[num-1][0];
+                let end = this.paraLoc[num-1][1];
+                for(let i = 0; i < this.labels[this.page-1].wanderLabels.length; i++) {
+                    if(this.labels[this.page-1].wanderLabels[i][0] == start && this.labels[this.page-1].wanderLabels[i][1] == end) {
+                        this.labels[this.page-1].wanderLabels.splice(i, 1);
+                        document.getElementsByClassName('wander')[num-1].style.borderColor = "black";
+                        document.getElementsByClassName('wander')[num-1].style.color = "black";
+                        console.log(this.labels);
+                        return;
+                    }
+                 }
+                document.getElementsByClassName('wander')[num-1].style.borderColor = "orange";
+                document.getElementsByClassName('wander')[num-1].style.color = "orange";
+                this.labels[this.page-1].wanderLabels.push(new Array(start,end));
+                console.log(this.labels);
+                {#this.labels[this.page-1].wanderLabels = this.radio;#}
+                {#console.log(this.labels[this.page-1].wanderLabels)#}
             },
 
             isInArr: function (num, arr) {
@@ -217,6 +217,22 @@
                         }
                     }
                 }
+                for(let i = 0; i < this.paraLoc[this.page-1].length; i++) {
+                    let el = document.createElement('button');
+                    el.className = "wander";
+                    el.innerHTML = (i+1).toString();
+                    el.setAttribute("onclick", "changeWanderSelect("+ (i+1) + ")");
+                    let start;
+                    if (i == 0) {
+                        start = document.getElementsByClassName('word')[0].getBoundingClientRect().top;
+                    }
+                    else {
+                        start = document.getElementsByClassName('word')[this.paraLoc[this.page-1][i-1]+1].getBoundingClientRect().top();
+                    }
+                    let end = document.getElementsByClassName('word')[this.paraLoc[this.page-1][i]].getBoundingClientRect().bottom();
+                    el.style.top = (end - start) / 2 + start - document.getElementsByClassName('wander')[i].style.width.match(/d+/g) / 2 + "px";
+                    document.getElementById('labelArea').appendChild(el);
+                }
                 {#let buttonNum = 0;#}
                 {#for (; e.children[buttonNum]; buttonNum++) {#}
                 {#    if(buttonNum > 1 && e.children[buttonNum].getBoundingClientRect().top > e.children[buttonNum-1].getBoundingClientRect().top) {#}
@@ -243,7 +259,7 @@
                 {#    document.getElementById('labelArea').appendChild(lab);#}
                 {# }#}
                 if(!this.labels[this.page-1]){
-                    this.labels.push({page: this.page, wordLabels: new Array(), sentenceLabels: new Array(), wanderLabels: 0});
+                    this.labels.push({page: this.page, wordLabels: new Array(), sentenceLabels: new Array(), wanderLabels: new Array()});
                 }
                 this.rememberLabels();
             },
@@ -281,6 +297,10 @@
                     $('.word:eq(' + num + ')').css('text-decoration', "underline");
                     $('.word:eq(' + num + ')').css('color', "blue");
                 }
+                for(let i = 0; i < this.labels[this.page-1].wanderLabels.length;i++) {
+                    $('.wander:eq(' + i +')').css('border-color', 'orange');
+                    $('.wander:eq(' + i +')').css('color', 'orange');
+                }
             },
             //清空当前页面word按钮和translation的div块，并初始化参数
             clearPageWords: function () {
@@ -291,10 +311,12 @@
                 e = document.getElementById('labelArea');
                 this.words = [];
                 this.lines = [];
-                if(this.labels[this.page-1])
-                    this.radio = this.labels[this.page-1].wanderLabels;
-                else
-                    this.radio = 0;
+                {#if(this.labels[this.page-1])#}
+                {#    this.radio = this.labels[this.page-1].wanderLabels;#}
+                {#else#}
+                {#    this.radio = 0;#}
+                while(e.children[2])
+                    e.removeChild(e.children[2])
             },
 
         },
@@ -304,7 +326,6 @@
             for(let i = 0; i < paraLoc.length; i++) {
                 this.paraLoc.push(paraLoc[i].split(','));
             }
-            console.log(this.paraLoc)
             this.totalPage = this.content.length;
             this.getPage();
         },
