@@ -1046,9 +1046,7 @@ def find_threshold(df):
     IQR = Percentile[3] - Percentile[1]
     UpLimit = Percentile[3] + IQR * 1.5
     DownLimit = Percentile[1] - IQR * 1.5
-
     return Percentile[1], Percentile[3], DownLimit, UpLimit
-
 
 
 # 处理两个图片的拼接

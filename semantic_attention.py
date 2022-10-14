@@ -6,6 +6,8 @@ import numpy as np
 import spacy
 import torch
 
+from utils import get_importance
+
 nlp = spacy.load("en_core_web_lg")
 tokenizer = XLNetTokenizerFast.from_pretrained("xlnet-base-cased")
 model = XLNetModel.from_pretrained("xlnet-base-cased", output_attentions=True)
@@ -240,9 +242,10 @@ def generate_sentence_difficulty(input_text):
 
 
 if __name__ == '__main__':
-    # rst = generate_word_attention(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
+    # rst = generate_word_attention('China culture is nice culture')
+    rst = get_importance('China culture is nice culture. Culture is important')
     texts = 'hello word; this is cisl.That is he.'
-    rst = generate_sentence_attention(texts)
+    # rst = generate_sentence_attention(texts)
     # rst = generate_word_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
     # rst = generate_sentence_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
     print(rst)
