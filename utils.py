@@ -834,7 +834,9 @@ def get_importance(text):
 
 
 def get_word_and_sentence_from_text(content):
+    print(content)
     sentences = content.split("..")
+    print(sentences)
     sentence_list = []
     word_list = []
     cnt = 0
@@ -847,11 +849,13 @@ def get_word_and_sentence_from_text(content):
                 if len(word) > 0:
                     # 根据实际情况补充，或者更改为正则表达式（是否有去除数字的风险？）
                     word = word.strip().lower().replace('"', "").replace(",", "")
-                    if len(word)>0:
+                    if len(word) > 0:
                         word_list.append(word)
                         cnt += 1
             end = cnt
-            sentence_list.append((sentence, begin, end))
+            sentence_list.append(
+                (sentence, begin, end, end - begin)
+            )  # (句子文本，开始的单词序号，结束的单词序号+1，长度)
             begin = cnt
     return word_list, sentence_list
 
@@ -931,7 +935,7 @@ def calculate_identity(word_dict, level="word"):
     return result
 
 
-def paint_bar_graph(data_dict, base_path,attribute="similarity"):
+def paint_bar_graph(data_dict, base_path, attribute="similarity"):
     size = 3
     # x轴坐标
     x = np.arange(1, size + 1)
@@ -986,7 +990,7 @@ def paint_bar_graph(data_dict, base_path,attribute="similarity"):
     # 显示图例
     plt.legend()
     # 保存图片
-    plt.savefig(base_path+attribute+".png")
+    plt.savefig(base_path + attribute + ".png")
     # 显示柱状图
     plt.show()
 
