@@ -74,6 +74,7 @@
             wordLocation: 0,
             radio: 0,
             paraLoc: [],
+            allParas: [],
         },
         methods: {
             getWordLocation: function (num) {
@@ -272,6 +273,7 @@
             collect_labels: function () {
                 let formdata = new FormData();
                 formdata.append('labels',JSON.stringify(this.labels));
+                formdata.append("para", JSON.stringify(this.allParas));
                 $.ajax({
                     type: 'POST',
                     url: '/label/send/',
@@ -330,7 +332,26 @@
             this.content = getCookie('contentPerPage').replace(new RegExp(":}","g"), ";").split('-.');
             let paraLoc = getCookie('paraLoc').split('|');
             for(let i = 0; i < paraLoc.length; i++) {
-                this.paraLoc.push(paraLoc[i].split(','));
+                let p = paraLoc[i].split(',');
+                if(p.length == 1 && p[0] == '') {
+                    this.paraLoc.push([]);
+                }
+                else this.paraLoc.push(p);
+            }
+            for(let i = 0; i < this.paraLoc.length; i++) {
+                for(let j = 0 ; j < this.paraLoc[i].length; j++) {
+                    this.paraLoc[i][j] = parseInt(this.paraLoc[i][j]);
+                }
+            }
+            for(let i = 0; i < this.paraLoc.length; i++) {
+                let tmp = [];
+                for(let j = 0 ; j < this.paraLoc[i].length; j++) {
+                    if(j > 0)
+                        tmp.push([this.paraLoc[i][j-1] + 1, this.paraLoc[i][j]]);
+                    else
+                        tmp.push([0, this.paraLoc[i][0]]);
+                }
+                this.allParas.push(tmp);
             }
             this.totalPage = this.content.length;
             this.getPage();

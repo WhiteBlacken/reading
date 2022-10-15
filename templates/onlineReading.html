@@ -394,7 +394,9 @@
                 var sentences = p.split('.');
                 if(sentences[sentences.length-1] == "")
                     sentences.splice(sentences.length - 1, 1);
-                
+                for(let i = 0; i < sentences.length; i++)
+                    sentences[i].replace('  ', ' ');
+                console.log(sentences)
                 let sentenceNum = 0;
                 let conPerPage = [];
                 let transPerPage = [];
@@ -466,7 +468,8 @@
                         }
 
                     }
-                    if (this.paraLoc[this.contentPerPage.length][this.paraLoc[this.contentPerPage.length].length - 1] < num - 1)
+                    console.log(this.paraLoc)
+                    if (this.paraLoc[this.contentPerPage.length].length == 0 || this.paraLoc[this.contentPerPage.length][this.paraLoc[this.contentPerPage.length].length - 1] < num - 1)
                         this.paraLoc[this.contentPerPage.length].push(num - 1);
                     this.transPerPage.push(transPerPage);
                     this.contentPerPage.push(conPerPage.join('.') + ".");
