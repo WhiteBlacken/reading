@@ -264,16 +264,20 @@ def get_labels(request):
     # 示例：labels:[{"page":1,"wordLabels":[],"sentenceLabels":[[27,57]],"wanderLabels":[[0,27]]},{"page":2,"wordLabels":[36],"sentenceLabels":[],"wanderLabels":[]},{"page":3,"wordLabels":[],"sentenceLabels":[],"wanderLabels":[[0,34]]}]
     labels = json.loads(labels)
 
+    paras = request.POST.get("para")
+    paras = json.loads(paras)
+
     if experiment_id:
-        for label in labels:
+        for i,label in enumerate(labels):
             PageData.objects.filter(experiment_id=experiment_id).filter(
                 page=label["page"]
             ).update(
                 wordLabels=label["wordLabels"],
                 sentenceLabels=label["sentenceLabels"],
                 wanderLabels=label["wanderLabels"],
-                para=label["para"],
+                para=paras[i],
             )
+        Experiment.objects.filter(id=experiment_id).update(is_finish=1)
     logger.info("已获得所有页标签")
     logger.info("--实验结束--")
     return HttpResponse(1)
@@ -1914,6 +1918,13 @@ def get_dataset(request):
         backward_saccade_times_word_level = [0 for i in word_list]
         for i, para in enumerate(para_list):
             for j in range(para[0], para[1] + 1):
+<<<<<<< HEAD
+                print("para end")
+                print(j)
+                print("word length")
+                print(len(word_list))
+=======
+>>>>>>> 0aef73ecbb4649b827238e77ca722f3728812293
                 saccade_times_of_para_word_level[j] = saccade_times_of_para_in_para[
                     i
                 ] / math.log((para[1] - para[0] + 1) + 1)
@@ -1937,6 +1948,7 @@ def get_dataset(request):
             # 1. 实验信息相关
             "experiment_id": [experiment_id for x in range(word_num)],
             "user": [experiment.user for x in range(word_num)],
+            "article_id": [experiment.article_id for x in range(word_num)],
             "word": word,
             # # 2. label相关
             "word_understand": word_understand,
@@ -1956,7 +1968,11 @@ def get_dataset(request):
             "backward_saccade_times_of_para": backward_saccade_times_of_para,
         }
     )
-    path = "static\\data\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d")+".csv"
+    path = (
+        "static\\data\\dataset\\"
+        + datetime.datetime.now().strftime("%Y-%m-%d")
+        + ".csv"
+    )
     import os
 
     if os.path.exists(path):
@@ -1974,3 +1990,25 @@ def get_sentence_by_word(word_index, sentence_list):
         if sentence[2] > word_index >= sentence[1]:
             return i
     return -1
+
+
+def article_2_csv(request):
+    texts = Text.objects.all()
+    ids = []
+    contents = []
+    for text in texts:
+        para_list = Paragraph.objects.filter(article_id=text.id).order_by("para_id")
+        content = ""
+        for para in para_list:
+            content = content + para.content.replace("...", ".").replace("..", ".")
+        contents.append(content)
+        ids.append(text.id)
+    df = pd.DataFrame(
+        {
+            "id": ids,
+            "content": contents,
+        }
+    )
+    path = "static\\data\\dataset\\" + "article.csv"
+    df.to_csv(path, index=False, header=False)
+    return JsonResponse({"status_code": 200, "status": "ok"})

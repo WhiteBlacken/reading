@@ -57,7 +57,12 @@ class Experiment(models.Model):
     # 一人次是一个实验
     article_id = models.BigIntegerField()
     user = models.CharField(max_length=200)
+    is_finish = models.BooleanField()
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 0aef73ecbb4649b827238e77ca722f3728812293
     class Meta:
         db_table = "data_experiment"
 
