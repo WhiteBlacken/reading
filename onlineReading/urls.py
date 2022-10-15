@@ -39,4 +39,5 @@ urlpatterns = [
     path("save_gaze/", views.get_gaze_data_pic),
     path("heatmap/", views.get_heatmap),
     path("dataset/", views.get_dataset),
+    path("article/",views.article_2_csv)
 ]
