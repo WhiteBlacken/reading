@@ -1918,10 +1918,13 @@ def get_dataset(request):
         backward_saccade_times_word_level = [0 for i in word_list]
         for i, para in enumerate(para_list):
             for j in range(para[0], para[1] + 1):
+<<<<<<< HEAD
                 print("para end")
                 print(j)
                 print("word length")
                 print(len(word_list))
+=======
+>>>>>>> 0aef73ecbb4649b827238e77ca722f3728812293
                 saccade_times_of_para_word_level[j] = saccade_times_of_para_in_para[
                     i
                 ] / math.log((para[1] - para[0] + 1) + 1)
