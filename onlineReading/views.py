@@ -1498,7 +1498,7 @@ def valid_coordinates(coordinates):
     begin = 0
     end = -1
     for i, coordinate in enumerate(coordinates):
-        if coordinate[2] > 200:
+        if coordinate[2]-coordinates[0][2] > 200:
             begin = i
             break
     for i in range(len(coordinates) - 1, -1, -1):
@@ -1532,11 +1532,16 @@ def get_visual_attention(
     list_y = list(map(float, gaze_y.split(",")))
     list_t = list(map(float, gaze_t.split(",")))
 
+    print("length of list")
+    print(len(list_x))
+
     if kernel_size != 0:
         # 滤波
         list_x = preprocess_data(list_x, kernel_size)
         list_y = preprocess_data(list_y, kernel_size)
 
+    print("length of list after filter")
+    print(len(list_x))
     # 滤波完是浮点数，需要转成int
     list_x = list(map(int, list_x))
     list_y = list(map(int, list_y))
@@ -1855,7 +1860,7 @@ def get_dataset(request):
             0 for x in word_list
         ]
         total_dwell_time_of_this_page_in_word_level = [0 for x in word_list]
-        scale = 4
+
         for i, sentence in enumerate(sentence_list):
             for j in range(sentence[1], sentence[2]):
                 reading_times_of_sentence_this_page_in_word_level[
@@ -1918,13 +1923,7 @@ def get_dataset(request):
         backward_saccade_times_word_level = [0 for i in word_list]
         for i, para in enumerate(para_list):
             for j in range(para[0], para[1] + 1):
-<<<<<<< HEAD
-                print("para end")
-                print(j)
-                print("word length")
-                print(len(word_list))
-=======
->>>>>>> 0aef73ecbb4649b827238e77ca722f3728812293
+
                 saccade_times_of_para_word_level[j] = saccade_times_of_para_in_para[
                     i
                 ] / math.log((para[1] - para[0] + 1) + 1)

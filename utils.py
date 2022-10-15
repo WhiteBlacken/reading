@@ -1071,26 +1071,13 @@ def join_two_image(img_1, img_2, save_path, flag="horizontal"):  # 默认是水�
         joint.paste(img2, loc2)
         joint.save(save_path)
 
+def pixel_2_cm(pixel):
+    """像素点到距离的转换"""
+    cmPerPix = 23.8 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
+    return pixel * cmPerPix
 
 if __name__ == "__main__":
     import re
 
-    word_dict = {
-        "visual": ["a", "b", "c", "d"],
-        "topic_relevant": ["a", "f", "e", "c"],
-        "word_attention": ["b", "e", "c", "d"],
-        "word_difficulty": ["b", "e", "c", "d"],
-    }
-    similarity = calculate_similarity(word_dict=word_dict, level="word")
-    identity = calculate_identity(word_dict=word_dict, level="word")
-    # print(calculate_similarity(word_dict=word_dict, level="word"))
-    # print(calculate_identity(word_dict=word_dict, level="word"))
-    data_dict = [
-        {"k": 5, "similarity": similarity, "identity": identity},
-        {"k": 10, "similarity": similarity, "identity": identity},
-        {"k": 20, "similarity": similarity, "identity": identity},
-        {"k": 30, "similarity": similarity, "identity": identity},
-        {"k": 40, "similarity": similarity, "identity": identity},
-    ]
-    paint_bar_graph(data_dict=data_dict, attribute="identity")
+    print(pixel_2_cm(140))
     pass
