@@ -1498,7 +1498,7 @@ def valid_coordinates(coordinates):
     begin = 0
     end = -1
     for i, coordinate in enumerate(coordinates):
-        if coordinate[2] > 200:
+        if coordinate[2]-coordinates[0][2] > 200:
             begin = i
             break
     for i in range(len(coordinates) - 1, -1, -1):
@@ -1532,11 +1532,16 @@ def get_visual_attention(
     list_y = list(map(float, gaze_y.split(",")))
     list_t = list(map(float, gaze_t.split(",")))
 
+    print("length of list")
+    print(len(list_x))
+
     if kernel_size != 0:
         # 滤波
         list_x = preprocess_data(list_x, kernel_size)
         list_y = preprocess_data(list_y, kernel_size)
 
+    print("length of list after filter")
+    print(len(list_x))
     # 滤波完是浮点数，需要转成int
     list_x = list(map(int, list_x))
     list_y = list(map(int, list_y))
@@ -1707,7 +1712,7 @@ def is_saccade(pre_word_location, now_word_location, magic_saccade_dis):
     center1 = get_center(pre_word_location)
     center2 = get_center(now_word_location)
     return (
-        get_euclid_distance(center1[0], center2[0], center1[1], center1[1])
+        get_euclid_distance(center1[0], center2[0], center1[1], center2[1])
         > magic_saccade_dis
     )
 
@@ -1786,7 +1791,9 @@ def get_dataset(request):
         mind_wandering.extend(mind_wandering_this_page)
 
         # 计算特征
-        # word level
+        '''
+        word level
+        '''
         list_x = list(map(float, page_data.gaze_x.split(",")))
         list_y = list(map(float, page_data.gaze_y.split(",")))
         list_t = list(map(float, page_data.gaze_t.split(",")))
@@ -1814,7 +1821,9 @@ def get_dataset(request):
                 reading_times_this_page[index] += 1
         reading_times.extend(reading_times_this_page)
 
-        # 句子level
+        '''
+        句子level
+        '''
         # 先从句子角度去看fixation的相关特征，之后将其再分配回单词上
         reading_times_of_sentence_this_page_in_sentence_level = [
             0 for x in sentence_list
@@ -1855,7 +1864,7 @@ def get_dataset(request):
             0 for x in word_list
         ]
         total_dwell_time_of_this_page_in_word_level = [0 for x in word_list]
-        scale = 4
+
         for i, sentence in enumerate(sentence_list):
             for j in range(sentence[1], sentence[2]):
                 reading_times_of_sentence_this_page_in_word_level[
@@ -1883,7 +1892,9 @@ def get_dataset(request):
         )
         total_dwell_time_of_sentence.extend(total_dwell_time_of_this_page_in_word_level)
 
-        # paragraph level
+        '''
+        para level
+        '''
         if len(page_data.para) > 3:
             para_list = json.loads(page_data.para)  # [[0,9],[10,17]
         else:
@@ -1900,43 +1911,40 @@ def get_dataset(request):
         )
         for fixation in fixations:
             index = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
-            now_word_location = words_location[index]
-            pre_word_location = words_location[pre_fixation]
-            if is_saccade(pre_word_location, now_word_location, magic_saccade_dis):
-                # 将saccade算入起点的段落
-                para_index = get_para_by_word_index(pre_fixation, para_list)
-                if para_list != -1:
-                    saccade_times_of_para_in_para[para_index] += 1
-                    # 计算回看
-                    if index > pre_fixation:
-                        forward_saccade_times_of_para_in_para[para_index] += 1
-                    else:
-                        backward_saccade_times_of_para_in_para[para_index] += 1
-
+            if index != -1:
+                now_word_location = words_location[index]
+                pre_word_location = words_location[pre_fixation]
+                if is_saccade(pre_word_location, now_word_location, magic_saccade_dis):
+                    # 将saccade算入起点的段落
+                    para_index = get_para_by_word_index(pre_fixation, para_list)
+                    if para_list != -1:
+                        saccade_times_of_para_in_para[para_index] += 1
+                        # 计算回看
+                        if index > pre_fixation:
+                            forward_saccade_times_of_para_in_para[para_index] += 1
+                        else:
+                            backward_saccade_times_of_para_in_para[para_index] += 1
+                pre_fixation = index
         saccade_times_of_para_word_level = [0 for i in word_list]
         forward_saccade_times_word_level = [0 for i in word_list]
         backward_saccade_times_word_level = [0 for i in word_list]
         for i, para in enumerate(para_list):
             for j in range(para[0], para[1] + 1):
 
-                print("para end")
-                print(j)
-                print("word length")
-                print(len(word_list))
+                assert len(word_list) > para[1]
+                scale = math.log((para[1] - para[0] + 1) + 1)
+                print("scale:%f"%scale)
+                print("saccade times:%d"%saccade_times_of_para_in_para[i])
 
                 saccade_times_of_para_word_level[j] = saccade_times_of_para_in_para[
                     i
-                ] / math.log((para[1] - para[0] + 1) + 1)
+                ] / scale
                 forward_saccade_times_word_level[
                     j
-                ] = forward_saccade_times_of_para_in_para[i] / math.log(
-                    (para[1] - para[0] + 1)
-                )
+                ] = forward_saccade_times_of_para_in_para[i] / scale
                 backward_saccade_times_word_level[
                     j
-                ] = backward_saccade_times_of_para_in_para[i] / math.log(
-                    (para[1] - para[0] + 1)
-                )
+                ] = backward_saccade_times_of_para_in_para[i] / scale
 
         saccade_times_of_para.extend(saccade_times_of_para_word_level)
         forward_saccade_times_of_para.extend(forward_saccade_times_word_level)
@@ -1967,10 +1975,14 @@ def get_dataset(request):
             "backward_saccade_times_of_para": backward_saccade_times_of_para,
         }
     )
+    # path = (
+    #     "static\\data\\dataset\\"
+    #     + datetime.datetime.now().strftime("%Y-%m-%d")
+    #     + ".csv"
+    # )
     path = (
         "static\\data\\dataset\\"
-        + datetime.datetime.now().strftime("%Y-%m-%d")
-        + ".csv"
+        + "test.csv"
     )
     import os
 
