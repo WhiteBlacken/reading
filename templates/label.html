@@ -48,11 +48,11 @@
 {#                        <el-radio :label="0">不是</el-radio>#}
 {#                    </el-radio-group>#}
 {#                </div>#}
-            <el-button type="primary" style="position: fixed;bottom: 5rem;right: 5rem;" v-if="page == totalPage"
-                       v-on:click="collect_labels">标注完成
-            </el-button>
             </div>
         </div>
+        <el-button type="primary" style="position: fixed;bottom: 5rem;right: 5rem;" v-if="page == totalPage"
+                       v-on:click="collect_labels">标注完成
+        </el-button>
     </div>
 </body>
 <script>
@@ -162,7 +162,7 @@
                 let end = parseInt(this.paraLoc[this.page-1][num-1]);
                 for(let i = 0; i < this.labels[this.page-1].wanderLabels.length; i++) {
                     if(this.labels[this.page-1].wanderLabels[i][0] == start && this.labels[this.page-1].wanderLabels[i][1] == end) {
-                        this.labels[this.page-1].wanderLabels.splice(i, 1);
+                        this.labels[this.page-1].wanderLabels[num-1] = [];
                         document.getElementsByClassName('wander')[num-1].style.borderColor = "black";
                         document.getElementsByClassName('wander')[num-1].style.color = "black";
                         console.log(this.labels);
@@ -171,7 +171,7 @@
                  }
                 document.getElementsByClassName('wander')[num-1].style.borderColor = "orange";
                 document.getElementsByClassName('wander')[num-1].style.color = "orange";
-                this.labels[this.page-1].wanderLabels.push(new Array(start,end));
+                this.labels[this.page-1].wanderLabels[num-1] = new Array(start, end);
                 console.log(this.labels);
                 {#this.labels[this.page-1].wanderLabels = this.radio;#}
                 {#console.log(this.labels[this.page-1].wanderLabels)#}
@@ -186,6 +186,9 @@
             },
 
             getPage: function () {
+                if(!this.labels[this.page-1]){
+                    this.labels.push({page: this.page, wordLabels: new Array(), sentenceLabels: new Array(), wanderLabels: new Array()});
+                }
                 let num = 0;
                 var e = document.getElementById('para');
                 var Content = this.content[this.page-1].split('..');
@@ -237,6 +240,7 @@
                     let end = document.getElementsByClassName('word')[parseInt(this.paraLoc[this.page-1][i])].getBoundingClientRect().bottom;
                     el.style.top = (end - start) / 2 + start - 17 + "px";
                     document.getElementById('labelArea').appendChild(el);
+                    this.labels[this.page-1].wanderLabels.push([]);
                 }
                 {#let buttonNum = 0;#}
                 {#for (; e.children[buttonNum]; buttonNum++) {#}
@@ -263,14 +267,21 @@
                 {#    lab.setAttribute("onclick", "changeWanderSelect("+ (i+1) + ")");#}
                 {#    document.getElementById('labelArea').appendChild(lab);#}
                 {# }#}
-                if(!this.labels[this.page-1]){
-                    this.labels.push({page: this.page, wordLabels: new Array(), sentenceLabels: new Array(), wanderLabels: new Array()});
-                }
                 this.rememberLabels();
             },
 
             //把labels发送给后端存储,并更新word_level_data
             collect_labels: function () {
+                for(let i = 0; i < this.labels.length; i++) {
+                    let j = 0;
+                    while(j < this.labels[i].wanderLabels.length) {
+                        if(this.labels[i].wanderLabels[j].length == 0) {
+                            this.labels[i].wanderLabels.splice(j,1);
+                        }
+                        else j++;
+                    }
+                }
+                console.log(this.labels);
                 let formdata = new FormData();
                 formdata.append('labels',JSON.stringify(this.labels));
                 formdata.append("para", JSON.stringify(this.allParas));
@@ -304,8 +315,10 @@
                     $('.word:eq(' + num + ')').css('color', "blue");
                 }
                 for(let i = 0; i < this.labels[this.page-1].wanderLabels.length;i++) {
-                    $('.wander:eq(' + i +')').css('border-color', 'orange');
-                    $('.wander:eq(' + i +')').css('color', 'orange');
+                    if(this.labels[this.page-1].wanderLabels[i].length > 0) {
+                        $('.wander:eq(' + i +')').css('border-color', 'orange');
+                        $('.wander:eq(' + i +')').css('color', 'orange');
+                    }
                 }
             },
             //清空当前页面word按钮和translation的div块，并初始化参数
