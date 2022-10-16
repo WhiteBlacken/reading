@@ -255,6 +255,7 @@ def paint_image(path, filename, coordinates):
     """
     import cv2
 
+    # coordinates = [x for i, x in enumerate(coordinates) if i % 2 == 0]
     img = cv2.imread(path + filename)
     cnt = 0
     pre_coordinate = (0, 0, 0)
@@ -262,9 +263,9 @@ def paint_image(path, filename, coordinates):
         cv2.circle(
             img,
             (coordinate[0], coordinate[1]),
-            int(float(coordinate[2] / 30)),
+            3,
             (0, 0, 255),
-            1,
+            -1,
         )
         if cnt > 0:
             cv2.line(
@@ -272,9 +273,8 @@ def paint_image(path, filename, coordinates):
                 (pre_coordinate[0], pre_coordinate[1]),
                 (coordinate[0], coordinate[1]),
                 (0, 0, 255),
-                2,
+                1,
             )
-        cnt = cnt + 1
         if cnt % 5 == 0:
             # 标序号 间隔着标序号
             cv2.putText(
@@ -282,10 +282,11 @@ def paint_image(path, filename, coordinates):
                 str(cnt),
                 (coordinate[0], coordinate[1]),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (0, 255, 0),
-                2,
+                0.5,
+                (255, 0, 0),
+                1,
             )
+        cnt = cnt + 1
         pre_coordinate = coordinate
     cv2.imwrite(path + "fixation.png", img)
 
@@ -1071,10 +1072,12 @@ def join_two_image(img_1, img_2, save_path, flag="horizontal"):  # 默认是水�
         joint.paste(img2, loc2)
         joint.save(save_path)
 
+
 def pixel_2_cm(pixel):
     """像素点到距离的转换"""
     cmPerPix = 23.8 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
     return pixel * cmPerPix
+
 
 if __name__ == "__main__":
     import re
