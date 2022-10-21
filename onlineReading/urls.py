@@ -37,7 +37,10 @@ urlpatterns = [
     path("analysis_1/", views.analysis_1),
     path("motion/", views.test_motion),
     path("save_gaze/", views.get_gaze_data_pic),
-    path("heatmap/", views.get_heatmap),
+    path("heatmap/all/", views.get_all_heatmap),
+    path("heatmap/visual/",views.get_visual_heatmap),
     path("dataset/", views.get_dataset),
-    path("article/",views.article_2_csv)
+    path("article/",views.article_2_csv),
+    path("ccn_data/",views.get_cnn_dataset),
+    path("row_level_fix/",views.get_row_level_fixations_map)
 ]
