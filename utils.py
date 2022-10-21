@@ -218,7 +218,7 @@ def x_y_t_2_coordinate(gaze_x, gaze_y, gaze_t):
     return coordinates
 
 
-def fixation_image(image_base64, username, fixations, page_data_id):
+def fixation_image(image_base64, username, fixations, page_data_id, pic_name):
     """
     将fixation点绘制到图片上
     :param image_base64: 图片的base64编码
@@ -243,10 +243,10 @@ def fixation_image(image_base64, username, fixations, page_data_id):
     #
     # with open(path + filename, "wb") as f:
     #     f.write(image_data)
-    paint_image(path, filename, fixations)
+    paint_image(path, filename, fixations, pic_name)
 
 
-def paint_image(path, filename, coordinates):
+def paint_image(path, filename, coordinates, pic_name):
     """
     在图片上绘画
     :param path: 图片的路径
@@ -288,7 +288,7 @@ def paint_image(path, filename, coordinates):
             )
         cnt = cnt + 1
         pre_coordinate = coordinate
-    cv2.imwrite(path + "fixation.png", img)
+    cv2.imwrite(path + pic_name, img)
 
 
 # 示例:The Coral Sea reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast.
@@ -1031,7 +1031,7 @@ def apply_heatmap(background, data, heatmap_name, alpha, title):
     background = Image.new("RGB", (image.shape[1], image.shape[0]), color=0)
     # 开始绘制热度图
     hm = HeatMap(data)
-    hit_img = hm.heatmap(base=background, r=50)  # background为背景图片，r是半径，默认为10
+    hit_img = hm.heatmap(base=background, r=40)  # background为背景图片，r是半径，默认为10
     hit_img = cv2.cvtColor(np.asarray(hit_img), cv2.COLOR_RGB2BGR)  # Image格式转换成cv2格式
     overlay = image.copy()
     cv2.rectangle(
@@ -1073,14 +1073,68 @@ def join_two_image(img_1, img_2, save_path, flag="horizontal"):  # 默认是水�
         joint.save(save_path)
 
 
+# 处理n张图的垂直拼接
+def join_images_vertical(img_list, save_path):
+    vertical_size = 0
+    horizontal_size = 0
+
+    for img in img_list:
+        image = Image.open(img)
+        horizontal_size = image.size[0]
+        vertical_size += image.size[1]
+    joint = Image.new("RGB", (horizontal_size, vertical_size))
+
+    x = 0
+    y = 0
+    for img in img_list:
+        image = Image.open(img)
+        loc = (x, y)
+        joint.paste(image, loc)
+        y += image.size[1]
+    joint.save(save_path)
+
+
 def pixel_2_cm(pixel):
     """像素点到距离的转换"""
     cmPerPix = 23.8 * 2.54 / math.sqrt(math.pow(16, 2) + math.pow(9, 2)) * 16 / 1534
     return pixel * cmPerPix
 
 
+def get_test_heatmap():
+    import pandas as pd
+
+    csv = pd.read_csv("static\\data\\dataset\\cnn.csv")
+    gaze_x = csv["gaze_x"]
+    gaze_y = csv["gaze_y"]
+    gaze_x_filter = csv["gaze_x_filter"]
+    gaze_y_filter = csv["gaze_y_filter"]
+
+    coordinate1 = []
+    coordinate2 = []
+    for i in range(len(gaze_x)):
+        tmp1 = (int(gaze_x[i]), int(gaze_y[i]))
+        tmp2 = (int(gaze_x_filter[i]), int(gaze_y_filter[i]))
+        coordinate1.append(tmp1)
+        coordinate2.append(tmp2)
+
+    apply_heatmap(
+        "static\\background\\img.png",
+        coordinate1,
+        "static\\background\\gaze_before.png",
+        0.4,
+        "gaze_before",
+    )
+    apply_heatmap(
+        "static\\background\\img.png",
+        coordinate2,
+        "static\\background\\gaze_after.png",
+        0.4,
+        "gaze_after",
+    )
+
+
 if __name__ == "__main__":
     import re
 
-    print(pixel_2_cm(140))
+    get_test_heatmap()
     pass
