@@ -106,7 +106,7 @@ def get_paragraph_and_translation(request):
     """根据文章id获取整篇文章的分段以及翻译"""
     # 获取整篇文章的内容和翻译
 
-    article_id = request.GET.get("article_id", 13)
+    article_id = request.GET.get("article_id", 18)
 
     paragraphs = Paragraph.objects.filter(article_id=article_id)
     print(len(paragraphs))

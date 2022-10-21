@@ -75,6 +75,7 @@
             radio: 0,
             paraLoc: [],
             allParas: [],
+            linesCurPage: [],
         },
         methods: {
             getWordLocation: function (num) {
@@ -156,10 +157,8 @@
             },
 
             changeWanderSelect: function (num) {
-                let start = 0;
-                if(num > 1)
-                    start = parseInt(this.paraLoc[this.page-1][num-2])+1;
-                let end = parseInt(this.paraLoc[this.page-1][num-1]);
+                let start = this.linesCurPage[num-1][0];
+                let end = this.linesCurPage[num-1][1];
                 for(let i = 0; i < this.labels[this.page-1].wanderLabels.length; i++) {
                     if(this.labels[this.page-1].wanderLabels[i][0] == start && this.labels[this.page-1].wanderLabels[i][1] == end) {
                         this.labels[this.page-1].wanderLabels[num-1] = [];
@@ -190,8 +189,12 @@
                     this.labels.push({page: this.page, wordLabels: new Array(), sentenceLabels: new Array(), wanderLabels: new Array()});
                 }
                 let num = 0;
+                let start = 0;
+                let end = 0;
+                let lastWord = null;
                 var e = document.getElementById('para');
                 var Content = this.content[this.page-1].split('..');
+                console.log(Content)
                 Content.splice(Content.length-1, 1);
                 this.sentences = Content;
                 for (let i = 0; i < Content.length; i++) {
@@ -209,6 +212,14 @@
                             if (j == sentence.length - 1) {
                                 el.innerHTML = sentence[j] + '.';
                             }
+                            if(lastWord) {
+                                if(el.getBoundingClientRect().top > lastWord.getBoundingClientRect().top || num == this.paraLoc[this.page-1][this.paraLoc[this.page-1].length-1]) {
+                                    end = num - 1;
+                                    this.linesCurPage.push(new Array(start, end));
+                                    start = num;
+                                }
+                            }
+                            lastWord = el;
                             num += 1;
                             if(this.isInArr(num - 1,this.paraLoc[this.page-1])) {
                                 el = document.createElement("button");
@@ -223,21 +234,13 @@
                         }
                     }
                 }
-                for(let i = 0; i < this.paraLoc[this.page-1].length; i++) {
+                for(let i = 0; i < this.linesCurPage.length; i++) {
                     let el = document.createElement('button');
                     el.className = "wander";
                     el.innerHTML = (i+1).toString();
                     el.setAttribute("onclick", "changeWanderSelect("+ (i+1) + ")");
-                    let start;
-                    if (i == 0) {
-                        start = document.getElementsByClassName('word')[0].getBoundingClientRect().top;
-                    }
-                    else {
-                        console.log(this.paraLoc)
-                        console.log(parseInt(this.paraLoc[this.page-1][i-1])+1)
-                        start = document.getElementsByClassName('word')[parseInt(this.paraLoc[this.page-1][i-1])+1].getBoundingClientRect().top;
-                    }
-                    let end = document.getElementsByClassName('word')[parseInt(this.paraLoc[this.page-1][i])].getBoundingClientRect().bottom;
+                    start = document.getElementsByClassName('word')[this.linesCurPage[i][0]].getBoundingClientRect().top;
+                    let end = document.getElementsByClassName('word')[this.linesCurPage[i][1]].getBoundingClientRect().bottom;
                     el.style.top = (end - start) / 2 + start - 17 + "px";
                     document.getElementById('labelArea').appendChild(el);
                     this.labels[this.page-1].wanderLabels.push([]);
@@ -330,6 +333,7 @@
                 e = document.getElementById('labelArea');
                 this.words = [];
                 this.lines = [];
+                this.linesCurPage = [];
                 {#if(this.labels[this.page-1])#}
                 {#    this.radio = this.labels[this.page-1].wanderLabels;#}
                 {#else#}
