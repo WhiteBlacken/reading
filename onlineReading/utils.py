@@ -103,5 +103,5 @@ def cm_2_pixel(cm):
 
 
 if __name__ == "__main__":
-    print(cm_2_pixel(3))
+    print(pixel_2_cm(30))
     pass

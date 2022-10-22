@@ -22,7 +22,7 @@ from action.models import (
     Experiment,
     Translation,
 )
-from heatmap import draw_heat_map
+from pyheatmap import myHeatmap
 
 import pandas as pd
 import numpy as np
@@ -72,7 +72,7 @@ from utils import (
     apply_heatmap,
     find_threshold,
     join_two_image,
-    get_item_index_x_y,
+    get_item_index_x_y, join_images_vertical,
 )
 
 
@@ -129,8 +129,8 @@ def get_paragraph_and_translation(request):
                 starttime = datetime.datetime.now()
                 translations = (
                     Translation.objects.filter(article_id=article_id)
-                    .filter(para_id=para)
-                    .filter(sentence_id=sentence_id)
+                        .filter(para_id=para)
+                        .filter(sentence_id=sentence_id)
                 )
                 if translations:
                     sentence_zh = translations.first().txt
@@ -268,7 +268,7 @@ def get_labels(request):
     paras = json.loads(paras)
 
     if experiment_id:
-        for i,label in enumerate(labels):
+        for i, label in enumerate(labels):
             PageData.objects.filter(experiment_id=experiment_id).filter(
                 page=label["page"]
             ).update(
@@ -881,6 +881,7 @@ def analysis(request):
                     Experiment.objects.get(id=pagedata.experiment_id).user,
                     fixations,
                     pagedata.id,
+                    "fixation.png",
                 )
 
             # 将数据写入csv
@@ -1096,7 +1097,7 @@ def takeSecond(elem):
 
 
 def paint_on_word(
-    image, target_words_index, word_locations, title, pic_path, alpha=0.4, color=255
+        image, target_words_index, word_locations, title, pic_path, alpha=0.4, color=255
 ):
     blk = np.zeros(image.shape, np.uint8)
     set_title(blk, title)
@@ -1117,7 +1118,193 @@ def paint_on_word(
     logger.info("heatmap已经生成:%s" % pic_path)
 
 
-def get_heatmap(request):
+def get_visual_heatmap(request):
+    """
+    仅生成 fixation、visual attention、二者组合、分行的fixation
+    :param request:
+    :return:
+    """
+    top_dict = {}
+
+    page_data_id = request.GET.get("id")
+    pageData = PageData.objects.get(id=page_data_id)
+    exp = Experiment.objects.filter(id=pageData.experiment_id)
+    # 准备工作，获取单词和句子的信息
+    word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
+    # 获取单词的位置
+    word_locations = get_word_location(
+        pageData.location
+    )  # [(left,top,right,bottom),(left,top,right,bottom)]
+
+    # 确保单词长度是正确的
+    assert len(word_locations) == len(word_list)
+
+    # 获取图片生成的路径
+    exp = Experiment.objects.filter(id=pageData.experiment_id)
+
+    base_path = (
+            "static\\data\\heatmap\\"
+            + str(exp.first().user)
+            + "\\"
+            + str(page_data_id)
+            + "\\"
+    )
+
+    # 创建图片存储的目录
+    # 如果目录不存在，则创建目录
+    path_levels = [
+        "static\\data\\heatmap\\" + str(exp.first().user) + "\\",
+        "static\\data\\heatmap\\"
+        + str(exp.first().user)
+        + "\\"
+        + str(page_data_id)
+        + "\\",
+    ]
+    for path in path_levels:
+        print("生成:%s" % path)
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+    # 创建背景图片
+    background = base_path + "background.png"
+    # 使用数据库的base64直接生成background
+    data = pageData.image.split(",")[1]
+    # 将str解码为byte
+    image_data = base64.b64decode(data)
+    with open(background, "wb") as f:
+        f.write(image_data)
+
+    kernel_size = int(request.GET.get("window", 0))
+
+    get_visual_attention(
+        page_data_id,
+        exp.first().user,
+        pageData.gaze_x,
+        pageData.gaze_y,
+        pageData.gaze_t,
+        kernel_size,
+        background,
+        base_path,
+        word_list,
+        word_locations,
+        top_dict,
+        pageData.image,
+    )
+
+    # 将spatial和temporal结合
+    save_path = base_path + "spatial_with_temporal_filter.png"
+    heatmap_img = base_path + "visual.png"
+    fixation_img = base_path + "fixation.png"
+    join_two_image(heatmap_img, fixation_img, save_path)
+
+    return HttpResponse(1)
+
+
+def get_row_level_fixations_map(request):
+    page_data_id = request.GET.get("id")
+    pageData = PageData.objects.get(id=page_data_id)
+    exp = Experiment.objects.filter(id=pageData.experiment_id)
+    kernel_size = int(request.GET.get("window", 0))
+
+    gaze_x = pageData.gaze_x
+    gaze_y = pageData.gaze_y
+    gaze_t = pageData.gaze_t
+    """
+    1.
+    清洗数据
+    """
+    list_x = list(map(float, gaze_x.split(",")))
+    list_y = list(map(float, gaze_y.split(",")))
+    list_t = list(map(float, gaze_t.split(",")))
+
+    print("length of list")
+    print(len(list_x))
+    print("kernel_size:%d" % kernel_size)
+    if kernel_size != 0:
+        # 滤波
+        list_x = preprocess_data(list_x, kernel_size)
+        list_y = preprocess_data(list_y, kernel_size)
+
+    print("length of list after filter")
+    print(len(list_x))
+    # 滤波完是浮点数，需要转成int
+    list_x = list(map(int, list_x))
+    list_y = list(map(int, list_y))
+
+    # 组合
+    coordinates = []
+    for i in range(len(list_x)):
+        coordinate = [list_x[i], list_y[i], list_t[i]]
+        coordinates.append(coordinate)
+    # 去除开始结束的gaze点
+    coordinates = coordinates[2:-1]
+    # 去除前后200ms的gaze点
+    begin = 0
+    end = -1
+    for i, coordinate in enumerate(coordinates):
+        if coordinate[2] - coordinates[0][2] > 500:
+            begin = i
+            break
+    print("begin:%d" % begin)
+    for i in range(len(coordinates) - 1, -1, -1):
+        if coordinates[-1][2] - coordinates[i][2] > 500:
+            end = i
+            break
+    coordinates = coordinates[begin:end]
+
+    fixations = get_fixations(coordinates)
+    # 按行切割gaze点
+    pre_fixation = fixations[0]
+    distance = 600
+    row_fixations = []
+    tmp = []
+    for fixation in fixations:
+        if (
+                get_euclid_distance(
+                    fixation[0], pre_fixation[0], fixation[1], pre_fixation[1]
+                )
+                > distance
+        ):
+            row_fixations.append(tmp)
+            tmp = [fixation]
+        else:
+            tmp.append(fixation)
+        pre_fixation = fixation
+
+    base_path = (
+            "static\\data\\heatmap\\"
+            + str(exp.first().user)
+            + "\\"
+            + str(page_data_id)
+            + "\\"
+    )
+
+    if not os.path.exists(base_path+"fixation\\"):
+        os.mkdir(base_path+"fixation\\")
+    for i, item in enumerate(row_fixations):
+        name = "1"
+        for j in range(i):
+            name += "1"
+        print(item)
+        fixation_image(
+            pageData.image,
+            exp.first().user,
+            item,
+            page_data_id,
+            "/fixation/" + name + ".png",
+        )
+
+    import glob
+    print(base_path)
+    img_list = glob.glob(base_path + "fixation\\" + "*.png")
+    img_list.sort()
+    print(img_list)
+    join_images_vertical(img_list, base_path + "row_fix.png")
+
+    return HttpResponse(1)
+
+
+def get_all_heatmap(request):
     """
     根据page_data_id生成visual attention和nlp attention
     :param request: id,window
@@ -1138,11 +1325,11 @@ def get_heatmap(request):
     exp = Experiment.objects.filter(id=pageData.experiment_id)
 
     base_path = (
-        "static\\data\\heatmap\\"
-        + str(exp.first().user)
-        + "\\"
-        + str(page_data_id)
-        + "\\"
+            "static\\data\\heatmap\\"
+            + str(exp.first().user)
+            + "\\"
+            + str(page_data_id)
+            + "\\"
     )
 
     # 创建图片存储的目录
@@ -1176,7 +1363,6 @@ def get_heatmap(request):
     word level
     1. 生成3张图片
     2. 填充top_k
-    存在问题：图片不清晰
     """
     get_word_level_nlp_attention(
         pageData.texts,
@@ -1209,7 +1395,7 @@ def get_heatmap(request):
     visual attention
     1. 生成2张图片：heatmap + fixation
     2. 填充top_k
-    存在问题：个别top不对应、生成top和展示图片实际上做了两个heatmap
+    存在问题：生成top和展示图片实际上做了两个heatmap
     """
     # 滤波处理
     kernel_size = int(request.GET.get("window", 0))
@@ -1229,7 +1415,7 @@ def get_heatmap(request):
     )
 
     # 将spatial和temporal结合
-    save_path = base_path + "spatial_with_temporal.png"
+    save_path = base_path + "spatial_with_temporal_filter.png"
     heatmap_img = base_path + "visual.png"
     fixation_img = base_path + "fixation.png"
     join_two_image(heatmap_img, fixation_img, save_path)
@@ -1278,7 +1464,7 @@ def get_heatmap(request):
             words_to_painted.append(i)
 
     title = (
-        str(page_data_id) + "-" + exp.first().user + "-" + "sentences_not_understand"
+            str(page_data_id) + "-" + exp.first().user + "-" + "sentences_not_understand"
     )
     pic_path = base_path + "sentences_not_understand" + ".png"
     # 画图
@@ -1336,14 +1522,14 @@ def set_title(blk, title):
 
 
 def get_word_level_nlp_attention(
-    texts,
-    page_data_id,
-    top_dict,
-    background,
-    word_list,
-    word_locations,
-    username,
-    base_path,
+        texts,
+        page_data_id,
+        top_dict,
+        background,
+        word_list,
+        word_locations,
+        username,
+        base_path,
 ):
     logger.info("word level attention正在分析....")
     nlp_attentions = ["topic_relevant", "word_attention", "word_difficulty"]
@@ -1401,14 +1587,14 @@ def get_word_level_nlp_attention(
 
 
 def get_sentence_level_nlp_attention(
-    texts,
-    sentence_list,
-    background,
-    word_locations,
-    page_data_id,
-    top_sentence_dict,
-    username,
-    base_path,
+        texts,
+        sentence_list,
+        background,
+        word_locations,
+        page_data_id,
+        top_sentence_dict,
+        username,
+        base_path,
 ):
     logger.info("sentence level attention正在分析....")
     sentence_attentions = ["sentence_attention", "sentence_difficulty"]
@@ -1498,9 +1684,10 @@ def valid_coordinates(coordinates):
     begin = 0
     end = -1
     for i, coordinate in enumerate(coordinates):
-        if coordinate[2]-coordinates[0][2] > 200:
+        if coordinate[2] - coordinates[0][2] > 200:
             begin = i
             break
+    print("begin:%d" % begin)
     for i in range(len(coordinates) - 1, -1, -1):
         if coordinates[-1][2] - coordinates[i][2] > 200:
             end = i
@@ -1510,18 +1697,18 @@ def valid_coordinates(coordinates):
 
 
 def get_visual_attention(
-    page_data_id,
-    username,
-    gaze_x,
-    gaze_y,
-    gaze_t,
-    kernel_size,
-    background,
-    base_path,
-    word_list,
-    word_locations,
-    top_dict,
-    image,
+        page_data_id,
+        username,
+        gaze_x,
+        gaze_y,
+        gaze_t,
+        kernel_size,
+        background,
+        base_path,
+        word_list,
+        word_locations,
+        top_dict,
+        image,
 ):
     logger.info("visual attention正在分析....")
 
@@ -1534,7 +1721,7 @@ def get_visual_attention(
 
     print("length of list")
     print(len(list_x))
-
+    print("kernel_size:%d" % kernel_size)
     if kernel_size != 0:
         # 滤波
         list_x = preprocess_data(list_x, kernel_size)
@@ -1545,6 +1732,7 @@ def get_visual_attention(
     # 滤波完是浮点数，需要转成int
     list_x = list(map(int, list_x))
     list_y = list(map(int, list_y))
+
     # 组合
     coordinates = []
     for i in range(len(list_x)):
@@ -1557,9 +1745,12 @@ def get_visual_attention(
     2. 计算top_k
     为了拿到热斑的位置，生成了一次heatmap
     """
-    heatmap_name = base_path + "visual.png"
     # 计算top_k
-    hotspot = draw_heat_map(coordinates, heatmap_name, background)
+    data_list = []
+    for coordinate in coordinates:
+        data = [coordinate[0], coordinate[1]]
+        data_list.append(data)
+    hotspot = myHeatmap.draw_heat_map(data_list, base_path + "visual.png", background)
 
     df = pd.DataFrame(
         {
@@ -1610,9 +1801,9 @@ def get_visual_attention(
                 for i in range(-1, 2):
                     for j in range(-1, 2):
                         if (
-                            (graph[y + i][x + j] == 1)
-                            and not visit[y + i][x + j]
-                            and (i != 0 or j != 0)
+                                (graph[y + i][x + j] == 1)
+                                and not visit[y + i][x + j]
+                                and (i != 0 or j != 0)
                         ):
                             flag = True
                             for p in U:
@@ -1686,25 +1877,15 @@ def get_visual_attention(
     3. 生成热力图
     为了半透明，再次生成了一次heatmap
     """
-    # 生成热力图
-    heatmap_name = base_path + "visual.png"
-
-    title = str(page_data_id) + "-" + str(username) + "-" + "visual"
-    apply_heatmap(background, coordinates, heatmap_name, 0.3, title)
 
     # 生成fixation图示
     fixations = get_fixations(coordinates)
-    fixation_image(
-        image,
-        username,
-        fixations,
-        page_data_id,
-    )
+    fixation_image(image, username, fixations, page_data_id, "fixation.png")
 
 
 def get_center(location):
     return (location["left"] + location["right"]) / 2, (
-        location["top"] + location["bottom"]
+            location["top"] + location["bottom"]
     ) / 2
 
 
@@ -1712,8 +1893,8 @@ def is_saccade(pre_word_location, now_word_location, magic_saccade_dis):
     center1 = get_center(pre_word_location)
     center2 = get_center(now_word_location)
     return (
-        get_euclid_distance(center1[0], center2[0], center1[1], center2[1])
-        > magic_saccade_dis
+            get_euclid_distance(center1[0], center2[0], center1[1], center2[1])
+            > magic_saccade_dis
     )
 
 
@@ -1729,268 +1910,350 @@ def get_dataset(request):
     # 特征可以直接用raw data去算，也可以用smooth过的特征去算
     # label分别是按照单词，句子、段落给的，可以先试下单词怎么给
 
-    # 这个给的应该experiment_id，将所有页组合在一起
-    experiment_id = request.GET.get("id")
-    experiment = Experiment.objects.get(id=experiment_id)
-    page_data_list = PageData.objects.filter(experiment_id=experiment_id)
+    experiments = Experiment.objects.filter(is_finish=True)
+    success = 0
+    fail = 0
+    for experiment in experiments:
+        try:
+            page_data_list = PageData.objects.filter(experiment_id=experiment.id)
 
-    word = []
-    # word level
-    word_understand = []
-    sentence_understand = []
-    mind_wandering = []
-    reading_times = []
-    number_of_fixations = []
-    # sentence level
-    reading_times_of_sentence = []  # 相对的
-    second_pass_dwell_time_of_sentence = []  # 相对的
-    total_dwell_time_of_sentence = []  # 相对的
-    # para level
-    saccade_times_of_para = []
-    forward_saccade_times_of_para = []
-    backward_saccade_times_of_para = []
-
-    # 分页填充数据
-    word_num = 0  # 记录总单词数
-    for page_data in page_data_list:
-        word_list, sentence_list = get_word_and_sentence_from_text(
-            page_data.texts
-        )  # 获取单词和句子对应的index
-        words_location = json.loads(
-            page_data.location
-        )  # [{'left': 330, 'top': 95, 'right': 435.109375, 'bottom': 147},...]
-        assert len(word_list) == len(words_location)  # 确保单词分割的是正确的
-        word_num += len(word_list)
-        word.extend(word_list)
-
-        # 打标签
-        # 单词不懂
-        word_understand_this_page = [1 for x in word_list]
-        if page_data.wordLabels:
-            wordLabels = json.loads(page_data.wordLabels)
-            for label in wordLabels:
-                word_understand_this_page[label] = 0
-        word_understand.extend(word_understand_this_page)
-
-        # 句子不懂,实际上也反应在单词上
-        sentence_understand_this_page = [1 for x in word_list]
-        if page_data.sentenceLabels:
-            sentenceLabels = json.loads(page_data.sentenceLabels)
-            for label in sentenceLabels:
-                for i in range(label[0], label[1]):
-                    sentence_understand_this_page[i] = 0
-        sentence_understand.extend(sentence_understand_this_page)
-
-        # 走神，以一段为标签出现
-        mind_wandering_this_page = [1 for x in word_list]
-        if page_data.wanderLabels:
-            wanderLabels = json.loads(page_data.wanderLabels)
-            for label in wanderLabels:
-                for i in range(label[0], label[1] + 1):
-                    mind_wandering_this_page[i] = 0
-        mind_wandering.extend(mind_wandering_this_page)
-
-        # 计算特征
-        '''
-        word level
-        '''
-        list_x = list(map(float, page_data.gaze_x.split(",")))
-        list_y = list(map(float, page_data.gaze_y.split(",")))
-        list_t = list(map(float, page_data.gaze_t.split(",")))
-
-        # 组合
-        coordinates = []
-        for i in range(len(list_x)):
-            coordinate = [list_x[i], list_y[i], list_t[i]]
-            coordinates.append(coordinate)
-        fixations = get_fixations(coordinates)
-
-        # 计算number of fixation
-        number_of_fixations_this_page = [0 for x in word_list]
-        for fixation in fixations:
-            index = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
-            if index != -1:
-                number_of_fixations_this_page[index] += 1
-        number_of_fixations.extend(number_of_fixations_this_page)
-        # 计算reading times
-        reading_times_this_page = [0 for x in word_list]
-        pre_word_index = -1
-        for fixation in fixations:
-            index = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
-            if index != pre_word_index and index != -1:
-                reading_times_this_page[index] += 1
-        reading_times.extend(reading_times_this_page)
-
-        '''
-        句子level
-        '''
-        # 先从句子角度去看fixation的相关特征，之后将其再分配回单词上
-        reading_times_of_sentence_this_page_in_sentence_level = [
-            0 for x in sentence_list
-        ]
-        second_pass_dwell_time_of_sentence_this_page_in_sentence_level = [
-            0 for x in sentence_list
-        ]
-        total_dwell_time_of_this_page_in_sentence_level = [0 for x in sentence_list]
-        pre_sentence_index = -1
-        for fixation in fixations:
-            word_index = get_item_index_x_y(
-                page_data.location, fixation[0], fixation[1]
-            )
-            sentence_index = get_sentence_by_word(word_index, sentence_list)
-            if sentence_index != -1:
-                # 累积fixation duration
-                total_dwell_time_of_this_page_in_sentence_level[
-                    sentence_index
-                ] += fixation[2]
-                # 计算reading times
-                if sentence_index != pre_sentence_index:
-                    reading_times_of_sentence_this_page_in_sentence_level[
-                        sentence_index
-                    ] += 1
-                # 只有在reading times是2时，才累积fixation duration
-                if (
-                    reading_times_of_sentence_this_page_in_sentence_level[
-                        sentence_index
-                    ]
-                    == 2
-                ):
-                    second_pass_dwell_time_of_sentence_this_page_in_sentence_level[
-                        sentence_index
-                    ] += fixation[2]
-        # 分配到每个单词上
-        reading_times_of_sentence_this_page_in_word_level = [0 for x in word_list]
-        second_pass_dwell_time_of_sentence_this_page_in_word_level = [
-            0 for x in word_list
-        ]
-        total_dwell_time_of_this_page_in_word_level = [0 for x in word_list]
-
-        for i, sentence in enumerate(sentence_list):
-            for j in range(sentence[1], sentence[2]):
-                reading_times_of_sentence_this_page_in_word_level[
-                    j
-                ] = reading_times_of_sentence_this_page_in_sentence_level[i] / (
-                    math.log(sentence[3] + 1)
-                )
-                second_pass_dwell_time_of_sentence_this_page_in_word_level[
-                    j
-                ] = second_pass_dwell_time_of_sentence_this_page_in_sentence_level[
-                    i
-                ] / (
-                    math.log(sentence[3] + 1)
-                )
-                total_dwell_time_of_this_page_in_word_level[
-                    j
-                ] = total_dwell_time_of_this_page_in_sentence_level[i] / (
-                    math.log(sentence[3] + 1)
-                )
-        reading_times_of_sentence.extend(
-            reading_times_of_sentence_this_page_in_word_level
-        )
-        second_pass_dwell_time_of_sentence.extend(
-            second_pass_dwell_time_of_sentence_this_page_in_word_level
-        )
-        total_dwell_time_of_sentence.extend(total_dwell_time_of_this_page_in_word_level)
-
-        '''
-        para level
-        '''
-        if len(page_data.para) > 3:
-            para_list = json.loads(page_data.para)  # [[0,9],[10,17]
-        else:
-            logger.warning("para data :%d 没有para标签" % page_data.id)
-            para_list = []
-        saccade_times_of_para_in_para = [0 for i in para_list]
-        forward_saccade_times_of_para_in_para = [0 for i in para_list]
-        backward_saccade_times_of_para_in_para = [0 for i in para_list]
-
-        # 计算saccade的magic number，当两个fixation的距离大于300，则为saccade
-        magic_saccade_dis = 300
-        pre_fixation = get_item_index_x_y(
-            page_data.location, fixations[0][0], fixations[0][1]
-        )
-        for fixation in fixations:
-            index = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
-            if index != -1:
-                now_word_location = words_location[index]
-                pre_word_location = words_location[pre_fixation]
-                if is_saccade(pre_word_location, now_word_location, magic_saccade_dis):
-                    # 将saccade算入起点的段落
-                    para_index = get_para_by_word_index(pre_fixation, para_list)
-                    if para_list != -1:
-                        saccade_times_of_para_in_para[para_index] += 1
-                        # 计算回看
-                        if index > pre_fixation:
-                            forward_saccade_times_of_para_in_para[para_index] += 1
-                        else:
-                            backward_saccade_times_of_para_in_para[para_index] += 1
-                pre_fixation = index
-        saccade_times_of_para_word_level = [0 for i in word_list]
-        forward_saccade_times_word_level = [0 for i in word_list]
-        backward_saccade_times_word_level = [0 for i in word_list]
-        for i, para in enumerate(para_list):
-            for j in range(para[0], para[1] + 1):
-
-                assert len(word_list) > para[1]
-                scale = math.log((para[1] - para[0] + 1) + 1)
-                print("scale:%f"%scale)
-                print("saccade times:%d"%saccade_times_of_para_in_para[i])
-
-                saccade_times_of_para_word_level[j] = saccade_times_of_para_in_para[
-                    i
-                ] / scale
-                forward_saccade_times_word_level[
-                    j
-                ] = forward_saccade_times_of_para_in_para[i] / scale
-                backward_saccade_times_word_level[
-                    j
-                ] = backward_saccade_times_of_para_in_para[i] / scale
-
-        saccade_times_of_para.extend(saccade_times_of_para_word_level)
-        forward_saccade_times_of_para.extend(forward_saccade_times_word_level)
-        backward_saccade_times_of_para.extend(backward_saccade_times_word_level)
-
-    df = pd.DataFrame(
-        {
-            # 1. 实验信息相关
-            "experiment_id": [experiment_id for x in range(word_num)],
-            "user": [experiment.user for x in range(word_num)],
-            "article_id": [experiment.article_id for x in range(word_num)],
-            "word": word,
-            # # 2. label相关
-            "word_understand": word_understand,
-            "sentence_understand": sentence_understand,
-            "mind_wandering": mind_wandering,
-            # 3. 特征相关
+            word = []
             # word level
-            "reading_times": reading_times,
-            "number_of_fixations": number_of_fixations,
+            word_understand = []
+            sentence_understand = []
+            mind_wandering = []
+            reading_times = []
+            number_of_fixations = []
             # sentence level
-            "second_pass_dwell_time_of_sentence": second_pass_dwell_time_of_sentence,
-            "total_dwell_time_of_sentence": total_dwell_time_of_sentence,
-            "reading_times_of_sentence": reading_times_of_sentence,
+            reading_times_of_sentence = []  # 相对的
+            second_pass_dwell_time_of_sentence = []  # 相对的
+            total_dwell_time_of_sentence = []  # 相对的
+            saccade_times_of_sentence = []
+            forward_times_of_sentence = []
+            backward_times_of_sentence = []
             # para level
-            "saccade_times_of_para": saccade_times_of_para,
-            "forward_saccade_times_of_para": forward_saccade_times_of_para,
-            "backward_saccade_times_of_para": backward_saccade_times_of_para,
-        }
-    )
-    # path = (
-    #     "static\\data\\dataset\\"
-    #     + datetime.datetime.now().strftime("%Y-%m-%d")
-    #     + ".csv"
-    # )
-    path = (
-        "static\\data\\dataset\\"
-        + "test.csv"
-    )
-    import os
+            saccade_times_of_para = []
+            forward_saccade_times_of_para = []
+            backward_saccade_times_of_para = []
 
-    if os.path.exists(path):
-        df.to_csv(path, index=False, mode="a", header=False)
-    else:
-        df.to_csv(path, index=False, mode="a")
+            # 分页填充数据
+            word_num = 0  # 记录总单词数
+            for page_data in page_data_list:
+                word_list, sentence_list = get_word_and_sentence_from_text(
+                    page_data.texts
+                )  # 获取单词和句子对应的index
+                words_location = json.loads(
+                    page_data.location
+                )  # [{'left': 330, 'top': 95, 'right': 435.109375, 'bottom': 147},...]
+                assert len(word_list) == len(words_location)  # 确保单词分割的是正确的
+                word_num += len(word_list)
+                word.extend(word_list)
 
+                # 打标签
+                # 单词不懂
+                word_understand_this_page = [1 for x in word_list]
+                if page_data.wordLabels:
+                    wordLabels = json.loads(page_data.wordLabels)
+                    for label in wordLabels:
+                        word_understand_this_page[label] = 0
+                word_understand.extend(word_understand_this_page)
+
+                # 句子不懂,实际上也反应在单词上
+                sentence_understand_this_page = [1 for x in word_list]
+                if page_data.sentenceLabels:
+                    sentenceLabels = json.loads(page_data.sentenceLabels)
+                    for label in sentenceLabels:
+                        for i in range(label[0], label[1]):
+                            sentence_understand_this_page[i] = 0
+                sentence_understand.extend(sentence_understand_this_page)
+
+                # 走神，以一段为标签出现
+                mind_wandering_this_page = [1 for x in word_list]
+                if page_data.wanderLabels:
+                    wanderLabels = json.loads(page_data.wanderLabels)
+                    for label in wanderLabels:
+                        for i in range(label[0], label[1] + 1):
+                            mind_wandering_this_page[i] = 0
+                mind_wandering.extend(mind_wandering_this_page)
+
+                # 计算特征
+                """
+                word level
+                """
+                list_x = list(map(float, page_data.gaze_x.split(",")))
+                list_y = list(map(float, page_data.gaze_y.split(",")))
+                list_t = list(map(float, page_data.gaze_t.split(",")))
+
+                # 组合
+                coordinates = []
+                for i in range(len(list_x)):
+                    coordinate = [list_x[i], list_y[i], list_t[i]]
+                    coordinates.append(coordinate)
+                fixations = get_fixations(coordinates)
+
+                # 计算number of fixation
+                number_of_fixations_this_page = [0 for x in word_list]
+                for fixation in fixations:
+                    index = get_item_index_x_y(
+                        page_data.location, fixation[0], fixation[1]
+                    )
+                    if index != -1:
+                        number_of_fixations_this_page[index] += 1
+                number_of_fixations.extend(number_of_fixations_this_page)
+                # 计算reading times
+                reading_times_this_page = [0 for x in word_list]
+                pre_word_index = -1
+                for fixation in fixations:
+                    index = get_item_index_x_y(
+                        page_data.location, fixation[0], fixation[1]
+                    )
+                    if index != pre_word_index and index != -1:
+                        reading_times_this_page[index] += 1
+                        pre_word_index = index
+                reading_times.extend(reading_times_this_page)
+
+                """
+                句子level
+                """
+                # 先从句子角度去看fixation的相关特征，之后将其再分配回单词上
+                reading_times_of_sentence_this_page_in_sentence_level = [
+                    0 for x in sentence_list
+                ]
+                second_pass_dwell_time_of_sentence_this_page_in_sentence_level = [
+                    0 for x in sentence_list
+                ]
+                total_dwell_time_of_this_page_in_sentence_level = [
+                    0 for x in sentence_list
+                ]
+                pre_sentence_index = -1
+                for fixation in fixations:
+                    word_index = get_item_index_x_y(
+                        page_data.location, fixation[0], fixation[1]
+                    )
+                    sentence_index = get_sentence_by_word(word_index, sentence_list)
+                    if sentence_index != -1:
+                        # 累积fixation duration
+                        total_dwell_time_of_this_page_in_sentence_level[
+                            sentence_index
+                        ] += fixation[2]
+                        # 计算reading times
+                        if sentence_index != pre_sentence_index:
+                            reading_times_of_sentence_this_page_in_sentence_level[
+                                sentence_index
+                            ] += 1
+                        # 只有在reading times是2时，才累积fixation duration
+                        if (
+                                reading_times_of_sentence_this_page_in_sentence_level[
+                                    sentence_index
+                                ]
+                                == 2
+                        ):
+                            second_pass_dwell_time_of_sentence_this_page_in_sentence_level[
+                                sentence_index
+                            ] += fixation[
+                                2
+                            ]
+                # 分配到每个单词上
+                reading_times_of_sentence_this_page_in_word_level = [
+                    0 for x in word_list
+                ]
+                second_pass_dwell_time_of_sentence_this_page_in_word_level = [
+                    0 for x in word_list
+                ]
+                total_dwell_time_of_this_page_in_word_level = [0 for x in word_list]
+
+                for i, sentence in enumerate(sentence_list):
+                    for j in range(sentence[1], sentence[2]):
+                        reading_times_of_sentence_this_page_in_word_level[
+                            j
+                        ] = reading_times_of_sentence_this_page_in_sentence_level[i] / (
+                            math.log(sentence[3] + 1)
+                        )
+                        second_pass_dwell_time_of_sentence_this_page_in_word_level[
+                            j
+                        ] = second_pass_dwell_time_of_sentence_this_page_in_sentence_level[
+                                i
+                            ] / (
+                                math.log(sentence[3] + 1)
+                            )
+                        total_dwell_time_of_this_page_in_word_level[
+                            j
+                        ] = total_dwell_time_of_this_page_in_sentence_level[i] / (
+                            math.log(sentence[3] + 1)
+                        )
+                reading_times_of_sentence.extend(
+                    reading_times_of_sentence_this_page_in_word_level
+                )
+                second_pass_dwell_time_of_sentence.extend(
+                    second_pass_dwell_time_of_sentence_this_page_in_word_level
+                )
+                total_dwell_time_of_sentence.extend(
+                    total_dwell_time_of_this_page_in_word_level
+                )
+
+                saccade_times_of_sentence_in_sentence = [0 for x in sentence_list]
+                forward_times_of_sentence_in_sentence = [0 for x in sentence_list]
+                backward_times_of_sentence_in_sentence = [0 for x in sentence_list]
+
+                pre_fixation = get_item_index_x_y(
+                    page_data.location, fixations[0][0], fixations[0][1]
+                )
+                magic_saccade_dis = 300
+                for fixation in fixations:
+                    index = get_item_index_x_y(
+                        page_data.location, fixation[0], fixation[1]
+                    )
+                    if index != -1:
+                        now_word_location = words_location[index]
+                        pre_word_location = words_location[pre_fixation]
+                        if is_saccade(
+                                pre_word_location, now_word_location, magic_saccade_dis
+                        ):
+                            # 将saccade算入起点的句子
+                            sentence_index = get_sentence_by_word(
+                                pre_fixation, sentence_list
+                            )
+                            if sentence_index != -1:
+                                saccade_times_of_sentence_in_sentence[
+                                    sentence_index
+                                ] += 1
+                                # 计算回看
+                                if index > pre_fixation:
+                                    forward_times_of_sentence_in_sentence[
+                                        sentence_index
+                                    ] += 1
+                                else:
+                                    backward_times_of_sentence_in_sentence[
+                                        sentence_index
+                                    ] += 1
+                        pre_fixation = index
+                saccade_times_of_sentence_word_level = [0 for x in word_list]
+                forward_times_of_sentence_word_level = [0 for x in word_list]
+                backward_times_of_sentence_word_level = [0 for x in word_list]
+                for i, sentence in enumerate(sentence_list):
+                    scale = math.log((sentence[3] + 1))
+                    for j in range(sentence[1], sentence[2]):
+                        saccade_times_of_sentence_word_level[j] = (
+                                saccade_times_of_sentence_in_sentence[i] / scale
+                        )
+                        forward_times_of_sentence_word_level[j] = (
+                                forward_times_of_sentence_in_sentence[i] / scale
+                        )
+                        backward_times_of_sentence_word_level[j] = (
+                                backward_times_of_sentence_in_sentence[i] / scale
+                        )
+                saccade_times_of_sentence.extend(saccade_times_of_sentence_word_level)
+                forward_times_of_sentence.extend(forward_times_of_sentence_word_level)
+                backward_times_of_sentence.extend(backward_times_of_sentence_word_level)
+                """
+                para level
+                """
+                if len(page_data.para) > 3:
+                    para_list = json.loads(page_data.para)  # [[0,9],[10,17]
+                else:
+                    logger.warning("para data :%d 没有para标签" % page_data.id)
+                    para_list = []
+                saccade_times_of_para_in_para = [0 for i in para_list]
+                forward_saccade_times_of_para_in_para = [0 for i in para_list]
+                backward_saccade_times_of_para_in_para = [0 for i in para_list]
+
+                # 计算saccade的magic number，当两个fixation的距离大于300，则为saccade
+                magic_saccade_dis = 300
+                pre_fixation = get_item_index_x_y(
+                    page_data.location, fixations[0][0], fixations[0][1]
+                )
+                for fixation in fixations:
+                    index = get_item_index_x_y(
+                        page_data.location, fixation[0], fixation[1]
+                    )
+                    if index != -1:
+                        now_word_location = words_location[index]
+                        pre_word_location = words_location[pre_fixation]
+                        if is_saccade(
+                                pre_word_location, now_word_location, magic_saccade_dis
+                        ):
+                            # 将saccade算入起点的段落
+                            para_index = get_para_by_word_index(pre_fixation, para_list)
+                            if para_list != -1:
+                                saccade_times_of_para_in_para[para_index] += 1
+                                # 计算回看
+                                if index > pre_fixation:
+                                    forward_saccade_times_of_para_in_para[
+                                        para_index
+                                    ] += 1
+                                else:
+                                    backward_saccade_times_of_para_in_para[
+                                        para_index
+                                    ] += 1
+                        pre_fixation = index
+                saccade_times_of_para_word_level = [0 for i in word_list]
+                forward_saccade_times_word_level = [0 for i in word_list]
+                backward_saccade_times_word_level = [0 for i in word_list]
+                for i, para in enumerate(para_list):
+                    for j in range(para[0], para[1] + 1):
+                        assert len(word_list) > para[1]
+                        scale = math.log((para[1] - para[0] + 1) + 1)
+                        print("scale:%f" % scale)
+                        print("saccade times:%d" % saccade_times_of_para_in_para[i])
+                        saccade_times_of_para_word_level[j] = (
+                                saccade_times_of_para_in_para[i] / scale
+                        )
+                        forward_saccade_times_word_level[j] = (
+                                forward_saccade_times_of_para_in_para[i] / scale
+                        )
+                        backward_saccade_times_word_level[j] = (
+                                backward_saccade_times_of_para_in_para[i] / scale
+                        )
+
+                saccade_times_of_para.extend(saccade_times_of_para_word_level)
+                forward_saccade_times_of_para.extend(forward_saccade_times_word_level)
+                backward_saccade_times_of_para.extend(backward_saccade_times_word_level)
+
+            df = pd.DataFrame(
+                {
+                    # 1. 实验信息相关
+                    "experiment_id": [experiment.id for x in range(word_num)],
+                    "user": [experiment.user for x in range(word_num)],
+                    "article_id": [experiment.article_id for x in range(word_num)],
+                    "word": word,
+                    # # 2. label相关
+                    "word_understand": word_understand,
+                    "sentence_understand": sentence_understand,
+                    "mind_wandering": mind_wandering,
+                    # 3. 特征相关
+                    # word level
+                    "reading_times": reading_times,
+                    "number_of_fixations": number_of_fixations,
+                    # sentence level
+                    "second_pass_dwell_time_of_sentence": second_pass_dwell_time_of_sentence,
+                    "total_dwell_time_of_sentence": total_dwell_time_of_sentence,
+                    "reading_times_of_sentence": reading_times_of_sentence,
+                    "saccade_times_of_sentence": saccade_times_of_sentence,
+                    "forward_times_of_sentence": forward_times_of_sentence,
+                    "backward_times_of_sentence": backward_times_of_sentence,
+                    # para level
+                    "saccade_times_of_para": saccade_times_of_para,
+                    "forward_saccade_times_of_para": forward_saccade_times_of_para,
+                    "backward_saccade_times_of_para": backward_saccade_times_of_para,
+                }
+            )
+            path = (
+                    "static\\data\\dataset\\"
+                    + datetime.datetime.now().strftime("%Y-%m-%d")
+                    + ".csv"
+            )
+            # path = "static\\data\\dataset\\" + "test.csv"
+            import os
+
+            if os.path.exists(path):
+                df.to_csv(path, index=False, mode="a", header=False)
+            else:
+                df.to_csv(path, index=False, mode="a")
+            success += 1
+        except Exception as e:
+            logger.warning("experiment: %d 生成数据失败" % experiment.id)
+            fail += 1
+    logger.info("成功生成%d条，失败%d条" % (success, fail))
     return JsonResponse({"status": "ok"})
 
 
@@ -2023,3 +2286,28 @@ def article_2_csv(request):
     path = "static\\data\\dataset\\" + "article.csv"
     df.to_csv(path, index=False, header=False)
     return JsonResponse({"status_code": 200, "status": "ok"})
+
+
+def get_cnn_dataset(request):
+    data_list = PageData.objects.filter(wordLabels__isnull=False).exclude(wordLabels=1)
+    print(len(data_list))
+    x = []
+    y = []
+    t = []
+    for data in data_list:
+        x.append(data.gaze_x)
+        y.append(data.gaze_y)
+        t.append(data.gaze_t)
+    df = pd.DataFrame({"x": x, "y": y, "t": t})
+    path = "static\\data\\dataset\\filter.csv"
+    df.to_csv(path, index=False)
+
+    return HttpResponse(1)
+
+
+def filter_layer(data, kernel_size=7):
+    data = preprocess_data(data, kernel_size)
+
+    data = list(map(int, data))
+
+    return data
