@@ -264,7 +264,7 @@ def get_labels(request):
     # 示例：labels:[{"page":1,"wordLabels":[],"sentenceLabels":[[27,57]],"wanderLabels":[[0,27]]},{"page":2,"wordLabels":[36],"sentenceLabels":[],"wanderLabels":[]},{"page":3,"wordLabels":[],"sentenceLabels":[],"wanderLabels":[[0,34]]}]
     labels = json.loads(labels)
 
-    paras = request.POST.get("para")
+    paras = request.POST.get("sentence")
     paras = json.loads(paras)
 
     if experiment_id:
