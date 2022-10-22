@@ -22,11 +22,12 @@
             <div class="modal-content">
                 <div class="modal-body">
                     接下来，请在您刚才读完的文章中进行标注，具体如下。
-                    1. 若在阅读过程中有不懂的单词，请<strong>单击该单词</strong>，标注形式如下：
+                    <br />
+                    1. 若在阅读过程中有影响你顺畅阅读（不论懂不懂）的单词，请<strong>单击该单词</strong>，标注形式如下：
                     <img src="/static/images/wordLabel.jpg" width="100%" height="100%" alt="labeling instructions"></img>
-                    2. 若在阅读过程中有不懂的句子，请<strong>双击句子中任意一个单词</strong>，标注形式如下：
+                    2. 若在阅读过程中有影响你顺畅阅读（不论懂不懂）的句子，请<strong>双击句子中任意一个单词</strong>，标注形式如下：
                     <img src="/static/images/sentenceLabel.jpg" width="100%" height="100%" alt="labeling instructions"></img>
-                    3. 若在阅读过程中出现走神，请<strong>单击对应行末尾右方的圆形按钮</strong>，标注形式如下：
+                    3. 若在阅读过程中出现走神，请<strong>单击对应行左边的圆形按钮</strong>，标注形式如下：
                     <img src="/static/images/wanderLabel.jpg" width="100%" height="100%" alt="labeling instructions"></img>
                 </div>
                 <div class="modal-footer">
@@ -64,6 +65,8 @@
             contentOfPages: [],
             words: [],
             sentences: [],
+            sentencesCurPage: [],
+            sentencesPerPage: [],
             {#lines: "",#}
             page: 1,
             totalPage: 1,
@@ -75,7 +78,7 @@
             radio: 0,
             paraLoc: [],
             allParas: [],
-            linesCurPage: [],
+            {#linesCurPage: [],#}
         },
         methods: {
             getWordLocation: function (num) {
@@ -157,8 +160,8 @@
             },
 
             changeWanderSelect: function (num) {
-                let start = this.linesCurPage[num-1][0];
-                let end = this.linesCurPage[num-1][1];
+                let start = this.sentencesCurPage[num-1][0];
+                let end = this.sentencesCurPage[num-1][1];
                 for(let i = 0; i < this.labels[this.page-1].wanderLabels.length; i++) {
                     if(this.labels[this.page-1].wanderLabels[i][0] == start && this.labels[this.page-1].wanderLabels[i][1] == end) {
                         this.labels[this.page-1].wanderLabels[num-1] = [];
@@ -194,11 +197,10 @@
                 let lastWord = null;
                 var e = document.getElementById('para');
                 var Content = this.content[this.page-1].split('..');
-                console.log(Content)
                 Content.splice(Content.length-1, 1);
                 this.sentences = Content;
                 for (let i = 0; i < Content.length; i++) {
-                    var sentence = Content[i].split(' ');
+                    var sentence = Content[i].replace(new RegExp("."), "").split(' ');
                     for (let j = 0; j < sentence.length; j++) {
                         if (sentence[j] != "") {
                             this.words.push(sentence[j].split(',')[0]);
@@ -210,16 +212,27 @@
                             el.setAttribute("ondblclick", "changeSentenceSelect(" + num + ")");
                             e.appendChild(el);
                             if (j == sentence.length - 1) {
+                                end = num;
+                                this.sentencesCurPage.push(new Array(start, end));
+                                start = num + 1;
                                 el.innerHTML = sentence[j] + '.';
+                                let ele = document.createElement('button');
+                                ele.className = "wander";
+                                ele.innerHTML = (i+1).toString();
+                                ele.setAttribute("onclick", "changeWanderSelect("+ (i+1) + ")");
+                                ele.style.left = el.getBoundingClientRect().right - 10 + "px";
+                                ele.style.top = el.getBoundingClientRect().top - 10 + "px";
+                                document.getElementById('labelArea').appendChild(ele);
+                                this.labels[this.page-1].wanderLabels.push([]);
                             }
-                            if(lastWord) {
-                                if(el.getBoundingClientRect().top > lastWord.getBoundingClientRect().top || num == this.paraLoc[this.page-1][this.paraLoc[this.page-1].length-1]) {
-                                    end = num - 1;
-                                    this.linesCurPage.push(new Array(start, end));
-                                    start = num;
-                                }
-                            }
-                            lastWord = el;
+                            {#if(lastWord) {#}
+                            {#    if(el.getBoundingClientRect().top > lastWord.getBoundingClientRect().top || num == this.paraLoc[this.page-1][this.paraLoc[this.page-1].length-1]) {#}
+                            {#        end = num - 1;#}
+                            {#        this.linesCurPage.push(new Array(start, end));#}
+                            {#        start = num;#}
+                            {#    }#}
+                            {# }#}
+                            {#lastWord = el;#}
                             num += 1;
                             if(this.isInArr(num - 1,this.paraLoc[this.page-1])) {
                                 el = document.createElement("button");
@@ -234,17 +247,17 @@
                         }
                     }
                 }
-                for(let i = 0; i < this.linesCurPage.length; i++) {
-                    let el = document.createElement('button');
-                    el.className = "wander";
-                    el.innerHTML = (i+1).toString();
-                    el.setAttribute("onclick", "changeWanderSelect("+ (i+1) + ")");
-                    start = document.getElementsByClassName('word')[this.linesCurPage[i][0]].getBoundingClientRect().top;
-                    let end = document.getElementsByClassName('word')[this.linesCurPage[i][1]].getBoundingClientRect().bottom;
-                    el.style.top = (end - start) / 2 + start - 17 + "px";
-                    document.getElementById('labelArea').appendChild(el);
-                    this.labels[this.page-1].wanderLabels.push([]);
-                }
+                {#for(let i = 0; i < this.linesCurPage.length; i++) {#}
+                {#    let el = document.createElement('button');#}
+                {#    el.className = "wander";#}
+                {#    el.innerHTML = (i+1).toString();#}
+                {#    el.setAttribute("onclick", "changeWanderSelect("+ (i+1) + ")");#}
+                {#    start = document.getElementsByClassName('word')[this.linesCurPage[i][0]].getBoundingClientRect().top;#}
+                {#    let end = document.getElementsByClassName('word')[this.linesCurPage[i][1]].getBoundingClientRect().bottom;#}
+                {#    el.style.top = (end - start) / 2 + start - 17 + "px";#}
+                {#    document.getElementById('labelArea').appendChild(el);#}
+                {#    this.labels[this.page-1].wanderLabels.push([]);#}
+                {# }#}
                 {#let buttonNum = 0;#}
                 {#for (; e.children[buttonNum]; buttonNum++) {#}
                 {#    if(buttonNum > 1 && e.children[buttonNum].getBoundingClientRect().top > e.children[buttonNum-1].getBoundingClientRect().top) {#}
@@ -271,6 +284,10 @@
                 {#    document.getElementById('labelArea').appendChild(lab);#}
                 {# }#}
                 this.rememberLabels();
+                if(!this.sentencesPerPage[this.page - 1]) {
+                    this.sentencesPerPage.push(this.sentencesCurPage);
+                }
+                console.log(this.sentencesPerPage);
             },
 
             //把labels发送给后端存储,并更新word_level_data
@@ -287,7 +304,7 @@
                 console.log(this.labels);
                 let formdata = new FormData();
                 formdata.append('labels',JSON.stringify(this.labels));
-                formdata.append("para", JSON.stringify(this.allParas));
+                formdata.append("sentence", JSON.stringify(this.sentencesPerPage));
                 $.ajax({
                     type: 'POST',
                     url: '/label/send/',
@@ -334,6 +351,7 @@
                 this.words = [];
                 this.lines = [];
                 this.linesCurPage = [];
+                this.sentencesCurPage = [];
                 {#if(this.labels[this.page-1])#}
                 {#    this.radio = this.labels[this.page-1].wanderLabels;#}
                 {#else#}
