@@ -27,7 +27,7 @@
                     <img src="/static/images/wordLabel.jpg" width="100%" height="100%" alt="labeling instructions"></img>
                     2. 若在阅读过程中有影响你顺畅阅读（不论懂不懂）的句子，请<strong>双击句子中任意一个单词</strong>，标注形式如下：
                     <img src="/static/images/sentenceLabel.jpg" width="100%" height="100%" alt="labeling instructions"></img>
-                    3. 若在阅读过程中出现走神，请<strong>单击对应行左边的圆形按钮</strong>，标注形式如下：
+                    3. 若在阅读过程中出现走神，请<strong>单击对应句子末尾右上方的圆形按钮（若在多句中出现走神，则把可能走神的句子都标注出来）</strong>，标注形式如下：
                     <img src="/static/images/wanderLabel.jpg" width="100%" height="100%" alt="labeling instructions"></img>
                 </div>
                 <div class="modal-footer">
@@ -200,7 +200,7 @@
                 Content.splice(Content.length-1, 1);
                 this.sentences = Content;
                 for (let i = 0; i < Content.length; i++) {
-                    var sentence = Content[i].replace(new RegExp("."), "").split(' ');
+                    var sentence = Content[i].replace(".", "").split(' ');
                     for (let j = 0; j < sentence.length; j++) {
                         if (sentence[j] != "") {
                             this.words.push(sentence[j].split(',')[0]);
