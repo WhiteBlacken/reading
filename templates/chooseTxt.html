@@ -45,13 +45,44 @@
             showArticles: function () {
                 axios.get("/text").then((response) => {
                     this.articles = response.data;
-                    console.log(this.articles)
+                    this.articles = Object.values(this.articles);
+                    let e = document.getElementById('article_list');
+                    let ul = document.createElement('ul');
+                    ul.id = "articles";
+                    e.appendChild(ul);
+                    e = ul;
+                    for(let i = 0; i < this.articles.length; i++) {
+                        let el = document.createElement('li');
+                        el.className = "article";
+                        el.innerHTML = (i+1).toString() + ": " + this.articles[i];
+                        e.appendChild(el);
+                    }
                 });
             },
         },
         created () {
-
+            this.showArticles();
         }
     })
+    function setCookie(cname, cvalue) {
+        document.cookie = cname + "=" + cvalue + "; path=/";
+    }
+
+    function getCookie(cname) {
+        let name = cname + "=";
+        let ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i].trim();
+            if (c.indexOf(name) == 0)
+                return c.substring(name.length, c.length);
+        }
+        return "";
+    }
+
+    function get_start () {
+        let article_id = document.getElementById('article_id').value;
+        setCookie("article_id", article_id);
+        window.location.href = "/reading/";
+    }
 </script>
 </html>

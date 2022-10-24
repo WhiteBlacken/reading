@@ -113,7 +113,7 @@ $(document).ready(function(){
                           if (isConfirm){
                             //clear the calibration & hide the last middle button
                             ClearCanvas();
-                            window.location.href = '/reading/';
+                            window.location.href = '/choose/';
                           } else {
                             //use restart function to restart the calibration
                             document.getElementById("Accuracy").innerHTML = "<a>暂未校准</a>";

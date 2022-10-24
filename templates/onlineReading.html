@@ -374,10 +374,14 @@
 
             getContent_2: async function () {
                 let maxLine = 16;
-                await axios.get("/para").then((response) => {
+                let article_id = getCookie('article_id');
+                let request = "/para";
+                if(article_id.length > 0)
+                    request += "?article_id=" + article_id;
+                console.log(request);
+                await axios.get(request).then((response) => {
                     this.content = response.data;
                 });
-
                 this.content = Object.values(this.content);
                 for (let i = 0; i < this.content.length; i++)
                     this.paras.push(this.content[i][0]);
