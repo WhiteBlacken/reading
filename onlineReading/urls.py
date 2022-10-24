@@ -42,5 +42,6 @@ urlpatterns = [
     path("dataset/", views.get_dataset),
     path("article/",views.article_2_csv),
     path("ccn_data/",views.get_cnn_dataset),
-    path("row_level_fix/",views.get_row_level_fixations_map)
+    path("row_level_fix/",views.get_row_level_fixations_map),
+    path("choose/", views.choose_text),
 ]

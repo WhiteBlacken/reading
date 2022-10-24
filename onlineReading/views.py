@@ -92,6 +92,8 @@ def index(request):
     """首页"""
     return render(request, "onlineReading.html")
 
+def choose_text(request):
+    return render(request, "chooseTxt.html")
 
 def get_all_text_available(request):
     """获取所有可以展示的文章列表"""
