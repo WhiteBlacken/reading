@@ -96,9 +96,11 @@ def index(request):
 def get_all_text_available(request):
     """获取所有可以展示的文章列表"""
     texts = Text.objects.filter(is_show=True)
-    texts_json = serializers.serialize("json", texts)
+    text_dict = {}
+    for text in texts:
+        text_dict[text.id] = text.title
     return JsonResponse(
-        texts_json, json_dumps_params={"ensure_ascii": False}, safe=False
+        text_dict, json_dumps_params={"ensure_ascii": False}, safe=False
     )
 
 
