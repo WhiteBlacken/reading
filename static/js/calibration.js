@@ -96,7 +96,7 @@ $(document).ready(function(){
                       var past50 = webgazer.getStoredPoints(); // retrieve the stored points
                       var precision_measurement = calculatePrecision(past50);
                       var isRecalibrate;
-                      if(precision_measurement > 80)
+                      if(precision_measurement >= 80)
                           isRecalibrate = "现在可以开始阅读啦！";
                       else
                           isRecalibrate = "小于 80% ，请重新校准！";
