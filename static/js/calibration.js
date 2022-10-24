@@ -116,7 +116,7 @@ $(document).ready(function(){
                             window.location.href = '/reading/';
                           } else {
                             //use restart function to restart the calibration
-                            document.getElementById("Accuracy").innerHTML = "<a>Not yet Calibrated</a>";
+                            document.getElementById("Accuracy").innerHTML = "<a>暂未校准</a>";
                             webgazer.clearData();
                             ClearCalibration();
                             ClearCanvas();
