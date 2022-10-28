@@ -421,8 +421,9 @@
 
                     for (; sentenceNum < sentences.length; sentenceNum++) {
                         var words = sentences[sentenceNum].split(' ');
+
                         for (let p = 0; p < words.length; p++) {
-                            if (words[p] == '')
+                            if (words[p].length == 0)
                                 words.splice(p, 1);
                         }
                         let k = 0;
