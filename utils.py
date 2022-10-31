@@ -1,23 +1,21 @@
 import base64
+import datetime
 import json
 import math
-import os
-import datetime
+
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import requests
+import torch
 from loguru import logger
 from paddleocr import PaddleOCR
 from paddleocr.tools.infer.utility import draw_ocr
+from PIL import Image
 from scipy import signal
 
-from PIL import Image
-
+from model.FeatureClassify import ModelWithoutFC
 from onlineReading import settings
-
-import matplotlib.pyplot as plt
-
-from sklearn.cluster import KMeans
 
 
 def get_fixations(coordinates):
@@ -38,10 +36,7 @@ def get_fixations(coordinates):
     print("gaze length:%d" % len(remaining_gaze))
     while remaining_gaze:
         # 逐个处理所有的gaze data
-        if (
-            len(working_queue) < 2
-            or (working_queue[-1][2] - working_queue[0][2]) < min_duration
-        ):
+        if len(working_queue) < 2 or (working_queue[-1][2] - working_queue[0][2]) < min_duration:
             # 如果当前无要处理的gaze或gaze间隔太短--再加一个gaze后再来处理
             datum = remaining_gaze.popleft()
             working_queue.append(datum)
@@ -63,9 +58,7 @@ def get_fixations(coordinates):
         # minimal fixation found,collect maximal data
         while remaining_gaze:
             datum = remaining_gaze[0]
-            if datum[2] > working_queue[0][2] + max_duration or with_distance(
-                working_queue[0], datum, max_distance
-            ):
+            if datum[2] > working_queue[0][2] + max_duration or with_distance(working_queue[0], datum, max_distance):
                 fixations.append(from_gazes_to_fixation(list(working_queue)))
                 working_queue.clear()
                 break  # maximum data found
@@ -174,13 +167,9 @@ def get_sentence_location(location, sentence_list):
         for j, sentence in enumerate(sentence_list):
             if sentence[2] > i >= sentence[1]:
                 if j in sentence_location.keys():
-                    sentence_location[j].append(
-                        [loc["left"], loc["top"], loc["right"], loc["bottom"]]
-                    )
+                    sentence_location[j].append([loc["left"], loc["top"], loc["right"], loc["bottom"]])
                 else:
-                    sentence_location[j] = [
-                        [loc["left"], loc["top"], loc["right"], loc["bottom"]]
-                    ]
+                    sentence_location[j] = [[loc["left"], loc["top"], loc["right"], loc["bottom"]]]
     return sentence_location
 
 
@@ -230,7 +219,7 @@ def fixation_image(image_base64, username, fixations, page_data_id, pic_name):
     # 1. 处理图片
     data = image_base64.split(",")[1]
     # 将str解码为byte
-    image_data = base64.b64decode(data)
+    base64.b64decode(data)
     # 获取名称
 
     filename = "background.png"
@@ -403,18 +392,17 @@ def translate(content):
         Encry.update(sign.encode())
         sign = Encry.hexdigest()
         # 3. 发送请求
-        url = (
-            "http://api.fanyi.baidu.com/api/trans/vip/translate?"
-            + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
-            % (content, appid, salt, sign)
+        url = "http://api.fanyi.baidu.com/api/trans/vip/translate?" + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s" % (
+            content,
+            appid,
+            salt,
+            sign,
         )
         # 4. 解析结果
         response = requests.get(url)
         data = json.loads(response.text)
         endtime = datetime.datetime.now()
-        logger.info(
-            "翻译接口执行时间为%sms" % round((endtime - starttime).microseconds / 1000 / 1000, 3)
-        )
+        logger.info("翻译接口执行时间为%sms" % round((endtime - starttime).microseconds / 1000 / 1000, 3))
         return {"status": 200, "zh": data["trans_result"][0]["dst"]}
     except Exception as e:
         return {"status": 500, "zh": None}
@@ -429,11 +417,7 @@ def get_out_of_screen_times(coordinates):
 
 
 def get_proportion_of_horizontal_saccades(fixations, locations, saccade_times):
-    return (
-        get_vertical_saccades(fixations, locations) / saccade_times
-        if saccade_times != 0
-        else 0
-    )
+    return get_vertical_saccades(fixations, locations) / saccade_times if saccade_times != 0 else 0
 
 
 def get_vertical_saccades(fixations, locations):
@@ -484,7 +468,6 @@ def get_reading_times_of_word(fixations, locations):
     """获取区域的reading times"""
     location = json.loads(locations)
     pre_fixation = [-2 for x in range(0, len(location))]
-    number_of_fixations = {}
     reading_times = {}  # dict
     reading_durations = {}  # dict.dict
     fixation_cnt = 0
@@ -512,9 +495,7 @@ def get_reading_times_of_word(fixations, locations):
     return reading_times, reading_durations
 
 
-def get_reading_times_and_dwell_time_of_sentence(
-    fixations, buttons_location, sentence_dict
-):
+def get_reading_times_and_dwell_time_of_sentence(fixations, buttons_location, sentence_dict):
     pre_fixations = [-2 for x in range(0, len(sentence_dict))]
     fixation_cnt = 0
     reading_times = {}
@@ -564,11 +545,7 @@ def get_sentence_by_word(word_index, sentences):
     """判断单词在哪个句子中"""
     index = 0
     for key in sentences:
-        if (
-            sentences[key]["end_word_index"]
-            > word_index
-            >= sentences[key]["begin_word_index"]
-        ):
+        if sentences[key]["end_word_index"] > word_index >= sentences[key]["begin_word_index"]:
             return index
         index = index + 1
     return -1
@@ -616,9 +593,7 @@ def get_saccade(fixations, location):
                 backward_saccade_times = backward_saccade_times + 1
 
             # 2. 计算saccade angle
-            sum_saccade_angle = sum_saccade_angle + get_saccade_angle(
-                pre_fixation, fixation
-            )
+            sum_saccade_angle = sum_saccade_angle + get_saccade_angle(pre_fixation, fixation)
             # 3. 更新pre fixation
             pre_word_index = word_index
             pre_fixation = fixation
@@ -776,6 +751,7 @@ def ocr(img_path):
 
 def get_sematic_heat_map():
     import urllib
+
     from pyheatmap.heatmap import HeatMap
 
     url = "https://raw.github.com/oldj/pyheatmap/master/examples/test_data.txt"
@@ -794,8 +770,6 @@ def get_sematic_heat_map():
     hm = HeatMap(data)
     hm.clickmap(save_as="hit.png")
     hm.heatmap(save_as="heat.png")
-
-    pass
 
 
 def meanFilter(data, win):
@@ -828,9 +802,7 @@ def get_importance(text):
 
     kw_model = KeyBERT()
 
-    importance = kw_model.extract_keywords(
-        text, keyphrase_ngram_range=(1, 1), stop_words=None, top_n=100
-    )
+    importance = kw_model.extract_keywords(text, keyphrase_ngram_range=(1, 1), stop_words=None, top_n=100)
     return importance
 
 
@@ -854,9 +826,7 @@ def get_word_and_sentence_from_text(content):
                         word_list.append(word)
                         cnt += 1
             end = cnt
-            sentence_list.append(
-                (sentence, begin, end, end - begin)
-            )  # (句子文本，开始的单词序号，结束的单词序号+1，长度)
+            sentence_list.append((sentence, begin, end, end - begin))  # (句子文本，开始的单词序号，结束的单词序号+1，长度)
             begin = cnt
     return word_list, sentence_list
 
@@ -892,21 +862,15 @@ def calculate_similarity(word_dict, level="word"):
 
     if level == "word":
         result = [
-            len(set(visual).intersection(set(topic)))
-            / len(set(visual).union(set(topic))),
-            len(set(visual).intersection(set(word_attention)))
-            / len(set(visual).union(set(word_attention))),
-            len(set(visual).intersection(set(difficulty_word)))
-            / len(set(visual).union(set(difficulty_word))),
+            len(set(visual).intersection(set(topic))) / len(set(visual).union(set(topic))),
+            len(set(visual).intersection(set(word_attention))) / len(set(visual).union(set(word_attention))),
+            len(set(visual).intersection(set(difficulty_word))) / len(set(visual).union(set(difficulty_word))),
         ]
     elif level == "sentence":
         result = [
-            len(set(visual).intersection(set(topic)))
-            / len(set(visual).union(set(topic))),
-            len(set(visual).intersection(set(sentence_attention)))
-            / len(set(visual).union(set(sentence_attention))),
-            len(set(visual).intersection(set(difficulty_sentence)))
-            / len(set(visual).union(set(difficulty_sentence))),
+            len(set(visual).intersection(set(topic))) / len(set(visual).union(set(topic))),
+            len(set(visual).intersection(set(sentence_attention))) / len(set(visual).union(set(sentence_attention))),
+            len(set(visual).intersection(set(difficulty_sentence))) / len(set(visual).union(set(difficulty_sentence))),
         ]
     return result
 
@@ -915,9 +879,9 @@ def calculate_identity(word_dict, level="word"):
     visual = word_dict.get("visual")
     topic = word_dict.get("topic_relevant")
     word_attention = word_dict.get("word_attention")
-    sentence_attention = word_dict.get("sentence_attention")
+    word_dict.get("sentence_attention")
     difficulty_word = word_dict.get("word_difficulty")
-    difficulty_sentence = word_dict.get("sentence_difficulty")
+    word_dict.get("sentence_difficulty")
 
     result = []
 
@@ -1022,10 +986,11 @@ def get_word_by_one_gaze(word_locations, gaze):
 
 
 def apply_heatmap(background, data, heatmap_name, alpha, title):
+    import matplotlib.pyplot as plt
     import numpy as np
     from PIL import Image
+
     from pyheatmap.heatmap import HeatMap
-    import matplotlib.pyplot as plt
 
     image = cv2.imread(background)
     background = Image.new("RGB", (image.shape[1], image.shape[0]), color=0)
@@ -1034,9 +999,7 @@ def apply_heatmap(background, data, heatmap_name, alpha, title):
     hit_img = hm.heatmap(base=background, r=40)  # background为背景图片，r是半径，默认为10
     hit_img = cv2.cvtColor(np.asarray(hit_img), cv2.COLOR_RGB2BGR)  # Image格式转换成cv2格式
     overlay = image.copy()
-    cv2.rectangle(
-        overlay, (0, 0), (image.shape[1], image.shape[0]), (255, 255, 255), -1
-    )  # 设置蓝色为热度图基本色蓝色
+    cv2.rectangle(overlay, (0, 0), (image.shape[1], image.shape[0]), (255, 255, 255), -1)  # 设置蓝色为热度图基本色蓝色
     image = cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0)  # 将背景热度图覆盖到原图
     image = cv2.addWeighted(hit_img, alpha, image, 1 - alpha, 0)  # 将热度图覆盖到原图
     plt.imshow(image)
@@ -1134,7 +1097,11 @@ def get_test_heatmap():
 
 
 if __name__ == "__main__":
-    import re
+    model = ModelWithoutFC()
+    model.load_state_dict(torch.load("model/EyeFeatureModel.pth"))
 
-    get_test_heatmap()
-    pass
+    model.eval()
+    input = torch.randn(1, 263, 5)
+    output = model(input)
+    print(output)
+    print(output.shape)
