@@ -113,6 +113,7 @@ $(document).ready(function(){
                           if (isConfirm){
                             //clear the calibration & hide the last middle button
                             ClearCanvas();
+                            full_screen();
                             window.location.href = '/choose/';
                           } else {
                             //use restart function to restart the calibration

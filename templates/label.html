@@ -51,7 +51,7 @@
 {#                </div>#}
             </div>
         </div>
-        <el-button type="primary" style="position: fixed;bottom: 5rem;right: 5rem;" v-if="page == totalPage"
+        <el-button type="primary" style="position: fixed;bottom: 1.8rem;right: 1.8rem;" v-if="page == totalPage"
                        v-on:click="collect_labels">标注完成
         </el-button>
     </div>
@@ -196,11 +196,16 @@
                 let end = 0;
                 let lastWord = null;
                 var e = document.getElementById('para');
-                var Content = this.content[this.page-1].split('..');
+                var Content = this.content[this.page-1].split('.');
                 Content.splice(Content.length-1, 1);
                 this.sentences = Content;
+                console.log(Content)
+                for(let i = 0 ; i < Content.length; i++)
+                    if(Content[i].length == 0)
+                        Content.splice(i,1);
                 for (let i = 0; i < Content.length; i++) {
                     var sentence = Content[i].replace(".", "").split(' ');
+                    console.log(sentence);
                     for (let j = 0; j < sentence.length; j++) {
                         if (sentence[j] != "") {
                             this.words.push(sentence[j].split(',')[0]);
