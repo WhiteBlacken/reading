@@ -48,4 +48,5 @@ urlpatterns = [
     path("test_model/", views.test),
     path("heatmap_all_user/", views.get_all_heatmap_of_all_user),
     path("semantic/value/", views.get_semantic_value_of_word),
+    path("fix_map_by_time/", views.get_fixation_by_time),
 ]

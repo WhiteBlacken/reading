@@ -3296,3 +3296,150 @@ def input_to_label(input):
     print("fixation占比:%f" % (np.sum(output == 1) / len(output)))
     print("saccade占比:%f" % (np.sum(output == 2) / len(output)))
     return output
+
+
+def get_t(gaze_t):
+    # 超参
+    times_for_remove = 500  # 删除开头结尾的长度，单位是ms
+    # 转换格式
+    list_t = list(map(float, gaze_t.split(",")))
+
+    new_list_t = []
+    # 组合+舍去开头结尾
+    for i in range(len(list_t)):
+        if list_t[-1] - list_t[i] <= times_for_remove:
+            # 舍去最后的一段时间的gaze点
+            break
+        if list_t[i] - list_t[0] > times_for_remove:
+            # 只有开始一段时间后的gaze点才计入
+            new_list_t.append(list_t[i])
+    return new_list_t
+
+
+def get_fixation_by_time(request):
+    exp_id = request.GET.get("exp_id")
+    time = request.GET.get("time")
+
+    # 1. 准备底图
+    # 先要把time按照page分页
+    page_data_ls = PageData.objects.filter(experiment_id=exp_id)
+
+    timestamp = 0
+    timestamps = []  # 每页的time范围
+    for page_data in page_data_ls:
+        gaze_t = get_t(page_data.gaze_t)
+        print(gaze_t)
+        begin = 0
+        for i, t in enumerate(gaze_t):
+            if i == 0:
+                continue
+            if gaze_t[i] - gaze_t[begin] > 800:
+                timestamp += 1
+                begin = i
+        timestamps.append(timestamp)
+
+    print("timestamps")
+    print(timestamps)
+    page_index = -1
+    for i, item in enumerate(timestamps):
+        print(item)
+        if item >= int(time):
+            page_index = i
+            break
+    assert page_index >= 0
+    assert len(page_data_ls) >= page_index
+
+    page_data = page_data_ls[page_index]
+
+    image = page_data.image.split(",")[1]
+    image_data = base64.b64decode(image)
+
+    filename = "static\\data\\timestamp\\origin.png"
+    with open(filename, "wb") as f:
+        f.write(image_data)
+
+    # 2. 准备gaze点
+    row = -1
+    csv = "static\\data\\dataset\\10-31-43-gaze.csv"
+    file = pd.read_csv(csv)
+    for i, r in file.iterrows():
+        if str(r["experiment_id"]) == exp_id and str(r["time"]) == time:
+            print(type(r["experiment_id"]))
+            print(type(exp_id))
+            row = i
+            break
+    if row == -1:
+        return JsonResponse({"code": 404, "status": "未检索相关信息"}, json_dumps_params={"ensure_ascii": False}, safe=False)
+
+    print(file["gaze_x"][row])
+    print(type(file["gaze_x"][row]))
+
+    gaze_x = file["gaze_x"][row]
+    gaze_y = file["gaze_y"][row]
+
+    list_x = list(map(float, gaze_x[1:-1].split(",")))
+    list_y = list(map(float, gaze_y[1:-1].split(",")))
+    list_t = []
+
+    time_t = 0
+    for i in range(len(list_x)):
+        list_t.append(time_t)
+        time_t += 30
+    assert len(list_x) == len(list_y) == len(list_t)
+
+    coordinates = []
+    for i in range(len(list_x)):
+        tmp = [int(list_x[i]), int(list_y[i]), int(list_t[i])]
+        coordinates.append(tmp)
+    fixations = get_fixations(coordinates)
+
+    # 3. 画图
+    img = cv2.imread(filename)
+    cnt = 0
+    pre_fix = (0, 0)
+    for i, fix in enumerate(fixations):
+        cv2.circle(
+            img,
+            (fix[0], fix[1]),
+            3,
+            (0, 0, 255),
+            -1,
+        )
+        if cnt > 0:
+            cv2.line(
+                img,
+                (pre_fix[0], pre_fix[1]),
+                (fix[0], fix[1]),
+                (0, 0, 255),
+                1,
+            )
+
+        # 标序号 间隔着标序号
+        cv2.putText(
+            img,
+            str(cnt),
+            (fix[0], fix[1]),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (255, 0, 0),
+            1,
+        )
+        cnt = cnt + 1
+        pre_fix = fix
+    result_filename = "static\\data\\timestamp\\" + str(exp_id) + "-" + str(time) + "-fix.png"
+    cv2.imwrite(result_filename, img)
+    logger.info("fixation 图片生成路径:%s" % result_filename)
+
+    img = cv2.imread(filename)
+    for i, fix in enumerate(coordinates):
+        cv2.circle(
+            img,
+            (fix[0], fix[1]),
+            1,
+            (0, 0, 255),
+            -1,
+        )
+    result_filename = "static\\data\\timestamp\\" + str(exp_id) + "-" + str(time) + "-gaze.png"
+    cv2.imwrite(result_filename, img)
+    logger.info("gaze 图片生成路径:%s" % result_filename)
+    return JsonResponse({"code": 200, "status": "生成完毕"}, json_dumps_params={"ensure_ascii": False}, safe=False)
