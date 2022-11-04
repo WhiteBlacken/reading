@@ -3360,7 +3360,7 @@ def get_fixation_by_time(request):
 
     # 2. 准备gaze点
     row = -1
-    csv = "static\\data\\dataset\\10-31-43-gaze.csv"
+    csv = "static\\dataset\\10-31-43-gaze.csv"
     file = pd.read_csv(csv)
     for i, r in file.iterrows():
         if str(r["experiment_id"]) == exp_id and str(r["time"]) == time:
