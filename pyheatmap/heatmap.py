@@ -11,28 +11,23 @@ pyHeatMap
 
 """
 
+import colorsys
 import os
 import random
-from PIL import Image
-from PIL import ImageDraw2
-from inc import cf
-import colorsys
-
 import sys
 
-if sys.version > '3':
+from PIL import Image, ImageDraw2
+
+from pyheatmap.inc import cf
+
+if sys.version > "3":
     PY3 = True
 else:
     PY3 = False
 
 
 class HeatMap(object):
-    def __init__(self,
-                 data,
-                 base=None,
-                 width=0,
-                 height=0
-                 ):
+    def __init__(self, data, base=None, width=0, height=0):
         u""""""
 
         assert type(data) in (list, tuple)
@@ -242,37 +237,44 @@ class HeatMap(object):
         self.__im.save(save_as)
         self.__im = None
 
+
 def hsl_to_rgb(s):
     a = s[4:-1]
-    hsl = [float(num.strip(' %')) for num in a.split(',')]
+    hsl = [float(num.strip(" %")) for num in a.split(",")]
     hsl[1] /= 100
     hsl[2] /= 100
-    r = colorsys.hls_to_rgb(hsl[0]/360, hsl[2], hsl[1])
+    r = colorsys.hls_to_rgb(hsl[0] / 360, hsl[2], hsl[1])
     return int(r[0] * 255), int(r[1] * 255), int(r[2] * 255)
 
-s = 'hsl(240, 100%, 50%)'
+
+s = "hsl(240, 100%, 50%)"
 hsl_to_rgb(s)
 
 
 def draw_heat_map(data, heatmap_name, base):
     # 开始绘制
     hm = HeatMap(data)
-    hm.heatmap(save_as=heatmap_name,base=base,r=40)
+    hm.heatmap(save_as=heatmap_name, base=base, r=40)
     return hm.hotspot
+
 
 if __name__ == "__main__":
     import pandas as pd
 
-    df = pd.read_csv('C://Users//20591\Desktop//reading//static//data//heatmap//luqi//1072//gaze.csv')
+    df = pd.read_csv("C://Users//20591\Desktop//reading//static//data//heatmap//luqi//1072//gaze.csv")
     data = []
 
-    for i in range(len(df['id'])):
+    for i in range(len(df["id"])):
         coordinate = []
-        coordinate.append(df['gaze_x'][i])
-        coordinate.append(df['gaze_y'][i])
+        coordinate.append(df["gaze_x"][i])
+        coordinate.append(df["gaze_y"][i])
 
         data.append(coordinate)
     #
     # print(data)
     hm = HeatMap(data)
-    hm.heatmap(save_as="heat.png",base='C://Users//20591\Desktop//reading//static//data//heatmap//luqi//1072//background.png',r=40)
+    hm.heatmap(
+        save_as="heat.png",
+        base="C://Users//20591\Desktop//reading//static//data//heatmap//luqi//1072//background.png",
+        r=40,
+    )
