@@ -1,5 +1,5 @@
-from django.db import models
 import django.utils.timezone as timezone
+from django.db import models
 
 # Create your models here.
 
@@ -14,14 +14,7 @@ class Text(models.Model):
     def toJson(self):
         import json
 
-        return json.dumps(
-            dict(
-                [
-                    (attr, getattr(self, attr))
-                    for attr in [f.name for f in self._meta.fields]
-                ]
-            )
-        )
+        return json.dumps(dict([(attr, getattr(self, attr)) for attr in [f.name for f in self._meta.fields]]))
 
 
 class Paragraph(models.Model):
@@ -58,6 +51,7 @@ class Experiment(models.Model):
     article_id = models.BigIntegerField()
     user = models.CharField(max_length=200)
     is_finish = models.BooleanField()
+
     class Meta:
         db_table = "data_experiment"
 
@@ -78,6 +72,7 @@ class PageData(models.Model):
     location = models.TextField()
     is_test = models.BooleanField()
     para = models.CharField(max_length=1000)
+
     class Meta:
         db_table = "data_page"
 
