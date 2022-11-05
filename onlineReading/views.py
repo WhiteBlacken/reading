@@ -2353,8 +2353,7 @@ def get_visual_attention(
 
     # 生成fixation图示
     fixations = get_fixations(coordinates)
-    fixs = [x for i, x in enumerate(fixations) if i % 3 == 1]
-    fixation_image(image, username, fixs, page_data_id, "fixation.png")
+    fixation_image(image, username, fixations, page_data_id, "fixation.png")
 
 
 def get_center(location):
