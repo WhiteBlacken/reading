@@ -6,6 +6,7 @@ import math
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import requests
 from loguru import logger
 from paddleocr import PaddleOCR
@@ -31,7 +32,7 @@ def get_fixations(coordinates):
     # 先进先出队列
     working_queue = deque()
     remaining_gaze = deque(coordinates)
-    print("gaze length:%d" % len(remaining_gaze))
+
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if len(working_queue) < 2 or (working_queue[-1][2] - working_queue[0][2]) < min_duration:
@@ -1094,6 +1095,14 @@ def get_test_heatmap():
     )
 
 
+def split_csv(exp_id):
+    filename = "static\\data\\dataset\\10-31-43.csv"
+    df = pd.read_csv(filename)
+    df = df[df["experiment_id"] == exp_id]
+    df.to_csv("static\\data\\dataset\\" + str(exp_id) + ".csv")
+    print("ok")
+
+
 if __name__ == "__main__":
     # model = ModelWithoutFC()
     # model.load_state_dict(torch.load("model/EyeFeatureModel.pth"))
@@ -1112,8 +1121,9 @@ if __name__ == "__main__":
     # sns.set_theme()
     # uniform_data = np.random.rand(10, 12)
     # ax = sns.heatmap(uniform_data)
-    # plt.show()
-    import seaborn as sns
-
-    df = sns.load_dataset("flights")
-    print(type(df))
+    # # plt.show()
+    # import seaborn as sns
+    #
+    # df = sns.load_dataset("flights")
+    # print(type(df))
+    split_csv(630)

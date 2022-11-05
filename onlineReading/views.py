@@ -1030,6 +1030,29 @@ def paint_on_word(image, target_words_index, word_locations, title, pic_path, al
     logger.info("heatmap已经生成:%s" % pic_path)
 
 
+def get_sentence_meaning(request):
+    page_data_id = request.GET.get("id")
+    page_data = PageData.objects.get(id=page_data_id)
+    dict = {}
+    texts = ""
+    page_data_ls = PageData.objects.filter(experiment_id=page_data.experiment_id)
+    for data in page_data_ls:
+        texts += data.texts
+    print(texts)
+    attention = generate_sentence_attention(texts)
+    diff = generate_sentence_difficulty(texts)
+    dict[page_data_id] = {"attention": attention, "difficulty": diff}
+
+    filename = str(id) + "-sen.txt"
+    with open(filename, "w") as f:
+        for key, value in dict.items():
+            f.write(key)
+            f.write(": ")
+            f.write(str(value))
+            f.write("\n")
+    return HttpResponse(1)
+
+
 def get_visual_heatmap(request):
     """
     仅生成 fixation、visual attention、二者组合、分行的fixation
@@ -1163,11 +1186,11 @@ def get_row_level_fixations_map(request):
     for fixation in fixations:
         if get_euclid_distance(fixation[0], pre_fixation[0], fixation[1], pre_fixation[1]) > distance:
             row_cnt += 1
-            if row_cnt == 19:
-                tmp.append(fixation)
-            else:
-                row_fixations.append(tmp)
-                tmp = [fixation]
+            # if row_cnt == 19:
+            #     tmp.append(fixation)
+            # else:
+            row_fixations.append(tmp)
+            tmp = [fixation]
         else:
             tmp.append(fixation)
         pre_fixation = fixation
@@ -2330,7 +2353,8 @@ def get_visual_attention(
 
     # 生成fixation图示
     fixations = get_fixations(coordinates)
-    fixation_image(image, username, fixations, page_data_id, "fixation.png")
+    fixs = [x for i, x in enumerate(fixations) if i % 3 == 1]
+    fixation_image(image, username, fixs, page_data_id, "fixation.png")
 
 
 def get_center(location):
@@ -2596,7 +2620,8 @@ def compute_label(wordLabels, sentenceLabels, wanderLabels, word_list):
 
 def get_eye_feature_dataset(request):
     # experiments = Experiment.objects.filter(id=641)
-    experiments = Experiment.objects.filter(is_finish=True).order_by("-id")[10:50]
+    experiments = Experiment.objects.filter(is_finish=True).order_by("-id")[10:51]
+    # experiments = Experiment.objects.filter(is_finish=True).filter(id=630)
     success = 0
     fail = 0
 
@@ -2662,7 +2687,6 @@ def get_eye_feature_dataset(request):
             forward_times_of_sentence = [0 for x in range(word_num)]
             backward_times_of_sentence = [0 for x in range(word_num)]
 
-            word_watching = [0 for _ in range(word_num)]
             for i, coor in enumerate(coors):
                 begin = 0
                 for j, coordinate in enumerate(coor):
@@ -2688,8 +2712,10 @@ def get_eye_feature_dataset(request):
 
                         cnt = 0
 
+                        word_watching = [0 for _ in range(word_num)]
                         for item in is_watching:
                             word_watching[item + begin_index] = 1
+
                         for x in range(begin_index, nums[i]):
                             number_of_fixations[x] += num_of_fixation_this_page[cnt]
                             reading_times[x] += reading_times_this_page[cnt]
@@ -3435,7 +3461,7 @@ def get_fixation_by_time(request):
         cv2.circle(
             img,
             (fix[0], fix[1]),
-            1,
+            3,
             (0, 0, 255),
             -1,
         )

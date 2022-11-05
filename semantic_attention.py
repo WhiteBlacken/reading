@@ -262,7 +262,8 @@ if __name__ == "__main__":
     # # rst = generate_sentence_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
     # print(rst)
 
-    sentence = "The BBC's Suranjana Tewari in Singapore says Asian investors are also dumping sterling and other currencies because the US Federal Reserve has hiked interest rates so quickly to fight inflation."
+    # sentence = "The BBC's Suranjana Tewari in Singapore says Asian investors are also dumping sterling and other currencies because the US Federal Reserve has hiked interest rates so quickly to fight inflation."
+    sentence = "Sitting in a more comfortable car in a different traffic jam is pleasant but hardly the liberation that once seemed to be promised."
     # 计算某一句的word attention
     word_list, word4show_list = generate_word_list(sentence)
     word_att_mat = generate_phrase_att(sentence, word_list)
@@ -270,7 +271,7 @@ if __name__ == "__main__":
     doc = nlp(sentence)
     index = [x.text.strip().lower() for x in doc]
 
-    stop_words = ["'s", "the", "in", "are", "and", "to", "other", "so", "because"]
+    stop_words = ["'s", "the", "in", "are", "and", "to", "other", "so", "because", "us", ".", "a", "is", "be"]
     df = pd.DataFrame()
 
     new_index = []
@@ -288,5 +289,6 @@ if __name__ == "__main__":
     df.index = Series(new_index)
     sns.set_theme()
     ax = sns.heatmap(df, linewidths=0.5)
+    plt.tight_layout()
+    plt.savefig("test.png")
     plt.show()
-    plt.imsave("test.png")
