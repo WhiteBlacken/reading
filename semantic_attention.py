@@ -1,20 +1,22 @@
-from docx import Document
-from nltk.tokenize import sent_tokenize
-from textstat import textstat
-from transformers import XLNetTokenizerFast, XLNetModel, BertTokenizer, BertForMaskedLM
 import numpy as np
+import pandas as pd
+import seaborn as sns
 import spacy
 import torch
-
-from utils import get_importance
+from docx import Document
+from matplotlib import pyplot as plt
+from nltk.tokenize import sent_tokenize
+from pandas import Series
+from textstat import textstat
+from transformers import BertForMaskedLM, BertTokenizer, XLNetModel, XLNetTokenizerFast
 
 nlp = spacy.load("en_core_web_lg")
 tokenizer = XLNetTokenizerFast.from_pretrained("xlnet-base-cased")
 model = XLNetModel.from_pretrained("xlnet-base-cased", output_attentions=True)
-bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-bert_model = BertForMaskedLM.from_pretrained('bert-base-uncased')
+bert_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+bert_model = BertForMaskedLM.from_pretrained("bert-base-uncased")
 
-f = open('mrc2.dct', 'r')
+f = open("mrc2.dct", "r")
 word_fam_map = {}
 
 i = 0
@@ -24,38 +26,38 @@ for line in f:
     # see wordmodel.py for blurbs of each variable
     # or even better, mrc2.doc
 
-    word, phon, dphon, stress = line[51:].split('|')
+    word, phon, dphon, stress = line[51:].split("|")
 
     w = {
-        'wid': i,
-        'nlet': int(line[0:2]),
-        'nphon': int(line[2:4]),
-        'nsyl': int(line[4]),
-        'kf_freq': int(line[5:10]),
-        'kf_ncats': int(line[10:12]),
-        'kf_nsamp': int(line[12:15]),
-        'tl_freq': int(line[15:21]),
-        'brown_freq': int(line[21:25]),
-        'fam': int(line[25:28]),
-        'conc': int(line[28:31]),
-        'imag': int(line[31:34]),
-        'meanc': int(line[34:37]),
-        'meanp': int(line[37:40]),
-        'aoa': int(line[40:43]),
-        'tq2': line[43],
-        'wtype': line[44],
-        'pdwtype': line[45],
-        'alphasyl': line[46],
-        'status': line[47],
-        'var': line[48],
-        'cap': line[49],
-        'irreg': line[50],
-        'word': word,
-        'phon': phon,
-        'dphon': dphon,
-        'stress': stress
+        "wid": i,
+        "nlet": int(line[0:2]),
+        "nphon": int(line[2:4]),
+        "nsyl": int(line[4]),
+        "kf_freq": int(line[5:10]),
+        "kf_ncats": int(line[10:12]),
+        "kf_nsamp": int(line[12:15]),
+        "tl_freq": int(line[15:21]),
+        "brown_freq": int(line[21:25]),
+        "fam": int(line[25:28]),
+        "conc": int(line[28:31]),
+        "imag": int(line[31:34]),
+        "meanc": int(line[34:37]),
+        "meanp": int(line[37:40]),
+        "aoa": int(line[40:43]),
+        "tq2": line[43],
+        "wtype": line[44],
+        "pdwtype": line[45],
+        "alphasyl": line[46],
+        "status": line[47],
+        "var": line[48],
+        "cap": line[49],
+        "irreg": line[50],
+        "word": word,
+        "phon": phon,
+        "dphon": dphon,
+        "stress": stress,
     }
-    word_fam_map[word] = w['fam']
+    word_fam_map[word] = w["fam"]
     i += 1
 
 
@@ -66,9 +68,9 @@ def get_word_familiar_rate(word_text):
 
 def get_docx_text(docx_path):
     document = Document(docx_path)
-    read_text = ''
+    read_text = ""
     for pa in document.paragraphs:
-        read_text += pa.text + ' '
+        read_text += pa.text + " "
     return read_text
 
 
@@ -93,9 +95,12 @@ def generate_phrase_att(input_text, phrase_list):
     token_phrase_idx_list = []
     max_cross_count = 3
     for token_idx, token in enumerate(inputs.tokens()):
-        original_token = token.replace('▁', '')
+        original_token = token.replace("▁", "")
         flag = False
-        while phrase_idx < len(phrase_list) and phrase_list[phrase_idx][phrase_pos : phrase_pos + len(original_token)] != original_token:
+        while (
+            phrase_idx < len(phrase_list)
+            and phrase_list[phrase_idx][phrase_pos : phrase_pos + len(original_token)] != original_token
+        ):
             phrase_pos += 1
             if phrase_pos >= len(phrase_list[phrase_idx]):
                 cross_count = 1
@@ -104,8 +109,12 @@ def generate_phrase_att(input_text, phrase_list):
                 while cross_count <= max_cross_count and phrase_idx + cross_count < len(phrase_list):
                     prefix += phrase_list[phrase_idx + cross_count]
                     new_phrase_pos = 0
-                    while new_phrase_pos + len(original_token) <= len(prefix) and new_phrase_pos < len(phrase_list[phrase_idx]):
-                        if prefix[new_phrase_pos : new_phrase_pos + len(original_token)] == original_token and new_phrase_pos + len(original_token) > len(phrase_list[phrase_idx]):
+                    while new_phrase_pos + len(original_token) <= len(prefix) and new_phrase_pos < len(
+                        phrase_list[phrase_idx]
+                    ):
+                        if prefix[
+                            new_phrase_pos : new_phrase_pos + len(original_token)
+                        ] == original_token and new_phrase_pos + len(original_token) > len(phrase_list[phrase_idx]):
                             phrase_pos = new_phrase_pos + len(original_token) - pre_length
                             flag = True
                             break
@@ -143,7 +152,10 @@ def generate_phrase_att(input_text, phrase_list):
     for phrase_idx in range(-1, len(phrase_list)):
         phrase_start_end[phrase_idx] = (99999, 0)
     for token_idx, phrase_idx in token_phrase_idx_list:
-        phrase_start_end[phrase_idx] = (min(phrase_start_end[phrase_idx][0], token_idx), max(phrase_start_end[phrase_idx][1], token_idx))
+        phrase_start_end[phrase_idx] = (
+            min(phrase_start_end[phrase_idx][0], token_idx),
+            max(phrase_start_end[phrase_idx][1], token_idx),
+        )
     phrase_start_end.pop(-1)
 
     # for idx, (phrase_id, (phrase_start, phrase_end)) in enumerate(phrase_start_end.items()):
@@ -152,7 +164,7 @@ def generate_phrase_att(input_text, phrase_list):
     rows = []
     for phrase_idx, (token_start_idx, token_end_idx) in phrase_start_end.items():
         if token_start_idx > token_end_idx:
-            rows.append(np.zeros((len(inputs.tokens()), )))
+            rows.append(np.zeros((len(inputs.tokens()),)))
         else:
             rows.append(np.mean(att[token_start_idx : token_end_idx + 1, :], axis=0))
     rows = np.array(rows)
@@ -180,7 +192,7 @@ def generate_word_attention(input_text):
         if token.is_alpha and not token.is_stop:
             score = value
         else:
-            score = 0.
+            score = 0.0
         word_att_list.append((token.text, score))
     return word_att_list
 
@@ -226,7 +238,7 @@ def generate_sentence_difficulty(input_text):
         tokenize_input = bert_tokenizer.tokenize(sentence)
         tensor_input = torch.tensor([bert_tokenizer.convert_tokens_to_ids(tokenize_input)])
         sen_len = len(tokenize_input)
-        sent_loss = 0.
+        sent_loss = 0.0
         for i, word in enumerate(tokenize_input):
             tokenize_input[i] = bert_tokenizer.mask_token
             mask_input = torch.tensor([bert_tokenizer.convert_tokens_to_ids(tokenize_input)])
@@ -235,18 +247,48 @@ def generate_sentence_difficulty(input_text):
             ps = torch.log_softmax(pred_scores[0, i], dim=0)
             word_loss = ps[tensor_input[0, i]]
             sent_loss += word_loss.item()
-            tokenize_input[i] = word   # restore
+            tokenize_input[i] = word  # restore
         ppl = np.exp(-sent_loss / sen_len)
         sentence_difficulty_list.append((sentence, ppl))
     return sentence_difficulty_list
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # rst = generate_word_attention('China culture is nice culture')
-    rst = get_importance('China culture is nice culture. Culture is important')
-    texts = 'hello word; this is cisl.That is he.'
-    # rst = generate_sentence_attention(texts)
-    # rst = generate_word_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
-    # rst = generate_sentence_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
-    print(rst)
-    pass
+    # rst = get_importance('China culture is nice culture. Culture is important')
+    # texts = 'hello word; this is cisl.That is he.'
+    # # rst = generate_sentence_attention(texts)
+    # # rst = generate_word_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
+    # # rst = generate_sentence_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
+    # print(rst)
+
+    # sentence = "The BBC's Suranjana Tewari in Singapore says Asian investors are also dumping sterling and other currencies because the US Federal Reserve has hiked interest rates so quickly to fight inflation."
+    sentence = "Sitting in a more comfortable car in a different traffic jam is pleasant but hardly the liberation that once seemed to be promised."
+    # 计算某一句的word attention
+    word_list, word4show_list = generate_word_list(sentence)
+    word_att_mat = generate_phrase_att(sentence, word_list)
+
+    doc = nlp(sentence)
+    index = [x.text.strip().lower() for x in doc]
+
+    stop_words = ["'s", "the", "in", "are", "and", "to", "other", "so", "because", "us", ".", "a", "is", "be"]
+    df = pd.DataFrame()
+
+    new_index = []
+    for i, word in enumerate(index):
+        if word in stop_words:
+            continue
+        tmp = []
+        for j, word1 in enumerate(index):
+            if word1 in stop_words:
+                continue
+            tmp.append(word_att_mat[i][j])
+        df[word] = tmp
+        new_index.append(word)
+
+    df.index = Series(new_index)
+    sns.set_theme()
+    ax = sns.heatmap(df, linewidths=0.5)
+    plt.tight_layout()
+    plt.savefig("test.png")
+    plt.show()

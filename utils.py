@@ -6,15 +6,14 @@ import math
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import requests
-import torch
 from loguru import logger
 from paddleocr import PaddleOCR
 from paddleocr.tools.infer.utility import draw_ocr
 from PIL import Image
 from scipy import signal
 
-from model.FeatureClassify import ModelWithoutFC
 from onlineReading import settings
 
 
@@ -33,7 +32,7 @@ def get_fixations(coordinates):
     # 先进先出队列
     working_queue = deque()
     remaining_gaze = deque(coordinates)
-    print("gaze length:%d" % len(remaining_gaze))
+
     while remaining_gaze:
         # 逐个处理所有的gaze data
         if len(working_queue) < 2 or (working_queue[-1][2] - working_queue[0][2]) < min_duration:
@@ -83,8 +82,8 @@ def from_gazes_to_fixation(gazes):
     for gaze in gazes:
         sum_x = sum_x + gaze[0]
         sum_y = sum_y + gaze[1]
-
-    return int(sum_x / len(gazes)), int(sum_y / len(gazes)), gazes[-1][2] - gazes[0][2]
+    # TODO 改成 list不知道有没有问题
+    return [int(sum_x / len(gazes)), int(sum_y / len(gazes)), gazes[-1][2] - gazes[0][2]]
 
 
 def get_euclid_distance(x1, x2, y1, y2):
@@ -802,7 +801,7 @@ def get_importance(text):
 
     kw_model = KeyBERT()
 
-    importance = kw_model.extract_keywords(text, keyphrase_ngram_range=(1, 1), stop_words=None, top_n=100)
+    importance = kw_model.extract_keywords(text, keyphrase_ngram_range=(1, 1), stop_words=None, top_n=1000)
     return importance
 
 
@@ -1096,12 +1095,35 @@ def get_test_heatmap():
     )
 
 
-if __name__ == "__main__":
-    model = ModelWithoutFC()
-    model.load_state_dict(torch.load("model/EyeFeatureModel.pth"))
+def split_csv(exp_id):
+    filename = "static\\data\\dataset\\10-31-43.csv"
+    df = pd.read_csv(filename)
+    df = df[df["experiment_id"] == exp_id]
+    df.to_csv("static\\data\\dataset\\" + str(exp_id) + ".csv")
+    print("ok")
 
-    model.eval()
-    input = torch.randn(1, 263, 5)
-    output = model(input)
-    print(output)
-    print(output.shape)
+
+if __name__ == "__main__":
+    # model = ModelWithoutFC()
+    # model.load_state_dict(torch.load("model/EyeFeatureModel.pth"))
+    #
+    # model.eval()
+    # input = torch.randn(1, 263, 5)
+    # output = model(input)
+    # print(output)
+    # print(output.shape)
+
+    # import numpy as np
+    #
+    # np.random.seed(0)
+    # import seaborn as sns
+    #
+    # sns.set_theme()
+    # uniform_data = np.random.rand(10, 12)
+    # ax = sns.heatmap(uniform_data)
+    # # plt.show()
+    # import seaborn as sns
+    #
+    # df = sns.load_dataset("flights")
+    # print(type(df))
+    split_csv(630)

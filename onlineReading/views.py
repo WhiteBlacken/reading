@@ -4,6 +4,7 @@ import datetime
 import json
 import math
 import os
+import shutil
 
 import cv2
 import numpy as np
@@ -24,6 +25,7 @@ from semantic_attention import (  # generate_sentence_difficulty,
     generate_sentence_difficulty,
     generate_word_attention,
     generate_word_difficulty,
+    nlp,
 )
 from utils import (
     add_fixations_to_location,
@@ -1028,6 +1030,29 @@ def paint_on_word(image, target_words_index, word_locations, title, pic_path, al
     logger.info("heatmap已经生成:%s" % pic_path)
 
 
+def get_sentence_meaning(request):
+    page_data_id = request.GET.get("id")
+    page_data = PageData.objects.get(id=page_data_id)
+    dict = {}
+    texts = ""
+    page_data_ls = PageData.objects.filter(experiment_id=page_data.experiment_id)
+    for data in page_data_ls:
+        texts += data.texts
+    print(texts)
+    attention = generate_sentence_attention(texts)
+    diff = generate_sentence_difficulty(texts)
+    dict[page_data_id] = {"attention": attention, "difficulty": diff}
+
+    filename = str(id) + "-sen.txt"
+    with open(filename, "w") as f:
+        for key, value in dict.items():
+            f.write(key)
+            f.write(": ")
+            f.write(str(value))
+            f.write("\n")
+    return HttpResponse(1)
+
+
 def get_visual_heatmap(request):
     """
     仅生成 fixation、visual attention、二者组合、分行的fixation
@@ -1156,6 +1181,335 @@ def get_row_level_fixations_map(request):
     distance = 600
     row_fixations = []
     tmp = []
+
+    row_cnt = 1
+    for fixation in fixations:
+        if get_euclid_distance(fixation[0], pre_fixation[0], fixation[1], pre_fixation[1]) > distance:
+            row_cnt += 1
+            # if row_cnt == 19:
+            #     tmp.append(fixation)
+            # else:
+            row_fixations.append(tmp)
+            tmp = [fixation]
+        else:
+            tmp.append(fixation)
+        pre_fixation = fixation
+
+    base_path = "static\\data\\heatmap\\" + str(exp.first().user) + "\\" + str(page_data_id) + "\\"
+
+    if not os.path.exists(base_path + "fixation\\"):
+        os.mkdir(base_path + "fixation\\")
+    for i, item in enumerate(row_fixations):
+        name = "1"
+        for j in range(i):
+            name += "1"
+        print(item)
+        fixation_image(
+            pageData.image,
+            exp.first().user,
+            item,
+            page_data_id,
+            "/fixation/" + name + ".png",
+        )
+
+    import glob
+
+    print(base_path)
+    img_list = glob.glob(base_path + "fixation\\" + "*.png")
+    img_list.sort()
+    print(img_list)
+    join_images_vertical(img_list, base_path + "row_fix.png")
+
+    shutil.rmtree(base_path + "fixation\\")
+    return HttpResponse(1)
+
+
+def get_row_level_heatmap(request):
+    id = request.GET.get("id")
+    pageData = PageData.objects.get(id=id)
+    exp = Experiment.objects.get(id=pageData.experiment_id)
+
+    kernel_size = int(request.GET.get("window", 7))
+
+    gaze_x = pageData.gaze_x
+    gaze_y = pageData.gaze_y
+    gaze_t = pageData.gaze_t
+    """
+    1.
+    清洗数据
+    """
+    list_x = list(map(float, gaze_x.split(",")))
+    list_y = list(map(float, gaze_y.split(",")))
+    list_t = list(map(float, gaze_t.split(",")))
+
+    print("length of list")
+    print(len(list_x))
+    print("kernel_size:%d" % kernel_size)
+    if kernel_size != 0:
+        # 滤波
+        list_x = preprocess_data(list_x, kernel_size)
+        list_y = preprocess_data(list_y, kernel_size)
+
+    print("length of list after filter")
+    print(len(list_x))
+    # 滤波完是浮点数，需要转成int
+    list_x = list(map(int, list_x))
+    list_y = list(map(int, list_y))
+
+    # 组合
+    coordinates = []
+    for i in range(len(list_x)):
+        coordinate = [list_x[i], list_y[i], list_t[i]]
+        coordinates.append(coordinate)
+    # 去除开始结束的gaze点
+    coordinates = coordinates[2:-1]
+    # 去除前后200ms的gaze点
+    begin = 0
+    end = -1
+    for i, coordinate in enumerate(coordinates):
+        if coordinate[2] - coordinates[0][2] > 500:
+            begin = i
+            break
+    print("begin:%d" % begin)
+    for i in range(len(coordinates) - 1, -1, -1):
+        if coordinates[-1][2] - coordinates[i][2] > 500:
+            end = i
+            break
+    coordinates = coordinates[begin:end]
+
+    fixations = get_fixations(coordinates)
+    # 按行切割gaze点
+    pre_fixation = fixations[0]
+    distance = 600
+    row_fixations = []
+    tmp = []
+    sum_y = 0
+    for fixation in fixations:
+        if get_euclid_distance(fixation[0], pre_fixation[0], fixation[1], pre_fixation[1]) > distance:
+            mean_y = int(sum_y / len(tmp))
+            for item in tmp:
+                if item[1] > mean_y + 20:
+                    item[1] = mean_y + 20
+                if item[1] < mean_y - 20:
+                    item[1] = mean_y - 20
+            row_fixations.append(tmp)
+            tmp = [fixation]
+            sum_y = 0
+        else:
+            tmp.append(fixation)
+            sum_y += fixation[1]
+        pre_fixation = fixation
+
+    base_path = "static\\data\\heatmap\\" + str(exp.user) + "\\" + str(pageData.id) + "\\"
+
+    if not os.path.exists(base_path + "heat\\"):
+        os.mkdir(base_path + "heat\\")
+    for i, item in enumerate(row_fixations):
+        name = "1"
+        for j in range(i):
+            name += "1"
+        print(item)
+        myHeatmap.draw_heat_map(item, base_path + "heat\\" + name + ".png", base_path + "background.png")
+
+    import glob
+
+    print(base_path)
+    img_list = glob.glob(base_path + "heat\\" + "*.png")
+    img_list.sort()
+    print(img_list)
+    join_images_vertical(img_list, base_path + "row_heat.png")
+
+    image = cv2.imread(base_path + "row_heat.png")
+    cv2.putText(
+        image,
+        str(pageData.id),  # text内容必须是str格式的
+        (700, 50),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (0, 255, 0),
+        2,
+    )
+    print(pageData.id)
+    cv2.imwrite("static\\data\\heatmap\\row_level_heat\\" + str(pageData.id) + ".png", image)
+    shutil.rmtree(base_path + "heat\\")
+
+    return HttpResponse(1)
+
+
+def get_row_level_heatmap_of_all_user(request):
+    exps = Experiment.objects.filter(is_finish=True).order_by("-id")[0:51]
+    success = 0
+    fail = 0
+    for exp in exps:
+        pageData_list = PageData.objects.filter(experiment_id=exp.id)
+        try:
+            for pageData in pageData_list:
+                kernel_size = int(request.GET.get("window", 7))
+
+                gaze_x = pageData.gaze_x
+                gaze_y = pageData.gaze_y
+                gaze_t = pageData.gaze_t
+                """
+                1.
+                清洗数据
+                """
+                list_x = list(map(float, gaze_x.split(",")))
+                list_y = list(map(float, gaze_y.split(",")))
+                list_t = list(map(float, gaze_t.split(",")))
+
+                print("length of list")
+                print(len(list_x))
+                print("kernel_size:%d" % kernel_size)
+                if kernel_size != 0:
+                    # 滤波
+                    list_x = preprocess_data(list_x, kernel_size)
+                    list_y = preprocess_data(list_y, kernel_size)
+
+                print("length of list after filter")
+                print(len(list_x))
+                # 滤波完是浮点数，需要转成int
+                list_x = list(map(int, list_x))
+                list_y = list(map(int, list_y))
+
+                # 组合
+                coordinates = []
+                for i in range(len(list_x)):
+                    coordinate = [list_x[i], list_y[i], list_t[i]]
+                    coordinates.append(coordinate)
+                # 去除开始结束的gaze点
+                coordinates = coordinates[2:-1]
+                # 去除前后200ms的gaze点
+                begin = 0
+                end = -1
+                for i, coordinate in enumerate(coordinates):
+                    if coordinate[2] - coordinates[0][2] > 500:
+                        begin = i
+                        break
+                print("begin:%d" % begin)
+                for i in range(len(coordinates) - 1, -1, -1):
+                    if coordinates[-1][2] - coordinates[i][2] > 500:
+                        end = i
+                        break
+                coordinates = coordinates[begin:end]
+
+                fixations = get_fixations(coordinates)
+                # 按行切割gaze点
+                pre_fixation = fixations[0]
+                distance = 600
+                row_fixations = []
+                tmp = []
+                sum_y = 0
+                for fixation in fixations:
+                    if get_euclid_distance(fixation[0], pre_fixation[0], fixation[1], pre_fixation[1]) > distance:
+                        mean_y = int(sum_y / len(tmp))
+                        for item in tmp:
+                            if item[1] > mean_y + 20:
+                                item[1] = mean_y + 20
+                            if item[1] < mean_y - 20:
+                                item[1] = mean_y - 20
+                        row_fixations.append(tmp)
+                        tmp = [fixation]
+                        sum_y = 0
+                    else:
+                        tmp.append(fixation)
+                        sum_y += fixation[1]
+                    pre_fixation = fixation
+
+                base_path = "static\\data\\heatmap\\" + str(exp.user) + "\\" + str(pageData.id) + "\\"
+
+                if not os.path.exists(base_path + "heat\\"):
+                    os.mkdir(base_path + "heat\\")
+                for i, item in enumerate(row_fixations):
+                    name = "1"
+                    for j in range(i):
+                        name += "1"
+                    print(item)
+                    myHeatmap.draw_heat_map(item, base_path + "heat\\" + name + ".png", base_path + "background.png")
+
+                import glob
+
+                print(base_path)
+                img_list = glob.glob(base_path + "heat\\" + "*.png")
+                img_list.sort()
+                print(img_list)
+                join_images_vertical(img_list, base_path + "row_heat.png")
+
+                image = cv2.imread(base_path + "row_heat.png")
+                cv2.putText(
+                    image,
+                    str(pageData.id),  # text内容必须是str格式的
+                    (700, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (0, 255, 0),
+                    2,
+                )
+                cv2.imwrite("static\\data\\heatmap\\row_level_heat\\" + str(pageData.id) + ".png", image)
+                shutil.rmtree(base_path + "heat\\")
+            success += 1
+            logger.info("成功生成 %d条,失败 %d条" % (success, fail))
+        except:
+            fail += 1
+            logger.info("成功生成 %d条,失败 %d条" % (success, fail))
+    return HttpResponse(1)
+
+
+def get_row_level_fixations(page_data_id, kernel_size):
+    pageData = PageData.objects.get(id=page_data_id)
+    exp = Experiment.objects.filter(id=pageData.experiment_id)
+
+    gaze_x = pageData.gaze_x
+    gaze_y = pageData.gaze_y
+    gaze_t = pageData.gaze_t
+    """
+    1.
+    清洗数据
+    """
+    list_x = list(map(float, gaze_x.split(",")))
+    list_y = list(map(float, gaze_y.split(",")))
+    list_t = list(map(float, gaze_t.split(",")))
+
+    print("length of list")
+    print(len(list_x))
+    print("kernel_size:%d" % kernel_size)
+    if kernel_size != 0:
+        # 滤波
+        list_x = preprocess_data(list_x, kernel_size)
+        list_y = preprocess_data(list_y, kernel_size)
+
+    print("length of list after filter")
+    print(len(list_x))
+    # 滤波完是浮点数，需要转成int
+    list_x = list(map(int, list_x))
+    list_y = list(map(int, list_y))
+
+    # 组合
+    coordinates = []
+    for i in range(len(list_x)):
+        coordinate = [list_x[i], list_y[i], list_t[i]]
+        coordinates.append(coordinate)
+    # 去除开始结束的gaze点
+    coordinates = coordinates[2:-1]
+    # 去除前后200ms的gaze点
+    begin = 0
+    end = -1
+    for i, coordinate in enumerate(coordinates):
+        if coordinate[2] - coordinates[0][2] > 500:
+            begin = i
+            break
+    print("begin:%d" % begin)
+    for i in range(len(coordinates) - 1, -1, -1):
+        if coordinates[-1][2] - coordinates[i][2] > 500:
+            end = i
+            break
+    coordinates = coordinates[begin:end]
+
+    fixations = get_fixations(coordinates)
+    # 按行切割gaze点
+    pre_fixation = fixations[0]
+    distance = 600
+    row_fixations = []
+    tmp = []
     for fixation in fixations:
         if get_euclid_distance(fixation[0], pre_fixation[0], fixation[1], pre_fixation[1]) > distance:
             row_fixations.append(tmp)
@@ -1189,6 +1543,7 @@ def get_row_level_fixations_map(request):
     print(img_list)
     join_images_vertical(img_list, base_path + "row_fix.png")
 
+    shutil.rmtree(base_path + "fixation\\")
     return HttpResponse(1)
 
 
@@ -1380,6 +1735,206 @@ def get_all_heatmap(request):
     return JsonResponse(result_dict, json_dumps_params={"ensure_ascii": False}, safe=False)
 
 
+def get_all_heatmap_of_all_user(request):
+    """
+    根据page_data_id生成visual attention和nlp attention
+    :param request: id,window
+    :return:
+    """
+    success = 0
+    fail = 0
+    exps = Experiment.objects.filter(is_finish=True).order_by("-id")[16:51]
+    for exp in exps:
+        pageDatas = PageData.objects.filter(experiment_id=exp.id)
+        for pageData in pageDatas:
+            try:
+                # 准备工作，获取单词和句子的信息
+                word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
+                # 获取单词的位置
+                word_locations = get_word_location(
+                    pageData.location
+                )  # [(left,top,right,bottom),(left,top,right,bottom)]
+
+                # 确保单词长度是正确的
+                assert len(word_locations) == len(word_list)
+                # 获取图片生成的路径
+                exp = Experiment.objects.filter(id=pageData.experiment_id)
+
+                base_path = "static\\data\\heatmap\\" + str(exp.first().user) + "\\" + str(pageData.id) + "\\"
+
+                # 创建图片存储的目录
+                # 如果目录不存在，则创建目录
+                path_levels = [
+                    "static\\data\\heatmap\\" + str(exp.first().user) + "\\",
+                    "static\\data\\heatmap\\" + str(exp.first().user) + "\\" + str(pageData.id) + "\\",
+                ]
+                for path in path_levels:
+                    print("生成:%s" % path)
+                    if not os.path.exists(path):
+                        os.mkdir(path)
+
+                # 创建背景图片
+                background = base_path + "background.png"
+                # 使用数据库的base64直接生成background
+                data = pageData.image.split(",")[1]
+                # 将str解码为byte
+                image_data = base64.b64decode(data)
+                with open(background, "wb") as f:
+                    f.write(image_data)
+
+                top_dict = {}  # 实际上是word的top dict
+                # nlp attention
+
+                """
+                word level
+                1. 生成3张图片
+                2. 填充top_k
+                """
+                get_word_level_nlp_attention(
+                    pageData.texts,
+                    pageData.id,
+                    top_dict,
+                    background,
+                    word_list,
+                    word_locations,
+                    exp.first().user,
+                    base_path,
+                )
+                """
+                sentence level
+                """
+
+                top_sentence_dict = {}
+                # 生成图片
+                get_sentence_level_nlp_attention(
+                    pageData.texts,
+                    sentence_list,
+                    background,
+                    word_locations,
+                    pageData.id,
+                    top_sentence_dict,
+                    exp.first().user,
+                    base_path,
+                )
+
+                """
+                visual attention
+                1. 生成2张图片：heatmap + fixation
+                2. 填充top_k
+                存在问题：生成top和展示图片实际上做了两个heatmap
+                """
+                # 滤波处理
+                kernel_size = int(request.GET.get("window", 7))
+                get_visual_attention(
+                    pageData.id,
+                    exp.first().user,
+                    pageData.gaze_x,
+                    pageData.gaze_y,
+                    pageData.gaze_t,
+                    kernel_size,
+                    background,
+                    base_path,
+                    word_list,
+                    word_locations,
+                    top_dict,
+                    pageData.image,
+                )
+
+                # 将spatial和temporal结合
+                save_path = base_path + "spatial_with_temporal_filter.png"
+                heatmap_img = base_path + "visual.png"
+                fixation_img = base_path + "fixation.png"
+                join_two_image(heatmap_img, fixation_img, save_path)
+
+                """
+                将单词不懂和句子不懂输出,走神的图示输出
+                """
+                image = cv2.imread(background)
+                # 走神与否
+                words_to_be_painted = []
+                if pageData.wanderLabels:
+                    paras_wander = json.loads(pageData.wanderLabels)
+                else:
+                    paras_wander = []
+
+                for para in paras_wander:
+                    for i in range(para[0], para[1] + 1):  # wander label是到一段结尾，不是到下一段
+                        words_to_be_painted.append(i)
+
+                title = str(pageData.id) + "-" + exp.first().user + "-" + "para_wander"
+                pic_path = base_path + "para_wander" + ".png"
+                # 画图
+                paint_on_word(image, words_to_be_painted, word_locations, title, pic_path)
+
+                # 单词 TODO 将这些整理为函数，复用
+                # 找需要画的单词
+                if pageData.wordLabels:
+                    words_not_understand = json.loads(pageData.wordLabels)
+                else:
+                    words_not_understand = []
+                title = str(pageData.id) + "-" + exp.first().user + "-" + "words_not_understand"
+                pic_path = base_path + "words_not_understand" + ".png"
+                # 画图
+                paint_on_word(image, words_not_understand, word_locations, title, pic_path)
+
+                # 句子
+                if pageData.sentenceLabels:
+                    sentences_not_understand = json.loads(pageData.sentenceLabels)
+                else:
+                    sentences_not_understand = []
+
+                words_to_painted = []
+                for sentence in sentences_not_understand:
+                    for i in range(sentence[0], sentence[1]):
+                        # 此处i代表的是单词
+                        words_to_painted.append(i)
+
+                title = str(pageData.id) + "-" + exp.first().user + "-" + "sentences_not_understand"
+                pic_path = base_path + "sentences_not_understand" + ".png"
+                # 画图
+                paint_on_word(image, words_to_painted, word_locations, title, pic_path)
+
+                """
+                不同k值下similarity和identity的计算以及图示
+                """
+                k_list = [3, 5, 7, 10, 20]
+
+                k_dict = {}
+                pic_list = []
+                max_k = len(top_dict["visual"])
+                for k in k_list:
+                    if k > max_k:
+                        break
+                    attention_type = {}
+                    for key in top_dict.keys():
+                        attention_type[key] = top_dict[key][0:k]
+                    k_dict[k] = attention_type
+
+                    pic_dict = {
+                        "k": k,
+                        "similarity": calculate_similarity(attention_type),
+                        "identity": calculate_identity(attention_type),
+                    }
+                    pic_list.append(pic_dict)
+
+                paint_bar_graph(pic_list, base_path, "similarity")
+                paint_bar_graph(pic_list, base_path, "identity")
+
+                result_dict = {"word level": k_dict, "sentence level": top_sentence_dict}
+
+                result_json = json.dumps(result_dict)
+                path = base_path + "result.txt"
+                with open(path, "w") as json_file:
+                    json_file.write(result_json)
+
+                get_row_level_fixations(pageData.id, 7)
+                success += 1
+            except:
+                fail += 1
+            logger.info("成功生成 %d 条，失败%d,当前id是%d" % (success, fail, pageData.id))
+    return HttpResponse(1)
+
+
 def set_title(blk, title):
     """设置图片标题"""
     cv2.putText(
@@ -1391,6 +1946,69 @@ def set_title(blk, title):
         (189, 252, 201),
         2,
     )
+
+
+def get_semantic_value_of_word(request):
+    ids = request.GET.get("ids")
+    ids = ids.split(",")
+    dict = {}
+    # sentence = "The BBC's Suranjana Tewari in Singapore says Asian investors are also dumping sterling and other currencies because the US Federal Reserve has hiked interest rates so quickly to fight inflation."
+    # sentence = "This policy sets the stage for the Department of Commerce to take over the management of traffic in space."
+    # sentence = "One impetus for the policy is that companies are already starting to build massive constellations, comprising hundreds or thousands of satellites with many moving parts among them"
+    # sentence = "The personal grievance provisions of New Zealand’s Employment Relations Act 2000 (ERA) prevent an employer from firing an employee without good cause."
+    sentence = "A local chief was also among the victims of the violence on Saturday in Turkana County."
+    # 计算某一句的word attention
+    doc = nlp(sentence)
+
+    words = []
+    for token in doc:
+        words.append(token.text.strip().lower())
+
+    for id in ids:
+        dict[id] = {}
+        texts = PageData.objects.filter(id=id).first().texts
+        topics = get_importance(texts)
+
+        attention = generate_word_attention(texts)
+        diff = generate_word_difficulty(texts)
+
+        topic_ls = []
+        at_ls = []
+        diff_ls = []
+        for word in words:
+            flag = True
+            for topic in topics:
+                if topic[0].lower() == word:
+                    topic_ls.append(topic)
+                    flag = False
+                    break
+            if flag:
+                tmp = (word, 0)
+                topic_ls.append(tmp)
+
+            for at in attention:
+                if at[0].lower() == word:
+                    tmp = (at[0].lower(), at[1])
+                    at_ls.append(tmp)
+                    break
+
+            for di in diff:
+                if di[0].lower() == word:
+                    tmp = (di[0].lower(), di[1])
+                    diff_ls.append(tmp)
+                    break
+            print(diff_ls)
+        dict[id] = {"topic": topic_ls, "attention": at_ls, "difficulty": diff_ls}
+
+        filename = str(id) + ".txt"
+        with open(filename, "w") as f:
+            for key, value in dict.items():
+                f.write(key)
+                f.write(": ")
+                f.write(str(value))
+                f.write("\n")
+
+    return HttpResponse(1)
 
 
 def get_word_level_nlp_attention(
@@ -1452,7 +2070,7 @@ def get_word_level_nlp_attention(
 
         plt.imshow(image)
         plt.title(title)
-        plt.show()
+        # plt.show()
         heatmap_name = base_path + str(attention) + ".png"
         cv2.imwrite(heatmap_name, image)
         logger.info("heatmap已经生成:%s" % heatmap_name)
@@ -1533,7 +2151,7 @@ def get_sentence_level_nlp_attention(
 
         plt.imshow(image)
         plt.title(title)
-        plt.show()
+        # plt.show()
         heatmap_name = base_path + attention + ".png"
         cv2.imwrite(heatmap_name, image)
         logger.info("heatmap已经生成:%s" % heatmap_name)
@@ -2001,7 +2619,8 @@ def compute_label(wordLabels, sentenceLabels, wanderLabels, word_list):
 
 def get_eye_feature_dataset(request):
     # experiments = Experiment.objects.filter(id=641)
-    experiments = Experiment.objects.filter(is_finish=True).order_by("-id")[10:50]
+    experiments = Experiment.objects.filter(is_finish=True).order_by("-id")[10:51]
+    # experiments = Experiment.objects.filter(is_finish=True).filter(id=630)
     success = 0
     fail = 0
 
@@ -2067,7 +2686,6 @@ def get_eye_feature_dataset(request):
             forward_times_of_sentence = [0 for x in range(word_num)]
             backward_times_of_sentence = [0 for x in range(word_num)]
 
-            word_watching = [0 for _ in range(word_num)]
             for i, coor in enumerate(coors):
                 begin = 0
                 for j, coordinate in enumerate(coor):
@@ -2093,8 +2711,10 @@ def get_eye_feature_dataset(request):
 
                         cnt = 0
 
+                        word_watching = [0 for _ in range(word_num)]
                         for item in is_watching:
                             word_watching[item + begin_index] = 1
+
                         for x in range(begin_index, nums[i]):
                             number_of_fixations[x] += num_of_fixation_this_page[cnt]
                             reading_times[x] += reading_times_this_page[cnt]
@@ -2701,3 +3321,150 @@ def input_to_label(input):
     print("fixation占比:%f" % (np.sum(output == 1) / len(output)))
     print("saccade占比:%f" % (np.sum(output == 2) / len(output)))
     return output
+
+
+def get_t(gaze_t):
+    # 超参
+    times_for_remove = 500  # 删除开头结尾的长度，单位是ms
+    # 转换格式
+    list_t = list(map(float, gaze_t.split(",")))
+
+    new_list_t = []
+    # 组合+舍去开头结尾
+    for i in range(len(list_t)):
+        if list_t[-1] - list_t[i] <= times_for_remove:
+            # 舍去最后的一段时间的gaze点
+            break
+        if list_t[i] - list_t[0] > times_for_remove:
+            # 只有开始一段时间后的gaze点才计入
+            new_list_t.append(list_t[i])
+    return new_list_t
+
+
+def get_fixation_by_time(request):
+    exp_id = request.GET.get("exp_id")
+    time = request.GET.get("time")
+
+    # 1. 准备底图
+    # 先要把time按照page分页
+    page_data_ls = PageData.objects.filter(experiment_id=exp_id)
+
+    timestamp = 0
+    timestamps = []  # 每页的time范围
+    for page_data in page_data_ls:
+        gaze_t = get_t(page_data.gaze_t)
+        print(gaze_t)
+        begin = 0
+        for i, t in enumerate(gaze_t):
+            if i == 0:
+                continue
+            if gaze_t[i] - gaze_t[begin] > 800:
+                timestamp += 1
+                begin = i
+        timestamps.append(timestamp)
+
+    print("timestamps")
+    print(timestamps)
+    page_index = -1
+    for i, item in enumerate(timestamps):
+        print(item)
+        if item >= int(time):
+            page_index = i
+            break
+    assert page_index >= 0
+    assert len(page_data_ls) >= page_index
+
+    page_data = page_data_ls[page_index]
+
+    image = page_data.image.split(",")[1]
+    image_data = base64.b64decode(image)
+
+    filename = "static\\data\\timestamp\\origin.png"
+    with open(filename, "wb") as f:
+        f.write(image_data)
+
+    # 2. 准备gaze点
+    row = -1
+    csv = "static\\dataset\\10-31-43-gaze.csv"
+    file = pd.read_csv(csv)
+    for i, r in file.iterrows():
+        if str(r["experiment_id"]) == exp_id and str(r["time"]) == time:
+            print(type(r["experiment_id"]))
+            print(type(exp_id))
+            row = i
+            break
+    if row == -1:
+        return JsonResponse({"code": 404, "status": "未检索相关信息"}, json_dumps_params={"ensure_ascii": False}, safe=False)
+
+    print(file["gaze_x"][row])
+    print(type(file["gaze_x"][row]))
+
+    gaze_x = file["gaze_x"][row]
+    gaze_y = file["gaze_y"][row]
+
+    list_x = list(map(float, gaze_x[1:-1].split(",")))
+    list_y = list(map(float, gaze_y[1:-1].split(",")))
+    list_t = []
+
+    time_t = 0
+    for i in range(len(list_x)):
+        list_t.append(time_t)
+        time_t += 30
+    assert len(list_x) == len(list_y) == len(list_t)
+
+    coordinates = []
+    for i in range(len(list_x)):
+        tmp = [int(list_x[i]), int(list_y[i]), int(list_t[i])]
+        coordinates.append(tmp)
+    fixations = get_fixations(coordinates)
+
+    # 3. 画图
+    img = cv2.imread(filename)
+    cnt = 0
+    pre_fix = (0, 0)
+    for i, fix in enumerate(fixations):
+        cv2.circle(
+            img,
+            (fix[0], fix[1]),
+            3,
+            (0, 0, 255),
+            -1,
+        )
+        if cnt > 0:
+            cv2.line(
+                img,
+                (pre_fix[0], pre_fix[1]),
+                (fix[0], fix[1]),
+                (0, 0, 255),
+                1,
+            )
+
+        # 标序号 间隔着标序号
+        cv2.putText(
+            img,
+            str(cnt),
+            (fix[0], fix[1]),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (255, 0, 0),
+            1,
+        )
+        cnt = cnt + 1
+        pre_fix = fix
+    result_filename = "static\\data\\timestamp\\" + str(exp_id) + "-" + str(time) + "-fix.png"
+    cv2.imwrite(result_filename, img)
+    logger.info("fixation 图片生成路径:%s" % result_filename)
+
+    img = cv2.imread(filename)
+    for i, fix in enumerate(coordinates):
+        cv2.circle(
+            img,
+            (fix[0], fix[1]),
+            3,
+            (0, 0, 255),
+            -1,
+        )
+    result_filename = "static\\data\\timestamp\\" + str(exp_id) + "-" + str(time) + "-gaze.png"
+    cv2.imwrite(result_filename, img)
+    logger.info("gaze 图片生成路径:%s" % result_filename)
+    return JsonResponse({"code": 200, "status": "生成完毕"}, json_dumps_params={"ensure_ascii": False}, safe=False)

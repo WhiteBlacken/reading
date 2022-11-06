@@ -42,7 +42,12 @@ urlpatterns = [
     path("article/", views.article_2_csv),
     path("ccn_data/", views.get_cnn_dataset),
     path("row_level_fix/", views.get_row_level_fixations_map),
+    path("row_level_heat/", views.get_row_level_heatmap),
     path("choose/", views.choose_text),
     path("eye/dataset/", views.get_eye_feature_dataset),
     path("test_model/", views.test),
+    path("heatmap_all_user/", views.get_all_heatmap_of_all_user),
+    path("semantic/value/", views.get_semantic_value_of_word),
+    path("fix_map_by_time/", views.get_fixation_by_time),
+    path("sen_mean/", views.get_sentence_meaning),
 ]
