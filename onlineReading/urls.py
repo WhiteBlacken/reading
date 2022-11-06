@@ -50,4 +50,5 @@ urlpatterns = [
     path("semantic/value/", views.get_semantic_value_of_word),
     path("fix_map_by_time/", views.get_fixation_by_time),
     path("sen_mean/", views.get_sentence_meaning),
+    path("speed/", views.get_speed),
 ]

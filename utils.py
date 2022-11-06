@@ -194,14 +194,14 @@ def x_y_t_2_coordinate(gaze_x, gaze_y, gaze_t):
         #     int(float(list_y[i])),
         #     int(float(list_t[i])),
         # )
-        if i % 2 == 0:
-            coordinate = (
-                # int(float(list_x[i]) * 1920 / 1534),
-                # int(float(list_y[i]) * 1920 / 1534),
-                int(float(list_x[i])),
-                int(float(list_y[i])),
-                int(float(list_t[i])),
-            )
+
+        coordinate = (
+            # int(float(list_x[i]) * 1920 / 1534),
+            # int(float(list_y[i]) * 1920 / 1534),
+            int(float(list_x[i])),
+            int(float(list_y[i])),
+            int(float(list_t[i])),
+        )
         coordinates.append(coordinate)
     return coordinates
 
@@ -221,10 +221,11 @@ def fixation_image(image_base64, username, fixations, page_data_id, pic_name):
     base64.b64decode(data)
     # 获取名称
 
-    filename = "background.png"
+    filename = "visual.png"
     # 存储地址
     path = "static/data/heatmap/" + str(username) + "/" + str(page_data_id) + "/"
-    logger.info("fixations轨迹已在该路径下生成:%s" % (path + filename))
+    # logger.info("fixations轨迹已在该路径下生成:%s" % (path + filename))
+
     # 如果目录不存在，则创建目录
     # if not os.path.exists(path):
     #     os.mkdir(path)
@@ -244,6 +245,10 @@ def paint_image(path, filename, coordinates, pic_name):
     import cv2
 
     # coordinates = [x for i, x in enumerate(coordinates) if i % 2 == 0]
+    print(coordinates)
+    for coordinate in coordinates:
+        if coordinate[1] < 50:
+            coordinate[1] = 50
     img = cv2.imread(path + filename)
     cnt = 0
     pre_coordinate = (0, 0, 0)
@@ -251,7 +256,7 @@ def paint_image(path, filename, coordinates, pic_name):
         cv2.circle(
             img,
             (coordinate[0], coordinate[1]),
-            3,
+            7,
             (0, 0, 255),
             -1,
         )
@@ -263,16 +268,16 @@ def paint_image(path, filename, coordinates, pic_name):
                 (0, 0, 255),
                 1,
             )
-        if cnt % 5 == 0:
-            # 标序号 间隔着标序号
+        if cnt % 3 == 0:
+            #     # 标序号 间隔着标序号
             cv2.putText(
                 img,
                 str(cnt),
-                (coordinate[0], coordinate[1]),
+                (coordinate[0], coordinate[1] - 10),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
+                0.7,
                 (255, 0, 0),
-                1,
+                2,
             )
         cnt = cnt + 1
         pre_coordinate = coordinate
@@ -1107,23 +1112,17 @@ if __name__ == "__main__":
     # model = ModelWithoutFC()
     # model.load_state_dict(torch.load("model/EyeFeatureModel.pth"))
     #
-    # model.eval()
-    # input = torch.randn(1, 263, 5)
-    # output = model(input)
-    # print(output)
-    # print(output.shape)
 
-    # import numpy as np
-    #
-    # np.random.seed(0)
-    # import seaborn as sns
-    #
-    # sns.set_theme()
-    # uniform_data = np.random.rand(10, 12)
-    # ax = sns.heatmap(uniform_data)
-    # # plt.show()
-    # import seaborn as sns
-    #
-    # df = sns.load_dataset("flights")
-    # print(type(df))
-    split_csv(630)
+    fix1 = Image.open("pic/fix1.png")
+    word1 = Image.open("pic/word1.png")
+
+    size1, size2 = fix1.size, word1.size
+    word1 = word1.resize((size1[0], int(size2[1] * (size1[0] / size2[0]))))
+    size2 = word1.size
+    joint = Image.new("RGB", (size1[0] if size1[0] > size2[0] else size2[0], size1[1] + size2[1]))
+
+    print(joint.size)
+    loc1, loc2 = (0, 0), (0, size1[1])
+    joint.paste(fix1, loc1)
+    joint.paste(word1, loc2)
+    joint.save("cob.png")

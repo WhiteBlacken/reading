@@ -1561,7 +1561,7 @@ def get_all_heatmap(request):
     word_locations = get_word_location(pageData.location)  # [(left,top,right,bottom),(left,top,right,bottom)]
 
     # 确保单词长度是正确的
-    assert len(word_locations) == len(word_list)
+    # assert len(word_locations) == len(word_list)
     # 获取图片生成的路径
     exp = Experiment.objects.filter(id=pageData.experiment_id)
 
@@ -2168,12 +2168,12 @@ def valid_coordinates(coordinates):
     begin = 0
     end = -1
     for i, coordinate in enumerate(coordinates):
-        if coordinate[2] - coordinates[0][2] > 200:
+        if coordinate[2] - coordinates[0][2] > 400:
             begin = i
             break
     print("begin:%d" % begin)
     for i in range(len(coordinates) - 1, -1, -1):
-        if coordinates[-1][2] - coordinates[i][2] > 200:
+        if coordinates[-1][2] - coordinates[i][2] > 400:
             end = i
             break
     coordinates = coordinates[begin:end]
@@ -2220,6 +2220,10 @@ def get_visual_attention(
     # 组合
     coordinates = []
     for i in range(len(list_x)):
+        if list_y[i] < 70:
+            continue
+        if list_y[i] > 250:
+            continue
         coordinate = [list_x[i], list_y[i], list_t[i]]
         coordinates.append(coordinate)
     # 去除开始结束的gaze点
@@ -2231,8 +2235,12 @@ def get_visual_attention(
     """
     # 计算top_k
     data_list = []
-    for coordinate in coordinates:
-        data = [coordinate[0], coordinate[1]]
+    # for coordinate in coordinates:
+    #     c
+    #     data_list.append(data)
+    fixations = get_fixations(coordinates)
+    for fix in fixations:
+        data = [fix[0], fix[1]]
         data_list.append(data)
     hotspot = myHeatmap.draw_heat_map(data_list, base_path + "visual.png", background)
 
@@ -2353,7 +2361,9 @@ def get_visual_attention(
 
     # 生成fixation图示
     fixations = get_fixations(coordinates)
-    fixation_image(image, username, fixations, page_data_id, "fixation.png")
+    fixs = [x for i, x in enumerate(fixations) if i % 4 == 1]
+
+    fixation_image(image, username, fixs, page_data_id, "fixation.png")
 
 
 def get_center(location):
@@ -3468,3 +3478,24 @@ def get_fixation_by_time(request):
     cv2.imwrite(result_filename, img)
     logger.info("gaze 图片生成路径:%s" % result_filename)
     return JsonResponse({"code": 200, "status": "生成完毕"}, json_dumps_params={"ensure_ascii": False}, safe=False)
+
+
+def get_speed(request):
+    page_ids = request.GET.get("ids")
+    page_id_ls = page_ids.split(",")
+    index = request.GET.get("index")
+    dict = {}
+    for page_id in page_id_ls:
+        if len(page_id) > 0:
+            page_data = PageData.objects.filter(id=page_id).first()
+            coors = x_y_t_2_coordinate(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+            time = 0
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            for coor in coors:
+                word_index = get_item_index_x_y(page_data.location, coor[0], coor[1])
+                if word_index != -1:
+                    sentence_index = get_sentence_by_word(word_index, sentence_list)
+                    if sentence_index >= int(index):
+                        time += 30
+            dict[page_id] = time
+    return JsonResponse(dict, json_dumps_params={"ensure_ascii": False}, safe=False)
