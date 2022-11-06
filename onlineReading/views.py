@@ -1045,7 +1045,7 @@ def get_visual_heatmap(request):
     word_locations = get_word_location(pageData.location)  # [(left,top,right,bottom),(left,top,right,bottom)]
 
     # 确保单词长度是正确的
-    assert len(word_locations) == len(word_list)
+    # assert len(word_locations) == len(word_list)
 
     # 获取图片生成的路径
     exp = Experiment.objects.filter(id=pageData.experiment_id)
