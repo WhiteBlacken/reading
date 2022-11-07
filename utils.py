@@ -252,7 +252,17 @@ def paint_image(path, filename, coordinates, pic_name):
     img = cv2.imread(path + filename)
     cnt = 0
     pre_coordinate = (0, 0, 0)
+
+    t = [math.log(x[2], 5) for x in coordinates]
+    max(t)
+    min(t)
+
     for i, coordinate in enumerate(coordinates):
+        # print(coordinate[2])
+        # t = math.log(coordinate[2],5)
+        # r = (t-min_t)/max_t
+        # r = math.log(r)
+        # print(r)
         cv2.circle(
             img,
             (coordinate[0], coordinate[1]),
@@ -268,7 +278,7 @@ def paint_image(path, filename, coordinates, pic_name):
                 (0, 0, 255),
                 1,
             )
-        if cnt % 3 == 0:
+        if cnt % 2 == 0:
             #     # 标序号 间隔着标序号
             cv2.putText(
                 img,

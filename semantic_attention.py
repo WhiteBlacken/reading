@@ -11,10 +11,10 @@ from textstat import textstat
 from transformers import BertForMaskedLM, BertTokenizer, XLNetModel, XLNetTokenizerFast
 
 nlp = spacy.load("en_core_web_lg")
-tokenizer = XLNetTokenizerFast.from_pretrained("xlnet-base-cased")
-model = XLNetModel.from_pretrained("xlnet-base-cased", output_attentions=True)
-bert_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-bert_model = BertForMaskedLM.from_pretrained("bert-base-uncased")
+tokenizer = XLNetTokenizerFast.from_pretrained(r"D:\qxy\pre-trained-model\xlnet-base-cased")
+model = XLNetModel.from_pretrained(r"D:\qxy\pre-trained-model\xlnet-base-cased", output_attentions=True)
+bert_tokenizer = BertTokenizer.from_pretrained(r"D:\qxy\pre-trained-model\bert-base-cased")
+bert_model = BertForMaskedLM.from_pretrained(r"D:\qxy\pre-trained-model\bert-base-cased")
 
 f = open("mrc2.dct", "r")
 word_fam_map = {}
