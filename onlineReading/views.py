@@ -37,6 +37,7 @@ from utils import (
     get_importance,
     get_item_index_x_y,
     get_out_of_screen_times,
+    get_para_from_txt,
     get_proportion_of_horizontal_saccades,
     get_reading_times_and_dwell_time_of_sentence,
     get_reading_times_of_word,
@@ -3471,27 +3472,29 @@ def get_fixation_by_time(request):
 
 
 def get_speed(request):
-    page_ids = request.GET.get("ids")
-    # index = request.GET.get("index")
-    page_id_ls = page_ids.split(",")
+    exp_ids = request.GET.get("ids")
+    exp_id_ls = exp_ids.split(",")
     dict = {}
-    for page_id in page_id_ls:
-        if len(page_id) > 0:
-            page_data = PageData.objects.filter(id=page_id).first()
-            coors = x_y_t_2_coordinate(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+    path = "static\\data\\other\\paraLoc.txt"
+    aticle_para_1 = get_para_from_txt(path)
+    for exp_id in exp_id_ls:
+        if len(exp_id) > 0:
             time1 = 0
             time2 = 0
-            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
-            for coor in coors:
-                word_index = get_item_index_x_y(page_data.location, coor[0], coor[1])
-                if word_index != -1:
-                    # sentence_index = get_sentence_by_word(word_index, sentence_list)
-                    para_index = 0
-                    # TODO:根据word_index返回para_index
-                    # para_index = get_para_by_word(word_index, para_list)
-                    if para_index == 0:
-                        time1 += 30
-                    elif para_index > 0:
-                        time2 += 30
-            dict[page_id] = [time1, time2]
+            article_id = Experiment.objects.get(id=exp_id).article_id
+            first_para_index = aticle_para_1[article_id]["para_1"]
+            page_data_ls = PageData.objects.filter(experiment_id=exp_id)
+            for page_data in page_data_ls:
+                coors = x_y_t_2_coordinate(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+                for coor in coors:
+                    word_index = get_item_index_x_y(page_data.location, coor[0], coor[1])
+                    if word_index != -1:
+                        if word_index <= first_para_index and page_data.page == 1:
+                            time1 += 30
+                        else:
+                            time2 += 30
+            para_1_speed = time1 / first_para_index
+            assert time2 / aticle_para_1[article_id]["word_num"] > first_para_index
+            para_above_1_speed = time2 / aticle_para_1[article_id]["word_num"] - first_para_index
+            dict[exp_id] = {"para_1_speed": para_1_speed, "para_above_1_speed": para_above_1_speed}
     return JsonResponse(dict, json_dumps_params={"ensure_ascii": False}, safe=False)
