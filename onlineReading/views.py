@@ -3472,29 +3472,43 @@ def get_fixation_by_time(request):
 
 
 def get_speed(request):
-    exp_ids = request.GET.get("ids")
-    exp_id_ls = exp_ids.split(",")
+    page_ids = request.GET.get("ids")
+    page_id_ls = page_ids.split(",")
     dict = {}
     path = "static\\data\\other\\paraLoc.txt"
-    aticle_para_1 = get_para_from_txt(path)
-    for exp_id in exp_id_ls:
-        if len(exp_id) > 0:
+    for page_id in page_id_ls:
+        if len(page_id) > 0:
             time1 = 0
             time2 = 0
-            article_id = Experiment.objects.get(id=exp_id).article_id
+            page_data = PageData.objects.get(id=page_id)
+            aticle_para_1 = get_para_from_txt(path, page_data.page - 1)
+            article_id = Experiment.objects.get(id=page_data.experiment_id).article_id
             first_para_index = aticle_para_1[article_id]["para_1"]
-            page_data_ls = PageData.objects.filter(experiment_id=exp_id)
-            for page_data in page_data_ls:
-                coors = x_y_t_2_coordinate(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
-                for coor in coors:
-                    word_index = get_item_index_x_y(page_data.location, coor[0], coor[1])
-                    if word_index != -1:
-                        if word_index <= first_para_index and page_data.page == 1:
-                            time1 += 30
-                        else:
-                            time2 += 30
-            para_1_speed = time1 / first_para_index
+            coors = x_y_t_2_coordinate(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            for coor in coors:
+                word_index = get_item_index_x_y(page_data.location, coor[0], coor[1])
+                if word_index != -1:
+                    if word_index <= first_para_index:
+                        time1 += 30
+                    else:
+                        time2 += 30
+            para_1_speed = first_para_index / time1 * 60000
             assert time2 / aticle_para_1[article_id]["word_num"] > first_para_index
-            para_above_1_speed = time2 / aticle_para_1[article_id]["word_num"] - first_para_index
-            dict[exp_id] = {"para_1_speed": para_1_speed, "para_above_1_speed": para_above_1_speed}
+            para_above_1_speed = (aticle_para_1[article_id]["word_num"] - first_para_index) / time2 * 60000
+
+            sen_cnt = 0
+            print("fist_para")
+            print(first_para_index)
+            for sentence in sentence_list:
+                print(sentence)
+                if sentence[2] - 1 <= first_para_index:
+                    sen_cnt += 1
+            dict[page_id] = {
+                "para_1_speed": para_1_speed,
+                "para_above_1_speed": para_above_1_speed,
+                "para1_word_label": len(json.loads(page_data.wordLabels)) / first_para_index,
+                "para_1_sen_label": len(json.loads(page_data.sentenceLabels)) / sen_cnt,
+                "para_1_mw_label": len(json.loads(page_data.wanderLabels)) / sen_cnt,
+            }
     return JsonResponse(dict, json_dumps_params={"ensure_ascii": False}, safe=False)

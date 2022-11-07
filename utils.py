@@ -1103,7 +1103,7 @@ def split_csv(exp_id):
     print("ok")
 
 
-def get_para_from_txt(path):
+def get_para_from_txt(path, tar_page):
     dict = {}
     for line in open(path):
         print(line)
@@ -1114,14 +1114,14 @@ def get_para_from_txt(path):
         para_1 = 0
         for i, page in enumerate(pages):
             paras = page.split(",")
-            word_num += int(paras[-1])
-            if i == 0:
+            if i == tar_page:
                 para_1 = int(paras[0])
+                word_num += int(paras[-1])
         dict[article_id] = {"para_1": para_1, "word_num": word_num}
     return dict
 
 
 if __name__ == "__main__":
     path = "static\\data\\other\\paraLoc.txt"
-    dict = get_para_from_txt(path)
+    dict = get_para_from_txt(path, 1)
     print(dict)
