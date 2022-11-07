@@ -3468,3 +3468,24 @@ def get_fixation_by_time(request):
     cv2.imwrite(result_filename, img)
     logger.info("gaze 图片生成路径:%s" % result_filename)
     return JsonResponse({"code": 200, "status": "生成完毕"}, json_dumps_params={"ensure_ascii": False}, safe=False)
+
+
+def get_speed(request):
+    page_ids = request.GET.get("ids")
+    index = request.GET.get("index")
+    page_id_ls = page_ids.split(",")
+    dict = {}
+    for page_id in page_id_ls:
+        if len(page_id) > 0:
+            page_data = PageData.objects.filter(id=page_id).first()
+            coors = x_y_t_2_coordinate(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+            time = 0
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            for coor in coors:
+                word_index = get_item_index_x_y(page_data.location, coor[0], coor[1])
+                if word_index != -1:
+                    sentence_index = get_sentence_by_word(word_index, sentence_list)
+                    if sentence_index >= int(index):
+                        time += 30
+            dict[page_id] = time
+    return JsonResponse(dict, json_dumps_params={"ensure_ascii": False}, safe=False)
