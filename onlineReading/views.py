@@ -2620,7 +2620,7 @@ def compute_label(wordLabels, sentenceLabels, wanderLabels, word_list):
 
 def get_eye_feature_dataset(request):
     # experiments = Experiment.objects.filter(id=641)
-    experiments = Experiment.objects.filter(is_finish=True).order_by("-id")[10:51]
+    experiments = Experiment.objects.filter(is_finish=True).filter(id__gte=574).order_by("id")[11:46]
     # experiments = Experiment.objects.filter(is_finish=True).filter(id=630)
     success = 0
     fail = 0
@@ -2650,6 +2650,7 @@ def get_eye_feature_dataset(request):
             page_datas = []
             nums = []
             timestamp = 0
+            flag = 0
             for page_data in page_data_list:
                 # 1. 将gaze组合+去除异常值
                 coordinates = get_coordinate(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
@@ -2661,7 +2662,14 @@ def get_eye_feature_dataset(request):
                     page_data.location
                 )  # [{'left': 330, 'top': 95, 'right': 435.109375, 'bottom': 147},...]
                 assert len(word_list) == len(words_location)  # 确保单词分割的是正确的
-                nums.append(len(word_list))
+                if len(nums) == 0:
+                    nums.append(len(word_list))
+                else:
+                    sum = 0
+                    for num in nums:
+                        sum += num
+                    nums.append(sum + len(word_list))
+
                 word_num += len(word_list)
                 word.extend(word_list)
 
@@ -2716,21 +2724,26 @@ def get_eye_feature_dataset(request):
                         for item in is_watching:
                             word_watching[item + begin_index] = 1
 
+                        if i == 1 and flag == 0:
+                            print("begin_index")
+                            print(begin_index)
+                            print("nums")
+                            print(nums[i])
+                            flag = 1
+
                         for x in range(begin_index, nums[i]):
-                            number_of_fixations[x] += num_of_fixation_this_page[cnt]
-                            reading_times[x] += reading_times_this_page[cnt]
-                            reading_times_of_sentence[x] += reading_times_of_sentence_in_word_this_page[cnt]  # 相对的
+                            number_of_fixations[x] = num_of_fixation_this_page[cnt]
+                            reading_times[x] = reading_times_this_page[cnt]
+                            reading_times_of_sentence[x] = reading_times_of_sentence_in_word_this_page[cnt]  # 相对的
                             second_pass_dwell_time_of_sentence[
                                 x
-                            ] += second_pass_dwell_time_of_sentence_in_word_this_page[
+                            ] = second_pass_dwell_time_of_sentence_in_word_this_page[
                                 cnt
                             ]  # 相对的
-                            total_dwell_time_of_sentence[x] += total_dwell_time_of_sentence_in_word_this_page[
-                                cnt
-                            ]  # 相对的
-                            saccade_times_of_sentence[x] += saccade_times_of_sentence_word_level_this_page[cnt]
-                            forward_times_of_sentence[x] += forward_times_of_sentence_word_level_this_page[cnt]
-                            backward_times_of_sentence[x] += backward_times_of_sentence_word_level_this_page[cnt]
+                            total_dwell_time_of_sentence[x] = total_dwell_time_of_sentence_in_word_this_page[cnt]  # 相对的
+                            saccade_times_of_sentence[x] = saccade_times_of_sentence_word_level_this_page[cnt]
+                            forward_times_of_sentence[x] = forward_times_of_sentence_word_level_this_page[cnt]
+                            backward_times_of_sentence[x] = backward_times_of_sentence_word_level_this_page[cnt]
                             cnt += 1
 
                         experiment_ids.append(experiment.id)

@@ -365,8 +365,8 @@ if __name__ == "__main__":
     output = process(text, tokenizer, bert)
 
     # 根据每个head，画出一张attention图
-    layer = 2
-    heads = [2]
+    layer = 4
+    heads = [1]
     # pass 12 11 1
     # heads = [2]
     for head in heads:

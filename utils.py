@@ -62,7 +62,6 @@ def get_fixations(coordinates):
                 working_queue.clear()
                 break  # maximum data found
             working_queue.append(remaining_gaze.popleft())
-    print("fixaions:%s" % fixations)
     return fixations
 
 
