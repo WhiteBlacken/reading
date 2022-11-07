@@ -378,7 +378,6 @@
                 let request = "/para";
                 if(article_id.length > 0)
                     request += "?article_id=" + article_id;
-                console.log(request);
                 await axios.get(request).then((response) => {
                     this.content = response.data;
                 });
@@ -402,11 +401,11 @@
                 let num = 0;
                 //分割出该段落的所有句子
                 var sentences = p.split('.');
-                if(sentences[sentences.length-1] == "")
+                if(sentences[sentences.length-1] != '" 、 ')
                     sentences.splice(sentences.length - 1, 1);
+                console.log(sentences[sentences.length-1])
                 for(let i = 0; i < sentences.length; i++)
                     sentences[i].replace('  ', ' ');
-                console.log(sentences)
                 let sentenceNum = 0;
                 let conPerPage = [];
                 let transPerPage = [];
@@ -479,11 +478,12 @@
                         }
 
                     }
-                    console.log(this.paraLoc)
+                    {#console.log(this.paraLoc)#}
                     if (this.paraLoc[this.contentPerPage.length].length == 0 || this.paraLoc[this.contentPerPage.length][this.paraLoc[this.contentPerPage.length].length - 1] < num - 1)
                         this.paraLoc[this.contentPerPage.length].push(num - 1);
                     this.transPerPage.push(transPerPage);
-                    this.contentPerPage.push(conPerPage.join('.') + ".");
+                    this.contentPerPage.push(conPerPage.join(''));
+                    console.log(this.contentPerPage)
                 }
 
                 while (e.children[0])
