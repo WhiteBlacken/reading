@@ -3472,20 +3472,26 @@ def get_fixation_by_time(request):
 
 def get_speed(request):
     page_ids = request.GET.get("ids")
-    index = request.GET.get("index")
+    # index = request.GET.get("index")
     page_id_ls = page_ids.split(",")
     dict = {}
     for page_id in page_id_ls:
         if len(page_id) > 0:
             page_data = PageData.objects.filter(id=page_id).first()
             coors = x_y_t_2_coordinate(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
-            time = 0
+            time1 = 0
+            time2 = 0
             word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
             for coor in coors:
                 word_index = get_item_index_x_y(page_data.location, coor[0], coor[1])
                 if word_index != -1:
-                    sentence_index = get_sentence_by_word(word_index, sentence_list)
-                    if sentence_index >= int(index):
-                        time += 30
-            dict[page_id] = time
+                    # sentence_index = get_sentence_by_word(word_index, sentence_list)
+                    para_index = 0
+                    # TODO:根据word_index返回para_index
+                    # para_index = get_para_by_word(word_index, para_list)
+                    if para_index == 0:
+                        time1 += 30
+                    elif para_index > 0:
+                        time2 += 30
+            dict[page_id] = [time1, time2]
     return JsonResponse(dict, json_dumps_params={"ensure_ascii": False}, safe=False)
