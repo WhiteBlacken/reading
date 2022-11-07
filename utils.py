@@ -1103,27 +1103,25 @@ def split_csv(exp_id):
     print("ok")
 
 
-if __name__ == "__main__":
-    # model = ModelWithoutFC()
-    # model.load_state_dict(torch.load("model/EyeFeatureModel.pth"))
-    #
-    # model.eval()
-    # input = torch.randn(1, 263, 5)
-    # output = model(input)
-    # print(output)
-    # print(output.shape)
+def get_para_from_txt(path):
+    dict = {}
+    for line in open(path):
+        print(line)
+        line = line.split(" ")
+        article_id = int(line[0])
+        pages = line[1].split("|")
+        word_num = 0
+        para_1 = 0
+        for i, page in enumerate(pages):
+            paras = page.split(",")
+            if i == 0:
+                para_1 = int(paras[0])
+                word_num += int(paras[-1])
+        dict[article_id] = {"para_1": para_1, "word_num": word_num+1}
+    return dict
 
-    # import numpy as np
-    #
-    # np.random.seed(0)
-    # import seaborn as sns
-    #
-    # sns.set_theme()
-    # uniform_data = np.random.rand(10, 12)
-    # ax = sns.heatmap(uniform_data)
-    # # plt.show()
-    # import seaborn as sns
-    #
-    # df = sns.load_dataset("flights")
-    # print(type(df))
-    split_csv(630)
+
+if __name__ == "__main__":
+    path = "static\\data\\other\\paraLoc.txt"
+    dict = get_para_from_txt(path)
+    print(dict)
