@@ -3494,7 +3494,6 @@ def get_speed(request):
                     else:
                         time2 += 30
             para_1_speed = first_para_index / time1 * 60000
-            assert time2 / aticle_para_1[article_id]["word_num"] > first_para_index
             para_above_1_speed = (aticle_para_1[article_id]["word_num"] - first_para_index) / time2 * 60000
 
             sen_cnt = 0
@@ -3504,11 +3503,22 @@ def get_speed(request):
                 print(sentence)
                 if sentence[2] - 1 <= first_para_index:
                     sen_cnt += 1
+
+            wordLabels = json.loads(page_data.wordLabels)
+            senLabels = json.loads(page_data.sentenceLabels)
+            wanderLabels = json.loads(page_data.wanderLabels)
+
+            wordLabel_num = np.sum(np.array(wordLabels) <= first_para_index)
+            sens = [x[1] for x in senLabels]
+            senLabel_num = np.sum(np.array(sens) <= first_para_index + 1)
+            wanders = [x[1] for x in wanderLabels]
+            wanderLabel_num = np.sum(np.array(wanders) <= first_para_index)
+
             dict[page_id] = {
                 "para_1_speed": para_1_speed,
                 "para_above_1_speed": para_above_1_speed,
-                "para1_word_label": len(json.loads(page_data.wordLabels)) / first_para_index,
-                "para_1_sen_label": len(json.loads(page_data.sentenceLabels)) / sen_cnt,
-                "para_1_mw_label": len(json.loads(page_data.wanderLabels)) / sen_cnt,
+                "para1_word_label": wordLabel_num / first_para_index,
+                "para_1_sen_label": senLabel_num / sen_cnt,
+                "para_1_mw_label": wanderLabel_num / sen_cnt,
             }
     return JsonResponse(dict, json_dumps_params={"ensure_ascii": False}, safe=False)
