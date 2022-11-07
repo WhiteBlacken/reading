@@ -1,20 +1,18 @@
 import numpy as np
-import pandas as pd
-import seaborn as sns
 import spacy
 import torch
 from docx import Document
-from matplotlib import pyplot as plt
 from nltk.tokenize import sent_tokenize
-from pandas import Series
 from textstat import textstat
 from transformers import BertForMaskedLM, BertTokenizer, XLNetModel, XLNetTokenizerFast
 
 nlp = spacy.load("en_core_web_lg")
-tokenizer = XLNetTokenizerFast.from_pretrained("xlnet-base-cased")
-model = XLNetModel.from_pretrained("xlnet-base-cased", output_attentions=True)
-bert_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-bert_model = BertForMaskedLM.from_pretrained("bert-base-uncased")
+tokenizer = XLNetTokenizerFast.from_pretrained(r"D:\qxy\pre-trained-model\xlnet-base-cased")
+model = XLNetModel.from_pretrained(r"D:\qxy\pre-trained-model\xlnet-base-cased", output_attentions=True)
+# bert_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+bert_tokenizer = BertTokenizer.from_pretrained(r"D:\qxy\pre-trained-model\bert-base-cased")
+# bert_model = BertForMaskedLM.from_pretrained("bert-base-uncased")
+bert_model = BertForMaskedLM.from_pretrained(r"D:\qxy\pre-trained-model\bert-base-cased")
 
 f = open("mrc2.dct", "r")
 word_fam_map = {}
@@ -264,31 +262,39 @@ if __name__ == "__main__":
 
     # sentence = "The BBC's Suranjana Tewari in Singapore says Asian investors are also dumping sterling and other currencies because the US Federal Reserve has hiked interest rates so quickly to fight inflation."
     sentence = "Sitting in a more comfortable car in a different traffic jam is pleasant but hardly the liberation that once seemed to be promised."
+
+    from transformers import BertTokenizer
+
+    tokenizer = BertTokenizer.from_pretrained(r"D:\qxy\pre-trained-model\bert-base-cased")
+
+    tokens = tokenizer.tokenize(sentence)
+    print(tokens)
+
     # 计算某一句的word attention
-    word_list, word4show_list = generate_word_list(sentence)
-    word_att_mat = generate_phrase_att(sentence, word_list)
-
-    doc = nlp(sentence)
-    index = [x.text.strip().lower() for x in doc]
-
-    stop_words = ["'s", "the", "in", "are", "and", "to", "other", "so", "because", "us", ".", "a", "is", "be"]
-    df = pd.DataFrame()
-
-    new_index = []
-    for i, word in enumerate(index):
-        if word in stop_words:
-            continue
-        tmp = []
-        for j, word1 in enumerate(index):
-            if word1 in stop_words:
-                continue
-            tmp.append(word_att_mat[i][j])
-        df[word] = tmp
-        new_index.append(word)
-
-    df.index = Series(new_index)
-    sns.set_theme()
-    ax = sns.heatmap(df, linewidths=0.5)
-    plt.tight_layout()
-    plt.savefig("test.png")
-    plt.show()
+    # word_list, word4show_list = generate_word_list(sentence)
+    # word_att_mat = generate_phrase_att(sentence, word_list)
+    #
+    # doc = nlp(sentence)
+    # index = [x.text.strip().lower() for x in doc]
+    #
+    # stop_words = ["'s", "the", "in", "are", "and", "to", "other", "so", "because", "us", ".", "a", "is", "be"]
+    # df = pd.DataFrame()
+    #
+    # new_index = []
+    # for i, word in enumerate(index):
+    #     if word in stop_words:
+    #         continue
+    #     tmp = []
+    #     for j, word1 in enumerate(index):
+    #         if word1 in stop_words:
+    #             continue
+    #         tmp.append(word_att_mat[i][j])
+    #     df[word] = tmp
+    #     new_index.append(word)
+    #
+    # df.index = Series(new_index)
+    # sns.set_theme()
+    # ax = sns.heatmap(df, linewidths=0.5)
+    # plt.tight_layout()
+    # # plt.savefig("test.png")
+    # plt.show()
