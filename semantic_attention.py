@@ -314,7 +314,7 @@ def process(text, tokenizer, bert):
     return output
 
 
-def att_pic(tokens, att, head, layer):
+def att_pic(tokens, att, head, layer, type):
     import pandas as pd
     import seaborn as sns
 
@@ -339,7 +339,7 @@ def att_pic(tokens, att, head, layer):
     sns.set_theme()
     ax = sns.heatmap(df, linewidths=0.5, annot=True, fmt=".2f")
     plt.tight_layout()
-    plt.savefig("static\\data\\atts\\" + str(layer) + "-" + str(head) + ".png")
+    plt.savefig("static\\data\\atts\\" + str(layer) + "-" + str(head) + "-" + str(type) + ".png")
     plt.show()
 
 
@@ -365,8 +365,11 @@ if __name__ == "__main__":
     output = process(text, tokenizer, bert)
 
     # 根据每个head，画出一张attention图
-    layer = 4
-    heads = [1]
+    # semantic 0-4 0-11--  9-8 2-8
+    # syntactic 4-7 4-11 5-6 5-1 6-3
+    # semantic+syntactic 0-10 2-0
+    layer = 2
+    heads = [8]
     # pass 12 11 1
     # heads = [2]
     for head in heads:
@@ -377,4 +380,4 @@ if __name__ == "__main__":
         temp = inputs["input_ids"][0]  # 得到input_ids，为了将其转换成tokens
         tokens = tokenizer.convert_ids_to_tokens(temp)
         print(tokens)
-        att_pic(tokens, res2, head, layer)
+        att_pic(tokens, res2, head, layer, "all")
