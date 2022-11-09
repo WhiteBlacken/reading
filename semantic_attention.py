@@ -318,7 +318,9 @@ def att_pic(tokens, att, head, layer, type):
     import pandas as pd
     import seaborn as sns
 
-    remove_list = ["[CLS]", "[SEP]", ".", "sitting", "in", "a", "car", "but", "that", "once", "to", "be", "the", "is"]
+    # remove_list = ["[CLS]", "[SEP]", ".", "sitting", "in", "a", "car", "but", "that", "once", "to", "be", "the", "is"]
+    # remove_list = ["[CLS]", "[SEP]", "."]
+    remove_list = []
 
     data = []
     for i, row in enumerate(att):
@@ -336,10 +338,75 @@ def att_pic(tokens, att, head, layer, type):
     print(len(data))
     df = pd.DataFrame(data, index=tokens, columns=tokens)
 
+    plt.figure(figsize=(15, 12))
     sns.set_theme()
     ax = sns.heatmap(df, linewidths=0.5, annot=True, fmt=".2f")
     plt.tight_layout()
     plt.savefig("static\\data\\atts\\" + str(layer) + "-" + str(head) + "-" + str(type) + ".png")
+    plt.show()
+
+
+def attention_visualization(tokens, att, target_token):
+    import cv2
+
+    id = 0
+    for i, item in enumerate(tokens):
+        if item == target_token:
+            id = i
+            break
+
+    img_width = 3250
+    img_height = 700
+    canvas = np.zeros((img_height, img_width, 3), dtype="uint8")
+    canvas[0 : img_height - 1, 0 : img_width - 1] = 255
+
+    (text_length, base_h), bottom = cv2.getTextSize(target_token, cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
+    right = 20
+
+    for i, item in enumerate(tokens):
+        cv2.putText(
+            canvas,
+            item,
+            (right, 100),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.5,
+            (0, 0, 0),
+            3,
+        )
+
+        (base_width, base_h), bottom = cv2.getTextSize(item, cv2.FONT_HERSHEY_SIMPLEX, 1.5, 2)
+        if int(att[i][id]) > 2:
+
+            if int(att[i][id]) > 10:
+                r = att[i][id] * 1.5
+            elif int(att[i][id]) > 6:
+                r = 11
+            elif int(att[i][id]) > 4:
+                r = 10
+            else:
+                r = att[i][id] / 2
+            cv2.line(
+                canvas,
+                (int(img_width / 2) + int(text_length / 2), int(img_height / 6 * 5) - 60),
+                (right + int(base_width / 2), 120),
+                (255, 97, 0),
+                int(r),
+            )
+            print(r)
+        right += base_width + 10
+
+    cv2.putText(
+        canvas,
+        target_token,
+        (int(img_width / 2), int(img_height / 6 * 5)),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        2,
+        (0, 0, 0),
+        3,
+    )
+    plt.figure(figsize=(20, 8))
+    plt.imshow(canvas)
+    plt.savefig("test.png")
     plt.show()
 
 
@@ -383,16 +450,16 @@ if __name__ == "__main__":
     importance = [
         [0.49, 0.7, 1, 0.99, 0.72, 0.8, 0.75, 0.49, 0.65, 0.6, 1, 0.92],
         [0.92, 0.99, 0.72, 0.74, 0.99, 0.8, 0.99, 0.75, 0.61, 0.62, 0.89, 0.74],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
+        [1, 0.94, 0.84, 0.68, 0.82, 0.61, 0.83, 0.83, 0.8, 1, 0.78, 0.91],
+        [0.95, 0.73, 0.71, 0.86, 0.86, 0.99, 0.63, 0.66, 0.76, 0.94, 0.91, 0.84],
+        [0.69, 0.57, 0.54, 0.62, 0.6, 0.8, 0.67, 0.84, 0.6, 0.53, 0.67, 0.8],
+        [0.64, 0.77, 0.5, 0.6, 0.51, 0.57, 0.76, 0.79, 0.55, 0.96, 0.8, 0.62],
+        [0.6, 0.59, 0.61, 0.69, 0.74, 0.76, 0.73, 0.5, 0.51, 0.77, 0.78, 0.92],
+        [0.64, 0.69, 0.71, 0.67, 0.92, 0.63, 0.62, 0.61, 0.6, 0.71, 0.81, 0.64],
+        [0.57, 0.5, 0.67, 0.54, 0.61, 0.68, 0.61, 0.52, 0.55, 0.68, 0.64, 0.61],
+        [0.63, 0.53, 0.64, 0.59, 0.54, 0.65, 0.55, 0.81, 0.67, 0.56, 0.54, 0.58],
+        [0.35, 0.44, 0.33, 0.43, 0.39, 0.37, 0.39, 0.38, 0.39, 0.35, 0.45, 0.34],
+        [0.2, 0.2, 0.23, 0.24, 0.23, 0.19, 0.2, 0.23, 0.23, 0.21, 0, 24, 0.2],
     ]
     # 加起来
     atts = np.zeros((len(tokens), len(tokens)))
@@ -406,8 +473,8 @@ if __name__ == "__main__":
                 for y in range(len(tokens)):
                     atts[x][y] += res2[x][y] * importance[i][j]
 
-    print(output)
+    # att_pic(tokens, atts, 14, 14, "all")
+
     print(tokens)
 
-    # print(tokens)
-    att_pic(tokens, atts, 13, 13, "all")
+    attention_visualization(tokens, atts, "liberation")
