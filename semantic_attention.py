@@ -372,12 +372,42 @@ if __name__ == "__main__":
     heads = [8]
     # pass 12 11 1
     # heads = [2]
-    for head in heads:
-        layer_head_attention_score = getAttention(output, layer, head)
-        res2 = layer_head_attention_score.detach().numpy()
+    # for head in heads:
+    #     layer_head_attention_score = getAttention(output, layer, head)
+    #     res2 = layer_head_attention_score.detach().numpy()
 
-        inputs = tokenizer(text, return_tensors="pt")
-        temp = inputs["input_ids"][0]  # 得到input_ids，为了将其转换成tokens
-        tokens = tokenizer.convert_ids_to_tokens(temp)
-        print(tokens)
-        att_pic(tokens, res2, head, layer, "all")
+    inputs = tokenizer(text, return_tensors="pt")
+    temp = inputs["input_ids"][0]  # 得到input_ids，为了将其转换成tokens
+    tokens = tokenizer.convert_ids_to_tokens(temp)
+
+    importance = [
+        [0.49, 0.7, 1, 0.99, 0.72, 0.8, 0.75, 0.49, 0.65, 0.6, 1, 0.92],
+        [0.92, 0.99, 0.72, 0.74, 0.99, 0.8, 0.99, 0.75, 0.61, 0.62, 0.89, 0.74],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+    ]
+    # 加起来
+    atts = np.zeros((len(tokens), len(tokens)))
+    for i in range(12):
+        row = []
+        for j in range(12):
+            layer_head_attention_score = getAttention(output, i, j)
+            res2 = layer_head_attention_score.detach().numpy()
+
+            for x in range(len(tokens)):
+                for y in range(len(tokens)):
+                    atts[x][y] += res2[x][y] * importance[i][j]
+
+    print(output)
+    print(tokens)
+
+    # print(tokens)
+    att_pic(tokens, atts, 13, 13, "all")
