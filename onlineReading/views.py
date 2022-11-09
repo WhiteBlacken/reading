@@ -2361,8 +2361,8 @@ def get_visual_attention(
 
     # 生成fixation图示
     fixations = get_fixations(coordinates)
-    fixs = [x for i, x in enumerate(fixations) if i % 4 == 1]
-
+    # fixs = [x for i, x in enumerate(fixations) if i % 7 == 2]
+    fixs = [x for i, x in enumerate(fixations) if i % 4 == 2]
     fixation_image(image, username, fixs, page_data_id, "fixation.png")
 
 
