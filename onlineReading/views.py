@@ -2173,7 +2173,7 @@ def valid_coordinates(coordinates):
             break
     print("begin:%d" % begin)
     for i in range(len(coordinates) - 1, -1, -1):
-        if coordinates[-1][2] - coordinates[i][2] > 400:
+        if coordinates[-1][2] - coordinates[i][2] > 800:
             end = i
             break
     coordinates = coordinates[begin:end]
@@ -2362,7 +2362,7 @@ def get_visual_attention(
     # 生成fixation图示
     fixations = get_fixations(coordinates)
     # fixs = [x for i, x in enumerate(fixations) if i % 7 == 2]
-    fixs = [x for i, x in enumerate(fixations) if i % 4 == 2]
+    fixs = [x for i, x in enumerate(fixations) if i % 3 == 2]
     fixation_image(image, username, fixs, page_data_id, "fixation.png")
 
 

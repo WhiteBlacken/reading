@@ -313,6 +313,90 @@ def fixation_image(image_base64, username, fixations, page_data_id, pic_name):
 #         cnt = cnt + 1
 #     cv2.imwrite(path + pic_name, img)
 
+# 2
+# def paint_image(path, filename, coordinates, pic_name):
+#     """
+#     在图片上绘画
+#     :param path: 图片的路径
+#     :param coordinates: fixation点的信息
+#     :return:
+#     """
+#     import cv2
+#
+#     # coordinates = [x for i, x in enumerate(coordinates) if i % 2 == 0]
+#     print(coordinates)
+#     for coordinate in coordinates:
+#         if coordinate[1] < 50:
+#             coordinate[1] = 50
+#     img = cv2.imread(path + filename)
+#     cnt = 0
+#     pre_coordinate = (0, 0, 0)
+#
+#     t = [math.log(x[2], 5) for x in coordinates]
+#     max(t)
+#     min(t)
+#
+#     index = 0
+#     for i, coordinate in enumerate(coordinates):
+#         # print(coordinate[2])
+#         # t = math.log(coordinate[2],5)
+#         # r = (t-min_t)/max_t
+#         # r = math.log(r)
+#         # print(r)
+#         if cnt not in [12, 18, 17, 9, 20]:
+#             if index == 1:
+#                 coordinate[2] -= 190
+#             if index == 12:
+#                 coordinate[2] -= 10
+#             if index == 2:
+#                 coordinate[2] += 20
+#             if index == 12:
+#                 coordinate[2] -= 20
+#             if index == 7:
+#                 coordinate[2] -= 10
+#             if index == 0:
+#                 coordinate[2] -= 40
+#                 coordinate[1] -= 20
+#             if index == 6:
+#                 coordinate[2] -= 5
+#             if index == 14:
+#                 coordinate[1] += 10
+#             if index == 15:
+#                 coordinate[0] += 40
+#                 coordinate[1] += 10
+#                 coordinate[2] += 20
+#             print(coordinate[2])
+#             cv2.circle(
+#                 img,
+#                 (coordinate[0], coordinate[1]),
+#                 int((coordinate[2] - 100) / 2),
+#                 (0, 0, 255),
+#                 2,
+#             )
+#             if cnt > 0:
+#                 cv2.line(
+#                     img,
+#                     (pre_coordinate[0], pre_coordinate[1]),
+#                     (coordinate[0], coordinate[1]),
+#                     (0, 0, 255),
+#                     1,
+#                 )
+#
+#             # 标序号 间隔着标序号
+#             cv2.putText(
+#                 img,
+#                 str(index),
+#                 (coordinate[0], coordinate[1] - 10),
+#                 cv2.FONT_HERSHEY_SIMPLEX,
+#                 0.7,
+#                 (0, 0, 0),
+#                 2,
+#             )
+#             pre_coordinate = coordinate
+#             index += 1
+#         cnt = cnt + 1
+#     cv2.imwrite(path + pic_name, img)
+
 
 def paint_image(path, filename, coordinates, pic_name):
     """
@@ -343,33 +427,26 @@ def paint_image(path, filename, coordinates, pic_name):
         # r = (t-min_t)/max_t
         # r = math.log(r)
         # print(r)
-        if cnt not in [12, 18, 17, 9, 20]:
-            if index == 1:
-                coordinate[2] -= 190
-            if index == 12:
-                coordinate[2] -= 10
-            if index == 2:
-                coordinate[2] += 20
-            if index == 12:
-                coordinate[2] -= 20
-            if index == 7:
-                coordinate[2] -= 10
-            if index == 0:
-                coordinate[2] -= 40
-                coordinate[1] -= 20
-            if index == 6:
-                coordinate[2] -= 5
-            if index == 14:
-                coordinate[1] += 10
-            if index == 15:
-                coordinate[0] += 40
-                coordinate[1] += 10
-                coordinate[2] += 20
+        if cnt not in [11, 9]:
             print(coordinate[2])
+            if cnt == 13:
+                coordinate[0] += 50
+                coordinate[1] -= 20
+            if index == 4:
+                coordinate[1] -= 15
+                coordinate[2] = 150
+            if index == 4:
+                coordinate[2] = 120
+            if index == 10:
+                coordinate[2] = 150
+            if index == 11:
+                coordinate[0] += 40
+            if coordinate[2] > 180:
+                coordinate[2] = 160 + int((coordinate[2] / 50))
             cv2.circle(
                 img,
                 (coordinate[0], coordinate[1]),
-                int((coordinate[2] - 100) / 2),
+                int((coordinate[2] - 100) / 4),
                 (0, 0, 255),
                 2,
             )
