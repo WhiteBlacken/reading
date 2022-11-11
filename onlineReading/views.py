@@ -2094,9 +2094,9 @@ def get_sentence_level_nlp_attention(
         sentence_attention = [[]]
         # TODO 切割句子需要 '. ' 可能之后出现问题
         if attention == "sentence_attention":
-            sentence_attention = generate_sentence_attention(texts.replace("..", ". "))  # [('xx',数值),('xx',数值)]
+            sentence_attention = generate_sentence_attention(texts.replace("..", ".").replace(".",". "))  # [('xx',数值),('xx',数值)]
         if attention == "sentence_difficulty":
-            sentence_attention = generate_sentence_difficulty(texts.replace("..", ". "))  # [('xx',数值),('xx',数值)]
+            sentence_attention = generate_sentence_difficulty(texts.replace("..", ". ").replace(".",". "))  # [('xx',数值),('xx',数值)]
         # 确保句子长度是正确的
         # sentence有的拆的不对 3是个magic number，认为不会有长度在3以下的句子
         sentence_attention = [item for item in sentence_attention if len(item[0]) > 3]
