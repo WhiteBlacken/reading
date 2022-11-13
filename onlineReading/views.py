@@ -32,7 +32,7 @@ from utils import (
     calculate_identity,
     calculate_similarity,
     find_threshold,
-    fixation_image,
+    generate_pic_by_base64,
     get_fixations,
     get_importance,
     get_item_index_x_y,
@@ -51,6 +51,7 @@ from utils import (
     join_images_vertical,
     join_two_image,
     paint_bar_graph,
+    paint_gaze_on_pic,
     preprocess_data,
     x_y_t_2_coordinate,
 )
@@ -654,7 +655,7 @@ def add_page_feature_to_csv(analysis_result_by_page_level, path):
 def analysis(request):
     # 要分析的页
     experiment_id = request.GET.get("id")
-    image = request.GET.get("image", False)
+    request.GET.get("image", False)
     csv = request.GET.get("csv", False)
     pagedatas = PageData.objects.filter(experiment_id=experiment_id)
     for pagedata in pagedatas:
@@ -804,17 +805,6 @@ def analysis(request):
                 "proportion of horizontal saccades": proportion_of_horizontal_saccades,
                 "number_of_fixations": len(fixations),
             }
-
-            if image:
-                # 输出图示
-                print("输出图")
-                fixation_image(
-                    pagedata.image,
-                    Experiment.objects.get(id=pagedata.experiment_id).user,
-                    fixations,
-                    pagedata.id,
-                    "fixation.png",
-                )
 
             # 将数据写入csv
             # 先看word level
@@ -1200,18 +1190,17 @@ def get_row_level_fixations_map(request):
 
     if not os.path.exists(base_path + "fixation\\"):
         os.mkdir(base_path + "fixation\\")
-    for i, item in enumerate(row_fixations):
+    for i, fixs in enumerate(row_fixations):
         name = "1"
         for j in range(i):
             name += "1"
-        print(item)
-        fixation_image(
-            pageData.image,
-            exp.first().user,
-            item,
-            page_data_id,
-            "/fixation/" + name + ".png",
-        )
+
+        page_data = PageData.objects.get(id=page_data_id)
+        path = "static/data/heatmap/" + str(exp.first().user) + "/" + str(page_data_id) + "/"
+        filename = "background.png"
+
+        generate_pic_by_base64(page_data.image, path, filename)
+        paint_gaze_on_pic(fixs, path + filename, path + "/fixation/" + name + ".png")
 
     import glob
 
@@ -1523,18 +1512,17 @@ def get_row_level_fixations(page_data_id, kernel_size):
 
     if not os.path.exists(base_path + "fixation\\"):
         os.mkdir(base_path + "fixation\\")
-    for i, item in enumerate(row_fixations):
+    for i, fixs in enumerate(row_fixations):
         name = "1"
         for j in range(i):
             name += "1"
-        print(item)
-        fixation_image(
-            pageData.image,
-            exp.first().user,
-            item,
-            page_data_id,
-            "/fixation/" + name + ".png",
-        )
+
+        page_data = PageData.objects.get(id=page_data_id)
+        path = "static/data/heatmap/" + str(exp.first().user) + "/" + str(page_data_id) + "/"
+        filename = "background.png"
+
+        generate_pic_by_base64(page_data.image, path, filename)
+        paint_gaze_on_pic(fixs, path + filename, path + "fixation.png")
 
     import glob
 
@@ -2094,9 +2082,13 @@ def get_sentence_level_nlp_attention(
         sentence_attention = [[]]
         # TODO 切割句子需要 '. ' 可能之后出现问题
         if attention == "sentence_attention":
-            sentence_attention = generate_sentence_attention(texts.replace("..", ".").replace(".",". "))  # [('xx',数值),('xx',数值)]
+            sentence_attention = generate_sentence_attention(
+                texts.replace("..", ".").replace(".", ". ")
+            )  # [('xx',数值),('xx',数值)]
         if attention == "sentence_difficulty":
-            sentence_attention = generate_sentence_difficulty(texts.replace("..", ". ").replace(".",". "))  # [('xx',数值),('xx',数值)]
+            sentence_attention = generate_sentence_difficulty(
+                texts.replace("..", ". ").replace(".", ". ")
+            )  # [('xx',数值),('xx',数值)]
         # 确保句子长度是正确的
         # sentence有的拆的不对 3是个magic number，认为不会有长度在3以下的句子
         sentence_attention = [item for item in sentence_attention if len(item[0]) > 3]
@@ -2345,16 +2337,15 @@ def get_visual_attention(
     list2.sort(key=top_dict["visual"].index)
     top_dict["visual"] = list2
 
-    # 将排序后的结果更换为word
-
-    """
-    3. 生成热力图
-    为了半透明，再次生成了一次heatmap
-    """
-
     # 生成fixation图示
-    fixations = get_fixations(coordinates)
-    fixation_image(image, username, fixations, page_data_id, "fixation.png")
+    fixations = get_fixations(coordinates, min_duration=500, max_duration=10000)
+    page_data = PageData.objects.get(id=page_data_id)
+    path = "static/data/heatmap/" + str(username) + "/" + str(page_data_id) + "/"
+    filename = "background.png"
+
+    generate_pic_by_base64(page_data.image, path, filename)
+    # paint_gaze_on_pic(fixations, path + filename, path + "fixation.png")
+    paint_gaze_on_pic(fixations, path + "visual.png", path + "fix_heat.png")
 
 
 def get_center(location):
