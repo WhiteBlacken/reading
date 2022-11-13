@@ -1102,7 +1102,6 @@ def get_visual_heatmap(request):
         word_list,
         word_locations,
         top_dict,
-        pageData.image,
     )
 
     # 将spatial和temporal结合
@@ -1631,14 +1630,13 @@ def get_all_heatmap(request):
         word_list,
         word_locations,
         top_dict,
-        pageData.image,
     )
 
     # 将spatial和temporal结合
-    save_path = base_path + "spatial_with_temporal_filter.png"
-    heatmap_img = base_path + "visual.png"
-    fixation_img = base_path + "fixation.png"
-    join_two_image(heatmap_img, fixation_img, save_path)
+    base_path + "spatial_with_temporal_filter.png"
+    base_path + "visual.png"
+    base_path + "fixation.png"
+    # join_two_image(heatmap_img, fixation_img, save_path)
 
     """
     将单词不懂和句子不懂输出,走神的图示输出
@@ -1826,7 +1824,6 @@ def get_all_heatmap_of_all_user(request):
                     word_list,
                     word_locations,
                     top_dict,
-                    pageData.image,
                 )
 
                 # 将spatial和temporal结合
@@ -2185,7 +2182,6 @@ def get_visual_attention(
     word_list,
     word_locations,
     top_dict,
-    image,
 ):
     logger.info("visual attention正在分析....")
 
@@ -2223,12 +2219,31 @@ def get_visual_attention(
     为了拿到热斑的位置，生成了一次heatmap
     """
     # 计算top_k
+    path = "static/data/heatmap/" + str(username) + "/" + str(page_data_id) + "/"
+    filename = "background.png"
+
     data_list = []
     for coordinate in coordinates:
         data = [coordinate[0], coordinate[1]]
         data_list.append(data)
     hotspot = myHeatmap.draw_heat_map(data_list, base_path + "visual.png", background)
 
+    list2 = get_top_word_of_visual(hotspot, word_locations, path + filename, word_list)
+    top_dict["visual"] = list2
+
+    # 生成fixation图示
+    fixations = get_fixations(coordinates, min_duration=100, max_duration=10000)
+    # fixations = [item for i, item in enumerate(fixations) if i % 10 == 0]
+    page_data = PageData.objects.get(id=page_data_id)
+
+    generate_pic_by_base64(page_data.image, path, filename)
+
+    paint_gaze_on_pic(fixations, path + filename, path + "fixation.png")
+    paint_gaze_on_pic(fixations, path + "visual.png", path + "fix_heat.png")
+
+
+def get_top_word_of_visual(hotspot, word_locations, background, word_list):
+    top_dict = {}
     df = pd.DataFrame(
         {
             "x": [x[0] for x in hotspot],
@@ -2335,17 +2350,7 @@ def get_visual_attention(
 
     list2 = list(set(top_dict["visual"]))
     list2.sort(key=top_dict["visual"].index)
-    top_dict["visual"] = list2
-
-    # 生成fixation图示
-    fixations = get_fixations(coordinates, min_duration=500, max_duration=10000)
-    page_data = PageData.objects.get(id=page_data_id)
-    path = "static/data/heatmap/" + str(username) + "/" + str(page_data_id) + "/"
-    filename = "background.png"
-
-    generate_pic_by_base64(page_data.image, path, filename)
-    # paint_gaze_on_pic(fixations, path + filename, path + "fixation.png")
-    paint_gaze_on_pic(fixations, path + "visual.png", path + "fix_heat.png")
+    return list2
 
 
 def get_center(location):
