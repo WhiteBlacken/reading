@@ -32,7 +32,7 @@ from utils import (
     calculate_identity,
     calculate_similarity,
     find_threshold,
-    fixation_image,
+    generate_pic_by_base64,
     get_fixations,
     get_importance,
     get_item_index_x_y,
@@ -51,6 +51,7 @@ from utils import (
     join_images_vertical,
     join_two_image,
     paint_bar_graph,
+    paint_gaze_on_pic,
     preprocess_data,
     x_y_t_2_coordinate,
 )
@@ -654,7 +655,7 @@ def add_page_feature_to_csv(analysis_result_by_page_level, path):
 def analysis(request):
     # 要分析的页
     experiment_id = request.GET.get("id")
-    image = request.GET.get("image", False)
+    request.GET.get("image", False)
     csv = request.GET.get("csv", False)
     pagedatas = PageData.objects.filter(experiment_id=experiment_id)
     for pagedata in pagedatas:
@@ -804,17 +805,6 @@ def analysis(request):
                 "proportion of horizontal saccades": proportion_of_horizontal_saccades,
                 "number_of_fixations": len(fixations),
             }
-
-            if image:
-                # 输出图示
-                print("输出图")
-                fixation_image(
-                    pagedata.image,
-                    Experiment.objects.get(id=pagedata.experiment_id).user,
-                    fixations,
-                    pagedata.id,
-                    "fixation.png",
-                )
 
             # 将数据写入csv
             # 先看word level
@@ -1112,7 +1102,6 @@ def get_visual_heatmap(request):
         word_list,
         word_locations,
         top_dict,
-        pageData.image,
     )
 
     # 将spatial和temporal结合
@@ -1200,18 +1189,17 @@ def get_row_level_fixations_map(request):
 
     if not os.path.exists(base_path + "fixation\\"):
         os.mkdir(base_path + "fixation\\")
-    for i, item in enumerate(row_fixations):
+    for i, fixs in enumerate(row_fixations):
         name = "1"
         for j in range(i):
             name += "1"
-        print(item)
-        fixation_image(
-            pageData.image,
-            exp.first().user,
-            item,
-            page_data_id,
-            "/fixation/" + name + ".png",
-        )
+
+        page_data = PageData.objects.get(id=page_data_id)
+        path = "static/data/heatmap/" + str(exp.first().user) + "/" + str(page_data_id) + "/"
+        filename = "background.png"
+
+        generate_pic_by_base64(page_data.image, path, filename)
+        paint_gaze_on_pic(fixs, path + filename, path + "/fixation/" + name + ".png")
 
     import glob
 
@@ -1523,18 +1511,17 @@ def get_row_level_fixations(page_data_id, kernel_size):
 
     if not os.path.exists(base_path + "fixation\\"):
         os.mkdir(base_path + "fixation\\")
-    for i, item in enumerate(row_fixations):
+    for i, fixs in enumerate(row_fixations):
         name = "1"
         for j in range(i):
             name += "1"
-        print(item)
-        fixation_image(
-            pageData.image,
-            exp.first().user,
-            item,
-            page_data_id,
-            "/fixation/" + name + ".png",
-        )
+
+        page_data = PageData.objects.get(id=page_data_id)
+        path = "static/data/heatmap/" + str(exp.first().user) + "/" + str(page_data_id) + "/"
+        filename = "background.png"
+
+        generate_pic_by_base64(page_data.image, path, filename)
+        paint_gaze_on_pic(fixs, path + filename, path + "fixation.png")
 
     import glob
 
@@ -1643,14 +1630,13 @@ def get_all_heatmap(request):
         word_list,
         word_locations,
         top_dict,
-        pageData.image,
     )
 
     # 将spatial和temporal结合
-    save_path = base_path + "spatial_with_temporal_filter.png"
-    heatmap_img = base_path + "visual.png"
-    fixation_img = base_path + "fixation.png"
-    join_two_image(heatmap_img, fixation_img, save_path)
+    base_path + "spatial_with_temporal_filter.png"
+    base_path + "visual.png"
+    base_path + "fixation.png"
+    # join_two_image(heatmap_img, fixation_img, save_path)
 
     """
     将单词不懂和句子不懂输出,走神的图示输出
@@ -1838,7 +1824,6 @@ def get_all_heatmap_of_all_user(request):
                     word_list,
                     word_locations,
                     top_dict,
-                    pageData.image,
                 )
 
                 # 将spatial和temporal结合
@@ -2094,9 +2079,13 @@ def get_sentence_level_nlp_attention(
         sentence_attention = [[]]
         # TODO 切割句子需要 '. ' 可能之后出现问题
         if attention == "sentence_attention":
-            sentence_attention = generate_sentence_attention(texts.replace("..", ". "))  # [('xx',数值),('xx',数值)]
+            sentence_attention = generate_sentence_attention(
+                texts.replace("..", ".").replace(".", ". ")
+            )  # [('xx',数值),('xx',数值)]
         if attention == "sentence_difficulty":
-            sentence_attention = generate_sentence_difficulty(texts.replace("..", ". "))  # [('xx',数值),('xx',数值)]
+            sentence_attention = generate_sentence_difficulty(
+                texts.replace("..", ". ").replace(".", ". ")
+            )  # [('xx',数值),('xx',数值)]
         # 确保句子长度是正确的
         # sentence有的拆的不对 3是个magic number，认为不会有长度在3以下的句子
         sentence_attention = [item for item in sentence_attention if len(item[0]) > 3]
@@ -2193,7 +2182,6 @@ def get_visual_attention(
     word_list,
     word_locations,
     top_dict,
-    image,
 ):
     logger.info("visual attention正在分析....")
 
@@ -2231,12 +2219,31 @@ def get_visual_attention(
     为了拿到热斑的位置，生成了一次heatmap
     """
     # 计算top_k
+    path = "static/data/heatmap/" + str(username) + "/" + str(page_data_id) + "/"
+    filename = "background.png"
+
     data_list = []
     for coordinate in coordinates:
         data = [coordinate[0], coordinate[1]]
         data_list.append(data)
     hotspot = myHeatmap.draw_heat_map(data_list, base_path + "visual.png", background)
 
+    list2 = get_top_word_of_visual(hotspot, word_locations, path + filename, word_list)
+    top_dict["visual"] = list2
+
+    # 生成fixation图示
+    fixations = get_fixations(coordinates, min_duration=100, max_duration=10000)
+    # fixations = [item for i, item in enumerate(fixations) if i % 10 == 0]
+    page_data = PageData.objects.get(id=page_data_id)
+
+    generate_pic_by_base64(page_data.image, path, filename)
+
+    paint_gaze_on_pic(fixations, path + filename, path + "fixation.png")
+    paint_gaze_on_pic(fixations, path + "visual.png", path + "fix_heat.png")
+
+
+def get_top_word_of_visual(hotspot, word_locations, background, word_list):
+    top_dict = {}
     df = pd.DataFrame(
         {
             "x": [x[0] for x in hotspot],
@@ -2343,18 +2350,7 @@ def get_visual_attention(
 
     list2 = list(set(top_dict["visual"]))
     list2.sort(key=top_dict["visual"].index)
-    top_dict["visual"] = list2
-
-    # 将排序后的结果更换为word
-
-    """
-    3. 生成热力图
-    为了半透明，再次生成了一次heatmap
-    """
-
-    # 生成fixation图示
-    fixations = get_fixations(coordinates)
-    fixation_image(image, username, fixations, page_data_id, "fixation.png")
+    return list2
 
 
 def get_center(location):
@@ -2620,7 +2616,7 @@ def compute_label(wordLabels, sentenceLabels, wanderLabels, word_list):
 
 def get_eye_feature_dataset(request):
     # experiments = Experiment.objects.filter(id=641)
-    experiments = Experiment.objects.filter(is_finish=True).order_by("-id")[10:51]
+    experiments = Experiment.objects.filter(is_finish=True).filter(id__gte=574).order_by("id")[11:46]
     # experiments = Experiment.objects.filter(is_finish=True).filter(id=630)
     success = 0
     fail = 0
@@ -2650,6 +2646,7 @@ def get_eye_feature_dataset(request):
             page_datas = []
             nums = []
             timestamp = 0
+            flag = 0
             for page_data in page_data_list:
                 # 1. 将gaze组合+去除异常值
                 coordinates = get_coordinate(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
@@ -2661,7 +2658,14 @@ def get_eye_feature_dataset(request):
                     page_data.location
                 )  # [{'left': 330, 'top': 95, 'right': 435.109375, 'bottom': 147},...]
                 assert len(word_list) == len(words_location)  # 确保单词分割的是正确的
-                nums.append(len(word_list))
+                if len(nums) == 0:
+                    nums.append(len(word_list))
+                else:
+                    sum = 0
+                    for num in nums:
+                        sum += num
+                    nums.append(sum + len(word_list))
+
                 word_num += len(word_list)
                 word.extend(word_list)
 
@@ -2716,21 +2720,26 @@ def get_eye_feature_dataset(request):
                         for item in is_watching:
                             word_watching[item + begin_index] = 1
 
+                        if i == 1 and flag == 0:
+                            print("begin_index")
+                            print(begin_index)
+                            print("nums")
+                            print(nums[i])
+                            flag = 1
+
                         for x in range(begin_index, nums[i]):
-                            number_of_fixations[x] += num_of_fixation_this_page[cnt]
-                            reading_times[x] += reading_times_this_page[cnt]
-                            reading_times_of_sentence[x] += reading_times_of_sentence_in_word_this_page[cnt]  # 相对的
+                            number_of_fixations[x] = num_of_fixation_this_page[cnt]
+                            reading_times[x] = reading_times_this_page[cnt]
+                            reading_times_of_sentence[x] = reading_times_of_sentence_in_word_this_page[cnt]  # 相对的
                             second_pass_dwell_time_of_sentence[
                                 x
-                            ] += second_pass_dwell_time_of_sentence_in_word_this_page[
+                            ] = second_pass_dwell_time_of_sentence_in_word_this_page[
                                 cnt
                             ]  # 相对的
-                            total_dwell_time_of_sentence[x] += total_dwell_time_of_sentence_in_word_this_page[
-                                cnt
-                            ]  # 相对的
-                            saccade_times_of_sentence[x] += saccade_times_of_sentence_word_level_this_page[cnt]
-                            forward_times_of_sentence[x] += forward_times_of_sentence_word_level_this_page[cnt]
-                            backward_times_of_sentence[x] += backward_times_of_sentence_word_level_this_page[cnt]
+                            total_dwell_time_of_sentence[x] = total_dwell_time_of_sentence_in_word_this_page[cnt]  # 相对的
+                            saccade_times_of_sentence[x] = saccade_times_of_sentence_word_level_this_page[cnt]
+                            forward_times_of_sentence[x] = forward_times_of_sentence_word_level_this_page[cnt]
+                            backward_times_of_sentence[x] = backward_times_of_sentence_word_level_this_page[cnt]
                             cnt += 1
 
                         experiment_ids.append(experiment.id)
@@ -3495,7 +3504,9 @@ def get_speed(request):
                         time1 += 30
                     else:
                         time2 += 30
+
             para_1_speed = (first_para_index+1) / time1 * 60000
+
             para_above_1_speed = (aticle_para_1[article_id]["word_num"] - first_para_index) / time2 * 60000
 
             sen_cnt = 0
@@ -3505,11 +3516,22 @@ def get_speed(request):
                 print(sentence)
                 if sentence[2] - 1 <= first_para_index:
                     sen_cnt += 1
+
+            wordLabels = json.loads(page_data.wordLabels)
+            senLabels = json.loads(page_data.sentenceLabels)
+            wanderLabels = json.loads(page_data.wanderLabels)
+
+            wordLabel_num = np.sum(np.array(wordLabels) <= first_para_index)
+            sens = [x[1] for x in senLabels]
+            senLabel_num = np.sum(np.array(sens) <= first_para_index + 1)
+            wanders = [x[1] for x in wanderLabels]
+            wanderLabel_num = np.sum(np.array(wanders) <= first_para_index)
+
             dict[page_id] = {
                 "para_1_speed": para_1_speed,
                 "para_above_1_speed": para_above_1_speed,
-                "para1_word_label": len(json.loads(page_data.wordLabels)) / first_para_index,
-                "para_1_sen_label": len(json.loads(page_data.sentenceLabels)) / sen_cnt,
-                "para_1_mw_label": len(json.loads(page_data.wanderLabels)) / sen_cnt,
+                "para1_word_label": wordLabel_num / first_para_index,
+                "para_1_sen_label": senLabel_num / sen_cnt,
+                "para_1_mw_label": wanderLabel_num / sen_cnt,
             }
     return JsonResponse(dict, json_dumps_params={"ensure_ascii": False}, safe=False)

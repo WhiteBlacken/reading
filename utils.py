@@ -2,6 +2,7 @@ import base64
 import datetime
 import json
 import math
+import os
 
 import cv2
 import matplotlib.pyplot as plt
@@ -17,7 +18,7 @@ from scipy import signal
 from onlineReading import settings
 
 
-def get_fixations(coordinates):
+def get_fixations(coordinates, min_duration=100, max_duration=1200, max_distance=140):
     """
     根据gaze data(x,y,t1)计算fixation(x,y,r,t2) t2远小于t1
     :param coordinates: [(x,y,t),(x,y,t)]   # gaze点
@@ -26,9 +27,6 @@ def get_fixations(coordinates):
     from collections import deque
 
     fixations = []
-    min_duration = 100
-    max_duration = 1200
-    max_distance = 140
     # 先进先出队列
     working_queue = deque()
     remaining_gaze = deque(coordinates)
@@ -62,7 +60,6 @@ def get_fixations(coordinates):
                 working_queue.clear()
                 break  # maximum data found
             working_queue.append(remaining_gaze.popleft())
-    print("fixaions:%s" % fixations)
     return fixations
 
 
@@ -202,52 +199,32 @@ def x_y_t_2_coordinate(gaze_x, gaze_y, gaze_t):
                 int(float(list_y[i])),
                 int(float(list_t[i])),
             )
-        coordinates.append(coordinate)
+            coordinates.append(coordinate)
     return coordinates
 
 
-def fixation_image(image_base64, username, fixations, page_data_id, pic_name):
+def generate_pic_by_base64(image_base64: str, save_path: str, filename: str) -> None:
     """
-    将fixation点绘制到图片上
-    :param image_base64: 图片的base64编码
-    :param username: 用户
-    :param fixations: fixation点
-    :param page_data_id: 该数据对应在数据库中的id
-    :return:
+    使用base64生成图片，并保存至指定路径
     """
-    # 1. 处理图片
     data = image_base64.split(",")[1]
-    # 将str解码为byte
-    base64.b64decode(data)
-    # 获取名称
-
-    filename = "background.png"
-    # 存储地址
-    path = "static/data/heatmap/" + str(username) + "/" + str(page_data_id) + "/"
-    logger.info("fixations轨迹已在该路径下生成:%s" % (path + filename))
+    img_data = base64.b64decode(data)
     # 如果目录不存在，则创建目录
-    # if not os.path.exists(path):
-    #     os.mkdir(path)
-    #
-    # with open(path + filename, "wb") as f:
-    #     f.write(image_data)
-    paint_image(path, filename, fixations, pic_name)
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
+    with open(save_path + filename, "wb") as f:
+        f.write(img_data)
+    logger.info("background已在该路径下生成:%s" % (save_path + filename))
 
 
-def paint_image(path, filename, coordinates, pic_name):
+def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> None:
     """
-    在图片上绘画
-    :param path: 图片的路径
-    :param coordinates: fixation点的信息
-    :return:
+    根据坐标绘制fixation轨迹
     """
-    import cv2
-
-    # coordinates = [x for i, x in enumerate(coordinates) if i % 2 == 0]
-    img = cv2.imread(path + filename)
-    cnt = 0
-    pre_coordinate = (0, 0, 0)
+    img = cv2.imread(background)
     for i, coordinate in enumerate(coordinates):
+        print(coordinate[2])
         cv2.circle(
             img,
             (coordinate[0], coordinate[1]),
@@ -255,28 +232,26 @@ def paint_image(path, filename, coordinates, pic_name):
             (0, 0, 255),
             -1,
         )
-        if cnt > 0:
+        if i > 0:
             cv2.line(
                 img,
-                (pre_coordinate[0], pre_coordinate[1]),
+                (coordinates[i - 1][0], coordinates[i - 1][1]),
                 (coordinate[0], coordinate[1]),
                 (0, 0, 255),
                 1,
             )
-        if cnt % 5 == 0:
+        if i % 2 == 0:
             # 标序号 间隔着标序号
             cv2.putText(
                 img,
-                str(cnt),
+                str(i),
                 (coordinate[0], coordinate[1]),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (255, 0, 0),
-                1,
+                0.7,
+                (0, 0, 0),
+                2,
             )
-        cnt = cnt + 1
-        pre_coordinate = coordinate
-    cv2.imwrite(path + pic_name, img)
+    cv2.imwrite(save_path, img)
 
 
 # 示例:The Coral Sea reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast.

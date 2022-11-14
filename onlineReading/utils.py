@@ -3,8 +3,6 @@ import json
 import math
 
 import requests
-
-
 from loguru import logger
 
 from onlineReading import settings
@@ -26,18 +24,17 @@ def translate(content):
         Encry.update(sign.encode())
         sign = Encry.hexdigest()
         # 3. 发送请求
-        url = (
-            "http://api.fanyi.baidu.com/api/trans/vip/translate?"
-            + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s"
-            % (content, appid, salt, sign)
+        url = "http://api.fanyi.baidu.com/api/trans/vip/translate?" + "q=%s&from=en&to=zh&appid=%s&salt=%s&sign=%s" % (
+            content,
+            appid,
+            salt,
+            sign,
         )
         # 4. 解析结果
         response = requests.get(url)
         data = json.loads(response.text)
         endtime = datetime.datetime.now()
-        logger.info(
-            "翻译接口执行时间为%sms" % round((endtime - starttime).microseconds / 1000 / 1000, 3)
-        )
+        logger.info("翻译接口执行时间为%sms" % round((endtime - starttime).microseconds / 1000 / 1000, 3))
         return {"status": 200, "zh": data["trans_result"][0]["dst"]}
     except Exception as e:
         return {"status": 500, "zh": None}
@@ -103,5 +100,4 @@ def cm_2_pixel(cm):
 
 
 if __name__ == "__main__":
-    print(pixel_2_cm(30))
-    pass
+    print(pixel_2_cm(140))

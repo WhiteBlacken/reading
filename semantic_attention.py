@@ -6,8 +6,6 @@ from nltk.tokenize import sent_tokenize
 from textstat import textstat
 from transformers import BertForMaskedLM, BertTokenizer, XLNetModel, XLNetTokenizerFast
 
-from utils import get_importance
-
 nlp = spacy.load("en_core_web_lg")
 tokenizer = XLNetTokenizerFast.from_pretrained("xlnet-base-cased")
 model = XLNetModel.from_pretrained("xlnet-base-cased", output_attentions=True)
@@ -251,16 +249,100 @@ def generate_sentence_difficulty(input_text):
     return sentence_difficulty_list
 
 
-if __name__ == "__main__":
-    rst = generate_word_attention('China culture is nice culture')
-    rst = get_importance('China culture is nice culture. Culture is important')
-    # texts = 'hello word; this is cisl.That is he.'
-    # # rst = generate_sentence_attention(texts)
-    # # rst = generate_word_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
-    # # rst = generate_sentence_difficulty(get_docx_text('/home/wtpan/memx4edu-code/exp_data/1009/2.docx'))
-    # print(rst)
+def getAttention(output, layer, head):
+    res = output[2]
+    # print(type(res))#
+    # print(len(res)) # 12 。解释一下是12的原因：Number of hidden layers in the Transformer encoder 是12
+    # print(res) #(tensor()...,tensor()...)
 
-    # sentence = "The BBC's Suranjana Tewari in Singapore says Asian investors are also dumping sterling and other currencies because the US Federal Reserve has hiked interest rates so quickly to fight inflation."
+    layer_attention_score = res[layer]  # 得到 attention 中的最后一个tuple，也就是最后一层的attention 值
+    # print(type(res)) # 去掉一维之后仍然是tuple
+    # print(attention_score.size()) # torch.Size([1, 12, 28, 28])。 这个size = [batch_size,num_head,seq_len,seq_len]
+
+    layer_attention_score.squeeze_(0)  # 去掉第一维的1
+    # print(attention_score.size()) # 因为有12个head，这里只取第一个
+    layer_head_attention_score = layer_attention_score[head, :, :]
+    # print(layer_head_attention_score.size())
+    # print(layer_head_attention_score)
+    return layer_head_attention_score
+
+
+# print(first_attention_score)
+"""可视化attention 的结果
+01.可视化某个head
+02.或者把所有的head平均下来看看
+"""
+
+
+def drawAttention(inputs, first_attention_score, head):
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as ticker
+    import pandas as pd
+
+    # 将first_attention_score 的grad属性去除 => 使用detach()，并转为numpy
+    res2 = first_attention_score.detach().numpy()
+    temp = inputs["input_ids"][0]  # 得到input_ids，为了将其转换成tokens
+    # print(temp)
+    tokens = tokenizer.convert_ids_to_tokens(temp)
+    # print(type(tokens)) #
+    # print(tokens) # ['[CLS]', 'it', 'is', ...]
+
+    print(res2)
+    # tokens就是我们的横纵坐标(标签)
+    df = pd.DataFrame(res2, columns=tokens, index=tokens)
+    fig = plt.figure(figsize=(10, 10))  # 画图，这里调整了图片的大小，否则会因为word太长导致文字重叠
+    ax = fig.add_subplot(1, 1, 1)
+    cax = ax.matshow(df, interpolation="nearest", cmap="hot_r")
+    fig.colorbar(cax)
+
+    tick_spacing = 1
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
+    ax.set_xticklabels([""] + list(df.columns))
+    ax.set_yticklabels([""] + list(df.index))
+    str(head) + ".png"
+    # plt.savefig(name) # 存储图片
+    plt.show()
+
+
+def process(text, tokenizer, bert):
+    inputs = tokenizer(text, return_tensors="pt")
+    # print(inputs)
+    output = bert(**inputs, output_attentions=True)  # 因为需要输出attention score 的值，所以这里用了 output_attentions 参数
+    return output
+
+
+def att_pic(tokens, att, head, layer):
+    import pandas as pd
+    import seaborn as sns
+
+    remove_list = ["[CLS]", "[SEP]", ".", "sitting", "in", "a", "car", "but", "that", "once", "to", "be", "the", "is"]
+
+    data = []
+    for i, row in enumerate(att):
+        if tokens[i] in remove_list:
+            continue
+        tmp = []
+        for j, item in enumerate(row):
+            if tokens[j] in remove_list:
+                continue
+            tmp.append(att[i][j])
+        data.append(tmp)
+
+    tokens = [x for x in tokens if x not in remove_list]
+    print(len(tokens))
+    print(len(data))
+    df = pd.DataFrame(data, index=tokens, columns=tokens)
+
+    sns.set_theme()
+    ax = sns.heatmap(df, linewidths=0.5, annot=True, fmt=".2f")
+    plt.tight_layout()
+    plt.savefig("static\\data\\atts\\" + str(layer) + "-" + str(head) + ".png")
+    plt.show()
+
+
+if __name__ == "__main__":
+
     sentence = "Sitting in a more comfortable car in a different traffic jam is pleasant but hardly the liberation that once seemed to be promised."
 
     from transformers import BertTokenizer
@@ -270,31 +352,27 @@ if __name__ == "__main__":
     tokens = tokenizer.tokenize(sentence)
     print(tokens)
 
-    # 计算某一句的word attention
-    # word_list, word4show_list = generate_word_list(sentence)
-    # word_att_mat = generate_phrase_att(sentence, word_list)
-    #
-    # doc = nlp(sentence)
-    # index = [x.text.strip().lower() for x in doc]
-    #
-    # stop_words = ["'s", "the", "in", "are", "and", "to", "other", "so", "because", "us", ".", "a", "is", "be"]
-    # df = pd.DataFrame()
-    #
-    # new_index = []
-    # for i, word in enumerate(index):
-    #     if word in stop_words:
-    #         continue
-    #     tmp = []
-    #     for j, word1 in enumerate(index):
-    #         if word1 in stop_words:
-    #             continue
-    #         tmp.append(word_att_mat[i][j])
-    #     df[word] = tmp
-    #     new_index.append(word)
-    #
-    # df.index = Series(new_index)
-    # sns.set_theme()
-    # ax = sns.heatmap(df, linewidths=0.5)
-    # plt.tight_layout()
-    # # plt.savefig("test.png")
-    # plt.show()
+    import matplotlib.pyplot as plt
+    from transformers import BertModel
+
+    tokenizer = BertTokenizer.from_pretrained(r"D:\qxy\pre-trained-model\bert-base-cased")
+    bert = BertModel.from_pretrained(r"D:\qxy\pre-trained-model\bert-base-cased")
+    # text ="It is in this spirit that a majority of American governments have passed new laws since 2008 making the registration or voting process more difficult."
+    text = "Sitting in a more comfortable car in a different traffic jam is pleasant but hardly the liberation that once seemed to be promised."
+    # figure = plt.figure(30,30)
+    output = process(text, tokenizer, bert)
+
+    # 根据每个head，画出一张attention图
+    layer = 4
+    heads = [1]
+    # pass 12 11 1
+    # heads = [2]
+    for head in heads:
+        layer_head_attention_score = getAttention(output, layer, head)
+        res2 = layer_head_attention_score.detach().numpy()
+
+        inputs = tokenizer(text, return_tensors="pt")
+        temp = inputs["input_ids"][0]  # 得到input_ids，为了将其转换成tokens
+        tokens = tokenizer.convert_ids_to_tokens(temp)
+        print(tokens)
+        att_pic(tokens, res2, head, layer)
