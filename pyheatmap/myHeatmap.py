@@ -1,10 +1,10 @@
-import urllib
-from pyheatmap.heatmap import HeatMap
-import csv
-from PIL import ImageDraw2
 import colorsys
-
+import csv
 import sys
+
+from PIL import ImageDraw2
+
+from pyheatmap.heatmap import HeatMap
 
 if sys.version > "3":
     PY3 = True
@@ -168,6 +168,8 @@ hsl_to_rgb(s)
 def draw_heat_map(data, heatmap_name, base):
     # 开始绘制
     hm = MyHeatMap(data=data)
+    assert len(data) > 0
+    assert len(data[0]) == 2
     hm.heatmap(save_as=heatmap_name, base=base, r=40)
     return hm.hotspot
 
@@ -194,5 +196,3 @@ def main():
         base="/home/wtpan/memx4edu-code/exp_data/WechatIMG961.png",
         r=40,
     )
-
-
