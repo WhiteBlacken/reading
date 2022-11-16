@@ -30,7 +30,7 @@ distance_to_screen = 60
 
 
 def detect_fixations(
-    gaze_points: list, min_duration: int = 200, max_duration: int = 1000, max_dispersion: int = 100
+    gaze_points: list, min_duration: int = 200, max_duration: int = 10000, max_dispersion: int = 100
 ) -> list:
     """
     fixation的特征：
@@ -58,6 +58,7 @@ def detect_fixations(
             continue
         # min duration reached,check for fixation
         dispersion = gaze_dispersion(list(working_queue))  # 值域：[0:pai]
+        print(dispersion)
         if dispersion > max_dispersion:
             working_queue.popleft()
             continue
@@ -71,7 +72,7 @@ def detect_fixations(
 
         # check for fixation with maximum duration
         dispersion = gaze_dispersion(list(working_queue))
-        if dispersion <= dispersion:
+        if dispersion <= max_dispersion:
             fixation_list.append(gaze_2_fixation(list(working_queue)))  # generate fixation
             working_queue.clear()
             continue
@@ -97,7 +98,7 @@ def detect_fixations(
     return fixation_list
 
 
-def detect_saccades(fixations: list, min_velocity: int = 400) -> tuple:
+def detect_saccades(fixations: list, min_velocity: int = 70) -> tuple:
     """
     saccade的特征
     + velocity

@@ -57,7 +57,7 @@ def classify_gaze_2_label_in_pic(request):
 
     myHeatmap.draw_heat_map(gaze_4_heat, base_path + "heatmap.png", background)
 
-    fixations = detect_fixations(gaze_points)  # todo:default argument should be adjust to optimal
+    fixations = detect_fixations(gaze_points)  # todo:default argument should be adjust to optimal--fixed
 
     saccades, velocities = detect_saccades(fixations)  # todo:default argument should be adjust to optimal
 
