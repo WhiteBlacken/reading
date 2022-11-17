@@ -79,8 +79,8 @@ def generate_tmp_pic(request):
 
     gaze_4_heat = [[x[0], x[1]] for x in gaze_points]
     myHeatmap.draw_heat_map(gaze_4_heat, base_path + "heatmap.png", background)
-    fixations = detect_fixations(gaze_points)
-    canvas = paint_fixations(cv2.imread(base_path + "heatmap.png"), fixations, interval=3, label=3)
+    fixations = detect_fixations(gaze_points,min_duration=800)
+    canvas = paint_fixations(cv2.imread(base_path + "heatmap.png"), fixations, interval=1, label=3)
     cv2.imwrite(base_path + "fix_on_heat.png", canvas)
 
     return JsonResponse({"code": 200, "status": "生成成功"}, json_dumps_params={"ensure_ascii": False})
