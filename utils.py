@@ -226,7 +226,7 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
     import matplotlib.pyplot as plt
 
     img = cv2.imread(background)
-    plt.rc('pdf', fonttype=42)
+    # plt.rc('pdf', fonttype=42)
     # c1 = coordinates[0:6]
     # c2 = coordinates[7:-1]
     # coordinates = c1 + c2
@@ -355,6 +355,64 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
         #             horizontalalignment='center', color="tomato")
     plt.show()
     fig.savefig(save_path, dpi=1000)
+
+
+def cal_fix_radius(fix_duration):
+    rad = (fix_duration - 100) / 5
+    if rad > 22:
+        return 22
+    if rad < 4:
+        return 4
+    else:
+        return round(rad)
+
+
+def cal_annotate_loc(i, coordinates):
+    rad = cal_fix_radius(coordinates[i][2])
+    if i == 0:
+        return [coordinates[0][0] - rad - 15, coordinates[0][1] - rad - 15]
+    if i == len(coordinates) - 1:
+        return [coordinates[i][0] + rad + 15, coordinates[i][1] + rad + 15]
+    if coordinates[i + 1][0] > coordinates[i][0] > coordinates[i - 1][0]:
+        if coordinates[i + 1][1] <= coordinates[i][1] <= coordinates[i - 1][1]:
+            return [coordinates[i][0] + rad + 15, coordinates[i][1] + rad + 15]
+        elif coordinates[i + 1][1] >= coordinates[i][1] <= coordinates[i - 1][1]:
+            return [coordinates[i][0], coordinates[i][1] - rad - 15]
+        elif coordinates[i + 1][1] <= coordinates[i][1] >= coordinates[i - 1][1]:
+            return [coordinates[i][0], coordinates[i][1] + rad + 15]
+        elif coordinates[i + 1][1] >= coordinates[i][1] >= coordinates[i - 1][1]:
+            return [coordinates[i][0] + rad + 15, coordinates[i][1] - rad + 15]
+
+    if coordinates[i + 1][0] <= coordinates[i][0] >= coordinates[i - 1][0]:
+        if coordinates[i + 1][1] <= coordinates[i][1] <= coordinates[i - 1][1]:
+            return [coordinates[i][0] + rad + 15, coordinates[i][1]]
+        elif coordinates[i + 1][1] >= coordinates[i][1] <= coordinates[i - 1][1]:
+            return [coordinates[i][0] + rad + 15, coordinates[i][1] - rad - 15]
+        elif coordinates[i + 1][1] <= coordinates[i][1] >= coordinates[i - 1][1]:
+            return [coordinates[i][0] + rad + 15, coordinates[i][1] + rad + 15]
+        elif coordinates[i + 1][1] >= coordinates[i][1] >= coordinates[i - 1][1]:
+            return [coordinates[i][0] + rad + 15, coordinates[i][1]]
+
+    if coordinates[i + 1][0] >= coordinates[i][0] <= coordinates[i - 1][0]:
+        if coordinates[i + 1][1] <= coordinates[i][1] <= coordinates[i - 1][1]:
+            return [coordinates[i][0] - rad - 15, coordinates[i][1]]
+        elif coordinates[i + 1][1] >= coordinates[i][1] <= coordinates[i - 1][1]:
+            return [coordinates[i][0] - rad - 15, coordinates[i][1] - rad - 15]
+        elif coordinates[i + 1][1] <= coordinates[i][1] >= coordinates[i - 1][1]:
+            return [coordinates[i][0] - rad - 15, coordinates[i][1] + rad + 15]
+        elif coordinates[i + 1][1] >= coordinates[i][1] >= coordinates[i - 1][1]:
+            return [coordinates[i][0] - rad - 15, coordinates[i][1]]
+
+    if coordinates[i + 1][0] <= coordinates[i][0] <= coordinates[i - 1][0]:
+        if coordinates[i + 1][1] <= coordinates[i][1] <= coordinates[i - 1][1]:
+            return [coordinates[i][0] - rad - 15, coordinates[i][1] - rad - 15]
+        elif coordinates[i + 1][1] >= coordinates[i][1] <= coordinates[i - 1][1]:
+            return [coordinates[i][0], coordinates[i][1] - rad - 15]
+        elif coordinates[i + 1][1] <= coordinates[i][1] >= coordinates[i - 1][1]:
+            return [coordinates[i][0], coordinates[i][1] + rad + 15]
+        elif coordinates[i + 1][1] >= coordinates[i][1] >= coordinates[i - 1][1]:
+            return [coordinates[i][0] - rad - 15, coordinates[i][1] - rad - 15]
+
 
 
 # 示例:The Coral Sea reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast.
