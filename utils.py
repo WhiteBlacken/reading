@@ -275,7 +275,86 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
         #         (0, 0, 0),
         #         2,
         #     )
-    cv2.imwrite(save_path, img)
+    s = save_path.split('.')[0] + '.png'
+    cv2.imwrite(s, img, [int(cv2.IMWRITE_PNG_COMPRESSION), 0])
+    img = plt.imread(s)
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    ax.imshow(img)
+    plt.axis('off')
+    for i, coordinate in enumerate(coordinates):
+        if i % 3 == 0:
+            # if i == 12:
+            #     ax.text(coordinate[0] - cal_fix_radius(coordinate[2]) - 15,
+            #             coordinate[1] + cal_fix_radius(coordinate[2]) + 15, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # elif i == 15:
+            #     ax.text(coordinate[0],
+            #             coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # elif i == 18:
+            #     ax.text(coordinate[0] + cal_fix_radius(coordinate[2]) + 15,
+            #             coordinate[1] - cal_fix_radius(coordinate[2]) - 15, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # elif i == 21:
+            #     ax.text(coordinate[0],
+            #             coordinate[1] - cal_fix_radius(coordinate[2]) - 20, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # if i == 0:
+            #     ax.text(coordinate[0] - cal_fix_radius(coordinate[2]) - 10, coordinate[1] - cal_fix_radius(coordinate[2]) - 10, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # elif i == 3:
+            #     ax.text(coordinate[0], coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # elif i == 9:
+            #     ax.text(coordinate[0] - cal_fix_radius(coordinate[2]) - 15, coordinate[1] + cal_fix_radius(coordinate[2]) + 15, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # elif i == 12:
+            #     ax.text(coordinate[0],
+            #             coordinate[1] - cal_fix_radius(coordinate[2]) - 20, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # elif i == 15:
+            #     ax.text(coordinate[0] - cal_fix_radius(coordinate[2]) - 15,
+            #             coordinate[1] - cal_fix_radius(coordinate[2]) - 15, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # if i == 0:
+            #     ax.text(coordinate[0], coordinate[1] - cal_fix_radius(coordinate[2]) - 10, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # if i == 18:
+            #     ax.text(coordinate[0] - cal_fix_radius(coordinate[2]) - 24, coordinate[1], str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # elif i == 21:
+            #     ax.text(coordinate[0] + cal_fix_radius(coordinate[2]) + 22, coordinate[1] - 5, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # elif i == 3 or i == 9:
+            #     ax.text(coordinate[0], coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # elif i == 6 or i == 9:
+            #     ax.text(coordinate[0], coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
+            #             family='Times New Roman', fontsize=7, verticalalignment='center',
+            #             horizontalalignment='center', color="black")
+            # else:
+            ax.text(cal_annotate_loc(i, coordinates)[0], cal_annotate_loc(i, coordinates)[1], str(i),
+                        family='Times New Roman', fontsize=7, verticalalignment='center',
+                        horizontalalignment='center', color="black")
+        # else:
+        #     ax.text(coordinate[0], coordinate[1], str(i + 1), fontsize=5, verticalalignment='center',
+        #             horizontalalignment='center', color="tomato")
+    plt.show()
+    fig.savefig(save_path, dpi=1000)
 
 
 # 示例:The Coral Sea reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast.
