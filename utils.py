@@ -225,7 +225,7 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
     """
     img = cv2.imread(background)
     for i, coordinate in enumerate(coordinates):
-        print(coordinate[2])
+        # print(coordinate[2])
         cv2.circle(
             img,
             (coordinate[0], coordinate[1]),

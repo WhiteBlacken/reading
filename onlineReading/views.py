@@ -1175,12 +1175,17 @@ def get_row_level_fixations_map(request):
     row_cnt = 1
     for fixation in fixations:
         if get_euclid_distance(fixation[0], pre_fixation[0], fixation[1], pre_fixation[1]) > distance:
-            row_cnt += 1
+
             # if row_cnt == 19:
             #     tmp.append(fixation)
             # else:
-            row_fixations.append(tmp)
+            if row_cnt == 11:
+                row_fixations.append(tmp[12:41])
+                row_fixations.append(tmp[42:])
+            else:
+                row_fixations.append(tmp)
             tmp = [fixation]
+            row_cnt += 1
         else:
             tmp.append(fixation)
         pre_fixation = fixation
