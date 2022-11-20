@@ -17,6 +17,7 @@ from matplotlib import pyplot as plt
 from PIL import Image
 
 from action.models import Dictionary, Dispersion, Experiment, PageData, Paragraph, Text, Translation
+from feature.utils import keep_row, detect_fixations, preprocess_data
 from model.FeatureClassify import ModelWithoutFC
 from onlineReading.utils import cm_2_pixel, get_euclid_distance, pixel_2_cm, pixel_2_deg, translate
 from pyheatmap import myHeatmap
@@ -52,7 +53,6 @@ from utils import (
     join_two_image,
     paint_bar_graph,
     paint_gaze_on_pic,
-    preprocess_data,
     x_y_t_2_coordinate,
 )
 
@@ -119,8 +119,8 @@ def get_paragraph_and_translation(request):
                 starttime = datetime.datetime.now()
                 translations = (
                     Translation.objects.filter(article_id=article_id)
-                    .filter(para_id=para)
-                    .filter(sentence_id=sentence_id)
+                        .filter(para_id=para)
+                        .filter(sentence_id=sentence_id)
                 )
                 if translations:
                     sentence_zh = translations.first().txt
@@ -1998,14 +1998,14 @@ def get_semantic_value_of_word(request):
 
 
 def get_word_level_nlp_attention(
-    texts,
-    page_data_id,
-    top_dict,
-    background,
-    word_list,
-    word_locations,
-    username,
-    base_path,
+        texts,
+        page_data_id,
+        top_dict,
+        background,
+        word_list,
+        word_locations,
+        username,
+        base_path,
 ):
     logger.info("word level attention正在分析....")
     nlp_attentions = ["topic_relevant", "word_attention", "word_difficulty"]
@@ -2027,8 +2027,11 @@ def get_word_level_nlp_attention(
 
         image = cv2.imread(background)
         color = 255
-        alpha = 0.4  # 设置覆盖图片的透明度
+        alpha = 0.3  # 设置覆盖图片的透明度
         blk = np.zeros(image.shape, np.uint8)
+        # (1080, 1920, 3)
+        blk[0:image.shape[0] - 1, 0:image.shape[1] - 1] = 255
+        print(image.shape)
         title = str(page_data_id) + "-" + str(username) + "-" + str(attention)
         # 设置标题
         set_title(blk, title)
@@ -2063,14 +2066,14 @@ def get_word_level_nlp_attention(
 
 
 def get_sentence_level_nlp_attention(
-    texts,
-    sentence_list,
-    background,
-    word_locations,
-    page_data_id,
-    top_sentence_dict,
-    username,
-    base_path,
+        texts,
+        sentence_list,
+        background,
+        word_locations,
+        page_data_id,
+        top_sentence_dict,
+        username,
+        base_path,
 ):
     logger.info("sentence level attention正在分析....")
     sentence_attentions = ["sentence_attention", "sentence_difficulty"]
@@ -2104,8 +2107,10 @@ def get_sentence_level_nlp_attention(
             index_list_by_weight.append(max_index)
         image = cv2.imread(background)
         color = 255
-        alpha = 0.4  # 设置覆盖图片的透明度
+        alpha = 0.3  # 设置覆盖图片的透明度
         blk = np.zeros(image.shape, np.uint8)
+        blk[0:image.shape[0] - 1, 0:image.shape[1] - 1] = 255
+
         title = str(page_data_id) + "-" + str(username) + "-" + attention
         set_title(blk, title)
         for j, index in enumerate(index_list_by_weight):
@@ -2171,17 +2176,17 @@ def valid_coordinates(coordinates):
 
 
 def get_visual_attention(
-    page_data_id,
-    username,
-    gaze_x,
-    gaze_y,
-    gaze_t,
-    kernel_size,
-    background,
-    base_path,
-    word_list,
-    word_locations,
-    top_dict,
+        page_data_id,
+        username,
+        gaze_x,
+        gaze_y,
+        gaze_t,
+        kernel_size,
+        background,
+        base_path,
+        word_list,
+        word_locations,
+        top_dict,
 ):
     logger.info("visual attention正在分析....")
 
@@ -3225,8 +3230,9 @@ def gaze_to_input(coordinates, window):
         # 计算速度、方向，作为模型输入
         time = (coordinates[end][2] - coordinates[begin][2]) / 100
         speed = (
-            get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1], coordinates[end][1])
-            / time
+                get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1],
+                                    coordinates[end][1])
+                / time
         )
         direction = math.atan2(coordinates[end][1] - coordinates[begin][1], coordinates[end][0] - coordinates[begin][0])
         coordinate.append(speed)
@@ -3284,8 +3290,9 @@ def coor_to_input(coordinates, window):
         # 计算速度、方向，作为模型输入
         time = (coordinates[end][2] - coordinates[begin][2]) / 100
         speed = (
-            get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1], coordinates[end][1])
-            / time
+                get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1],
+                                    coordinates[end][1])
+                / time
         )
         direction = math.atan2(coordinates[end][1] - coordinates[begin][1], coordinates[end][0] - coordinates[begin][0])
         coordinate.append(speed)
@@ -3333,16 +3340,16 @@ def input_to_label(input):
     return output
 
 
-def get_t(gaze_t):
+def get_t(gaze_t, remove=500):
     # 超参
-    times_for_remove = 500  # 删除开头结尾的长度，单位是ms
+    times_for_remove = remove  # 删除开头结尾的长度，单位是ms
     # 转换格式
     list_t = list(map(float, gaze_t.split(",")))
 
     new_list_t = []
     # 组合+舍去开头结尾
     for i in range(len(list_t)):
-        if list_t[-1] - list_t[i] <= times_for_remove:
+        if list_t[-1] - list_t[i] < times_for_remove:
             # 舍去最后的一段时间的gaze点
             break
         if list_t[i] - list_t[0] > times_for_remove:
@@ -3359,20 +3366,20 @@ def get_fixation_by_time(request):
     # 先要把time按照page分页
     page_data_ls = PageData.objects.filter(experiment_id=exp_id)
 
+    interval = 2 * 1000
+
     timestamp = 0
     timestamps = []  # 每页的time范围
     for page_data in page_data_ls:
         gaze_t = get_t(page_data.gaze_t)
-        print(gaze_t)
         begin = 0
         for i, t in enumerate(gaze_t):
             if i == 0:
                 continue
-            if gaze_t[i] - gaze_t[begin] > 800:
+            if gaze_t[i] - gaze_t[begin] > interval:
                 timestamp += 1
                 begin = i
         timestamps.append(timestamp)
-
     print("timestamps")
     print(timestamps)
     page_index = -1
@@ -3395,7 +3402,7 @@ def get_fixation_by_time(request):
 
     # 2. 准备gaze点
     row = -1
-    csv = "static\\dataset\\10-31-43-gaze.csv"
+    csv = "jupyter\\dataset\\2022-11-20-test-gaze.csv"
     file = pd.read_csv(csv)
     for i, r in file.iterrows():
         if str(r["experiment_id"]) == exp_id and str(r["time"]) == time:
@@ -3409,30 +3416,35 @@ def get_fixation_by_time(request):
     print(file["gaze_x"][row])
     print(type(file["gaze_x"][row]))
 
-    gaze_x = file["gaze_x"][row]
-    gaze_y = file["gaze_y"][row]
+    list_x = json.loads(file["gaze_x"][row])
+    list_y = json.loads(file["gaze_y"][row])
+    list_t = json.loads(file["gaze_t"][row])
 
-    list_x = list(map(float, gaze_x[1:-1].split(",")))
-    list_y = list(map(float, gaze_y[1:-1].split(",")))
-    list_t = []
+    print(list_x)
+    print(type(list_x))
+    # 时序滤波
+    if filter:
+        filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7}, {'type': 'mean', 'window': 5},
+                   {'type': 'mean', 'window': 5}]
+        list_x = preprocess_data(list_x, filters)
+        list_y = preprocess_data(list_y, filters)
 
-    time_t = 0
-    for i in range(len(list_x)):
-        list_t.append(time_t)
-        time_t += 30
+    list_x = list(map(int, list_x))
+    list_y = list(map(int, list_y))
+    list_t = list(map(int, list_t))
     assert len(list_x) == len(list_y) == len(list_t)
+    gaze_points = [[list_x[i], list_y[i], list_t[i]] for i in range(len(list_x))]
 
-    coordinates = []
-    for i in range(len(list_x)):
-        tmp = [int(list_x[i]), int(list_y[i]), int(list_t[i])]
-        coordinates.append(tmp)
-    fixations = get_fixations(coordinates)
-
+    print(detect_fixations(gaze_points))
+    fixations = keep_row(detect_fixations(gaze_points),kernel_size=3)
+    print(fixations)
     # 3. 画图
     img = cv2.imread(filename)
     cnt = 0
     pre_fix = (0, 0)
     for i, fix in enumerate(fixations):
+        fix[0] = int(fix[0])
+        fix[1] = int(fix[1])
         cv2.circle(
             img,
             (fix[0], fix[1]),
@@ -3466,7 +3478,7 @@ def get_fixation_by_time(request):
     logger.info("fixation 图片生成路径:%s" % result_filename)
 
     img = cv2.imread(filename)
-    for i, fix in enumerate(coordinates):
+    for i, fix in enumerate(gaze_points):
         cv2.circle(
             img,
             (fix[0], fix[1]),
