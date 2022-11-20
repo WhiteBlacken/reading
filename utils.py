@@ -223,6 +223,29 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
     """
     根据坐标绘制fixation轨迹
     """
+    import matplotlib.pyplot as plt
+
+    img = cv2.imread(background)
+    plt.rc('pdf', fonttype=42)
+    # c1 = coordinates[0:6]
+    # c2 = coordinates[7:-1]
+    # coordinates = c1 + c2
+    # coordinates[0][1] = coordinates[0][1] - 14
+    for i, coordinate in enumerate(coordinates):
+        if i > 0:
+            if coordinates[i][1] < coordinates[i - 1][1] - 22:
+                coordinates[i][1] = coordinates[i][1] + 10
+                if coordinates[i][1] < coordinates[i - 1][1] - 44:
+                    coordinates[i][1] = coordinates[i - 1][1] - 20
+            elif coordinates[i][1] > coordinates[i - 1][1] + 22:
+                coordinates[i][1] = coordinates[i][1] - 10
+                if coordinates[i][1] > coordinates[i - 1][1] + 44:
+                    coordinates[i][1] = coordinates[i - 1][1] + 20
+            if coordinates[i - 1][0] > coordinates[i][0] > coordinates[i - 1][0] - 30:
+                coordinates[i][0] = coordinates[i][0] - 30
+            elif coordinates[i - 1][0] < coordinates[i][0] < coordinates[i - 1][0] + 30:
+                coordinates[i][0] = coordinates[i][0] + 30
+
     img = cv2.imread(background)
     for i, coordinate in enumerate(coordinates):
         # print(coordinate[2])
@@ -241,17 +264,17 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
                 (0, 0, 255),
                 1,
             )
-        if i % 2 == 0:
-            # 标序号 间隔着标序号
-            cv2.putText(
-                img,
-                str(i),
-                (coordinate[0], coordinate[1]),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (0, 0, 0),
-                2,
-            )
+        # if i % 2 == 0:
+        #     # 标序号 间隔着标序号
+        #     cv2.putText(
+        #         img,
+        #         str(i),
+        #         (coordinate[0], coordinate[1]),
+        #         cv2.FONT_HERSHEY_SIMPLEX,
+        #         0.7,
+        #         (0, 0, 0),
+        #         2,
+        #     )
     cv2.imwrite(save_path, img)
 
 
