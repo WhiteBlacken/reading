@@ -248,7 +248,8 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
 
     coordinates_tmp = []
     for i, coordinate in enumerate(coordinates):
-        if i % 3 == 0:
+        coordinates[i][1] = coordinates[i][1] - 30
+        if i % 2 == 0:
             coordinates_tmp.append(coordinates[i])
     coordinates = coordinates_tmp
     coordinates.pop(0)
@@ -291,6 +292,11 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
     plt.axis('off')
     for i, coordinate in enumerate(coordinates):
         if i % 3 == 0:
+            if i == 12:
+                ax.text(coordinate[0],
+                        coordinate[1] + cal_fix_radius(coordinate[2]) + 15, str(i),
+                        family='Times New Roman', fontsize=7, verticalalignment='center',
+                        horizontalalignment='center', color="black")
             # if i == 12:
             #     ax.text(coordinate[0] - cal_fix_radius(coordinate[2]) - 15,
             #             coordinate[1] + cal_fix_radius(coordinate[2]) + 15, str(i),
@@ -353,8 +359,8 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
             #     ax.text(coordinate[0], coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
             #             family='Times New Roman', fontsize=7, verticalalignment='center',
             #             horizontalalignment='center', color="black")
-            # else:
-            ax.text(cal_annotate_loc(i, coordinates)[0], cal_annotate_loc(i, coordinates)[1], str(i),
+            else:
+                ax.text(cal_annotate_loc(i, coordinates)[0], cal_annotate_loc(i, coordinates)[1], str(i),
                         family='Times New Roman', fontsize=7, verticalalignment='center',
                         horizontalalignment='center', color="black")
         # else:
@@ -419,7 +425,6 @@ def cal_annotate_loc(i, coordinates):
             return [coordinates[i][0], coordinates[i][1] + rad + 15]
         elif coordinates[i + 1][1] >= coordinates[i][1] >= coordinates[i - 1][1]:
             return [coordinates[i][0] - rad - 15, coordinates[i][1] - rad - 15]
-
 
 
 # 示例:The Coral Sea reserve would cover almost 990 000 square kilometers and stretch as far as 1100 kilometers from the coast. Unveiled recently by environment minister Tony Burke, the proposal would be the last in a series of proposed marine reserves around Australia's coast.
@@ -590,13 +595,13 @@ def get_saccade_info(fixations):
     sum_angle = 0
     for i in range(len(fixations) - 1):
         if (
-            get_euclid_distance(
-                fixations[i][0],
-                fixations[i + 1][0],
-                fixations[i][1],
-                fixations[i + 1][1],
-            )
-            > 500
+                get_euclid_distance(
+                    fixations[i][0],
+                    fixations[i + 1][0],
+                    fixations[i][1],
+                    fixations[i + 1][1],
+                )
+                > 500
         ):
             saccade_times = saccade_times + 1
             sum_angle = sum_angle + get_saccade_angle(fixations[i], fixations[i + 1])
@@ -1260,7 +1265,7 @@ def get_para_from_txt(path, tar_page):
             if i == 0:
                 para_1 = int(paras[0])
                 word_num += int(paras[-1])
-        dict[article_id] = {"para_1": para_1, "word_num": word_num+1}
+        dict[article_id] = {"para_1": para_1, "word_num": word_num + 1}
     return dict
 
 

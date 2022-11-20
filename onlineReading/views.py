@@ -1204,6 +1204,9 @@ def get_row_level_fixations_map(request):
         filename = "background.png"
 
         generate_pic_by_base64(page_data.image, path, filename)
+        if i == 10:
+            paint_gaze_on_pic(fixs, path + filename,
+                              base_path + str(exp.first().user) + "_sentence_observation_5_" + str(i-9) + ".png")
         paint_gaze_on_pic(fixs, path + filename, path + "/fixation/" + name + ".png")
 
     import glob
