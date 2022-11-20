@@ -246,6 +246,13 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
             elif coordinates[i - 1][0] < coordinates[i][0] < coordinates[i - 1][0] + 30:
                 coordinates[i][0] = coordinates[i][0] + 30
 
+    coordinates_tmp = []
+    for i, coordinate in enumerate(coordinates):
+        if i % 3 == 0:
+            coordinates_tmp.append(coordinates[i])
+    coordinates = coordinates_tmp
+    coordinates.pop(0)
+
     img = cv2.imread(background)
     for i, coordinate in enumerate(coordinates):
         # print(coordinate[2])

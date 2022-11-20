@@ -1180,8 +1180,8 @@ def get_row_level_fixations_map(request):
             #     tmp.append(fixation)
             # else:
             if row_cnt == 11:
-                row_fixations.append(tmp[12:41])
-                row_fixations.append(tmp[42:])
+                row_fixations.append(tmp[11:41])
+                row_fixations.append(tmp[41:])
             else:
                 row_fixations.append(tmp)
             tmp = [fixation]
