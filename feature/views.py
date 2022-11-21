@@ -3,7 +3,6 @@ import json
 import os
 
 import cv2
-import numpy as np
 import pandas as pd
 from django.http import JsonResponse
 from PIL import Image
@@ -13,10 +12,10 @@ from loguru import logger
 
 from action.models import Experiment, PageData
 from feature.utils import detect_fixations, detect_saccades, gaze_map, join_images, show_fixations_and_saccades, \
-    preprocess_data, paint_fixations, textarea, detect_wrap, paint_line_on_fixations, keep_row, eye_gaze_to_feature
+    paint_fixations, textarea, detect_wrap, paint_line_on_fixations, keep_row, eye_gaze_to_feature
 from onlineReading.views import compute_label, coor_to_input
 from pyheatmap import myHeatmap
-from utils import generate_pic_by_base64, get_word_and_sentence_from_text, get_item_index_x_y
+from utils import generate_pic_by_base64, get_word_and_sentence_from_text, get_item_index_x_y, format_gaze
 
 """
 所有与eye gaze计算的函数都写在这里
@@ -27,45 +26,13 @@ TODO list
 """
 
 
-def format_gaze(pageData: PageData, filter=True) -> list:
-    list_x = list(map(float, pageData.gaze_x.split(",")))
-    list_y = list(map(float, pageData.gaze_y.split(",")))
-    list_t = list(map(float, pageData.gaze_t.split(",")))
-
-    # 时序滤波
-    if filter:
-        filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7}, {'type': 'mean', 'window': 5},
-                   {'type': 'mean', 'window': 5}]
-        list_x = preprocess_data(list_x, filters)
-        list_y = preprocess_data(list_y, filters)
-
-    list_x = list(map(int, list_x))
-    list_y = list(map(int, list_y))
-    list_t = list(map(int, list_t))
-    assert len(list_x) == len(list_y) == len(list_t)
-    gaze_points = [[list_x[i], list_y[i], list_t[i]] for i in range(len(list_x))]
-
-    begin = 0
-    end = 0
-    for i, gaze in enumerate(gaze_points):
-        if gaze[2] - gaze_points[0][2] > 500:
-            begin = i
-            break
-    for i in range(len(gaze_points) - 1, 0, -1):
-        if gaze_points[-1][2] - gaze_points[i][2] > 500:
-            end = i
-            break
-    assert begin < end
-    return gaze_points[begin:end]
-
-
 def classify_gaze_2_label_in_pic(request):
     page_data_id = request.GET.get("id")
     begin = request.GET.get("begin", 0)
     end = request.GET.get("end", -1)
     pageData = PageData.objects.get(id=page_data_id)
 
-    gaze_points = format_gaze(pageData, filter=True)[begin:end]
+    gaze_points = format_gaze(pageData.gaze_x, pageData.gaze_y, pageData.gaze_t)[begin:end]
 
     """
     生成示意图 要求如下：
@@ -137,7 +104,7 @@ def generate_tmp_pic(request):
     page_data_id = request.GET.get("id")
     pageData = PageData.objects.get(id=page_data_id)
 
-    gaze_points = format_gaze(pageData, filter=True)
+    gaze_points = format_gaze(pageData.gaze_x, pageData.gaze_y, pageData.gaze_t)
 
     base_path = "pic\\" + str(page_data_id) + "\\"
 
@@ -175,6 +142,7 @@ def get_dataset(request):
         [637, 641],
     ]
 
+    users = ['luqi', 'qxy', 'zhaoyifeng', 'ln']
     experiment_list_select = []
     for item in optimal_list:
         if len(item) == 2:
@@ -182,7 +150,7 @@ def get_dataset(request):
                 experiment_list_select.append(i)
         if len(item) == 1:
             experiment_list_select.append(item[0])
-    experiments = Experiment.objects.filter(is_finish=True).filter(id__in=experiment_list_select)
+    experiments = Experiment.objects.filter(is_finish=True).filter(id__in=experiment_list_select).filter(user__in=users)
     print(len(experiments))
     # 超参
     interval = 2 * 1000
@@ -237,7 +205,7 @@ def get_dataset(request):
             timestamp = 0
             # 收集信息
             for page_data in page_data_list:
-                gaze_points_this_page = format_gaze(page_data, filter=True)
+                gaze_points_this_page = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
                 gaze_points_list.append(gaze_points_this_page)
 
                 word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)  # 获取单词和句子对应的index
@@ -296,7 +264,8 @@ def get_dataset(request):
 
                         begin_index = words_num_until_page[i - 1] if i > 0 else 0
                         for item in is_watching:
-                            word_watching[item + begin_index] = 1
+                            if num_of_fixation_this_page[item] != 0 and reading_times_this_page[item] != 0:
+                                word_watching[item + begin_index] = 1
 
                         cnt = 0
                         for x in range(begin_index, words_num_until_page[i]):
@@ -376,7 +345,7 @@ def get_dataset(request):
                     "backward_times_of_sentence": backward_times_of_sentence_all,
                 }
             )
-            path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "-test.csv"
+            path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + ".csv"
 
             if os.path.exists(path):
                 df.to_csv(path, index=False, mode="a", header=False)
@@ -425,7 +394,7 @@ def get_dataset(request):
             "acc": acc,
         }
     )
-    path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "-test-gaze.csv"
+    path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "-gaze.csv"
     if os.path.exists(path):
         data.to_csv(path, index=False, mode="a", header=False)
     else:
@@ -462,10 +431,6 @@ def get_interval_dataset(request):
     experiments = Experiment.objects.filter(is_finish=True).filter(id__in=experiment_list_select)
     print(len(experiments))
 
-    mean_list = []
-    max_list = []
-    min_list = []
-    starttime = datetime.datetime.now()
     success = 0
     fail = 0
     interval_list = []
@@ -473,7 +438,7 @@ def get_interval_dataset(request):
         try:
             page_data_list = PageData.objects.filter(experiment_id=experiment.id)
             for page_data in page_data_list:
-                gaze_points_this_page = format_gaze(page_data, filter=True)
+                gaze_points_this_page = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
                 fixations = keep_row(detect_fixations(gaze_points_this_page))
 
                 word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
@@ -501,17 +466,6 @@ def get_interval_dataset(request):
                 interval = list(map(lambda x: x[0] - x[1], zip(last_time, first_time)))
 
                 interval = [item for i, item in enumerate(interval) if item > 0 and word_understand_in_page[i] == 0]
-                # print(interval)
-                # mean = np.mean(np.array(interval)) if len(interval) > 0 else 0
-                # max = np.max(np.array(interval)) if len(interval) > 0 else 0
-                # min = np.min(np.array(interval)) if len(interval) > 0 else 0
-                #
-                # if mean != 0:
-                #     mean_list.append(mean)
-                # if max != 0:
-                #     max_list.append(max)
-                # if min != 0:
-                #     min_list.append(min)
 
                 interval_list.extend(interval)
             success += 1

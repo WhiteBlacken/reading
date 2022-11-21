@@ -282,20 +282,6 @@ def join_images(img1, img2, save_path, flag="horizontal"):  # 默认是水平参
         joint.paste(img2, loc2)
         joint.save(save_path)
 
-
-def preprocess_data(data, filters):
-    cnt = 0
-    for filter in filters:
-        if filter['type'] == "median":
-            data = signal.medfilt(data, kernel_size=filter['window'])
-            cnt += 1
-        if filter['type'] == 'mean':
-            data = meanFilter(data, filter['window'])
-            cnt += 1
-    # data = meanFilter(data, win)
-    return data
-
-
 def meanFilter(data, win):
     length = len(data)
     res = np.zeros(length)
