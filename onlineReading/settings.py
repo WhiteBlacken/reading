@@ -32,14 +32,14 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
-fp = open(os.path.join(BASE_DIR, "secret_id_key.yml"), "r")
-secret_info_dict = yaml.load(fp, Loader=yaml.FullLoader)
-# 百度翻译配置信息
-APPID = secret_info_dict.get("baidu_translate").get("appid")
-SECRET = secret_info_dict.get("baidu_translate").get("secret")
-# 数据库配置信息
-user = secret_info_dict.get("db").get("user")
-password = secret_info_dict.get("db").get("password")
+# fp = open(os.path.join(BASE_DIR, "secret_id_key.yml"), "r")
+# secret_info_dict = yaml.load(fp, Loader=yaml.FullLoader)
+# # 百度翻译配置信息
+# APPID = secret_info_dict.get("baidu_translate").get("appid")
+# SECRET = secret_info_dict.get("baidu_translate").get("secret")
+# # 数据库配置信息
+# user = secret_info_dict.get("db").get("user")
+# password = secret_info_dict.get("db").get("password")
 
 # Application definition
 
@@ -96,8 +96,8 @@ DATABASES = {
         "NAME": "reading",
         "HOST": "47.102.217.84",
         "PORT": 3306,
-        "USER": user,
-        "PASSWORD": password,
+        "USER": 'root',
+        "PASSWORD": 'Bxyssz724',
     }
 }
 
