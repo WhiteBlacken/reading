@@ -43,7 +43,7 @@ from utils import (
     join_two_image,
     paint_bar_graph,
     paint_gaze_on_pic,
-    x_y_t_2_coordinate, Timer, format_gaze,
+    x_y_t_2_coordinate, Timer, format_gaze, preprocess_data,
 )
 
 
@@ -408,13 +408,12 @@ def get_row_level_fixations_map(request):
     list_y = list(map(float, gaze_y.split(",")))
     list_t = list(map(float, gaze_t.split(",")))
 
-    print("length of list")
-    print(len(list_x))
-    print("kernel_size:%d" % kernel_size)
     if kernel_size != 0:
+        filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7}, {'type': 'mean', 'window': 5},
+                   {'type': 'mean', 'window': 5}]
         # 滤波
-        list_x = preprocess_data(list_x, kernel_size)
-        list_y = preprocess_data(list_y, kernel_size)
+        list_x = preprocess_data(list_x, filters)
+        list_y = preprocess_data(list_y, filters)
 
     print("length of list after filter")
     print(len(list_x))
@@ -513,9 +512,11 @@ def get_row_level_heatmap(request):
     print(len(list_x))
     print("kernel_size:%d" % kernel_size)
     if kernel_size != 0:
+        filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7}, {'type': 'mean', 'window': 5},
+                   {'type': 'mean', 'window': 5}]
         # 滤波
-        list_x = preprocess_data(list_x, kernel_size)
-        list_y = preprocess_data(list_y, kernel_size)
+        list_x = preprocess_data(list_x, filters)
+        list_y = preprocess_data(list_y, filters)
 
     print("length of list after filter")
     print(len(list_x))
@@ -628,9 +629,12 @@ def get_row_level_heatmap_of_all_user(request):
                 print(len(list_x))
                 print("kernel_size:%d" % kernel_size)
                 if kernel_size != 0:
+                    filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7},
+                               {'type': 'mean', 'window': 5},
+                               {'type': 'mean', 'window': 5}]
                     # 滤波
-                    list_x = preprocess_data(list_x, kernel_size)
-                    list_y = preprocess_data(list_y, kernel_size)
+                    list_x = preprocess_data(list_x, filters)
+                    list_y = preprocess_data(list_y, filters)
 
                 print("length of list after filter")
                 print(len(list_x))
@@ -740,9 +744,11 @@ def get_row_level_fixations(page_data_id, kernel_size):
     print(len(list_x))
     print("kernel_size:%d" % kernel_size)
     if kernel_size != 0:
+        filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7}, {'type': 'mean', 'window': 5},
+                   {'type': 'mean', 'window': 5}]
         # 滤波
-        list_x = preprocess_data(list_x, kernel_size)
-        list_y = preprocess_data(list_y, kernel_size)
+        list_x = preprocess_data(list_x, filters)
+        list_y = preprocess_data(list_y, filters)
 
     print("length of list after filter")
     print(len(list_x))
@@ -1472,14 +1478,6 @@ def get_cnn_dataset(request):
     df.to_csv(path, index=False)
 
     return HttpResponse(1)
-
-
-def filter_layer(data, kernel_size=7):
-    data = preprocess_data(data, kernel_size)
-
-    data = list(map(int, data))
-
-    return data
 
 
 def get_input(gaze_x, gaze_y, gaze_t):
