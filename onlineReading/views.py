@@ -367,8 +367,6 @@ def get_visual_heatmap(request):
     with open(background, "wb") as f:
         f.write(image_data)
 
-
-
     get_visual_attention(
         page_data_id,
         exp.first().user,
@@ -442,7 +440,7 @@ def get_row_level_fixations_map(request):
             break
     coordinates = coordinates[begin:end]
 
-    fixations = get_fixations(coordinates)
+    fixations = detect_fixations(coordinates)
     # 按行切割gaze点
     pre_fixation = fixations[0]
     distance = 600
@@ -461,6 +459,8 @@ def get_row_level_fixations_map(request):
         else:
             tmp.append(fixation)
         pre_fixation = fixation
+    if len(tmp) != 0:
+        row_fixations.append(tmp)
 
     base_path = "static\\data\\heatmap\\" + str(exp.first().user) + "\\" + str(page_data_id) + "\\"
 
@@ -545,7 +545,7 @@ def get_row_level_heatmap(request):
             break
     coordinates = coordinates[begin:end]
 
-    fixations = get_fixations(coordinates)
+    fixations = detect_fixations(coordinates)
     # 按行切割gaze点
     pre_fixation = fixations[0]
     distance = 600
@@ -567,7 +567,8 @@ def get_row_level_heatmap(request):
             tmp.append(fixation)
             sum_y += fixation[1]
         pre_fixation = fixation
-
+    if len(tmp) > 0:
+        row_fixations.append(tmp)
     base_path = "static\\data\\heatmap\\" + str(exp.user) + "\\" + str(pageData.id) + "\\"
 
     if not os.path.exists(base_path + "heat\\"):
@@ -576,8 +577,9 @@ def get_row_level_heatmap(request):
         name = "1"
         for j in range(i):
             name += "1"
-        print(item)
-        myHeatmap.draw_heat_map(item, base_path + "heat\\" + name + ".png", base_path + "background.png")
+        print(len(item))
+        dat = [[int(x[0]), int(x[1])] for x in item]
+        myHeatmap.draw_heat_map(dat, base_path + "heat\\" + name + ".png", base_path + "background.png")
 
     import glob
 
@@ -601,127 +603,6 @@ def get_row_level_heatmap(request):
     cv2.imwrite("static\\data\\heatmap\\row_level_heat\\" + str(pageData.id) + ".png", image)
     shutil.rmtree(base_path + "heat\\")
 
-    return HttpResponse(1)
-
-
-def get_row_level_heatmap_of_all_user(request):
-    exps = Experiment.objects.filter(is_finish=True).order_by("-id")[0:51]
-    success = 0
-    fail = 0
-    for exp in exps:
-        pageData_list = PageData.objects.filter(experiment_id=exp.id)
-        try:
-            for pageData in pageData_list:
-                kernel_size = int(request.GET.get("window", 7))
-
-                gaze_x = pageData.gaze_x
-                gaze_y = pageData.gaze_y
-                gaze_t = pageData.gaze_t
-                """
-                1.
-                清洗数据
-                """
-                list_x = list(map(float, gaze_x.split(",")))
-                list_y = list(map(float, gaze_y.split(",")))
-                list_t = list(map(float, gaze_t.split(",")))
-
-                print("length of list")
-                print(len(list_x))
-                print("kernel_size:%d" % kernel_size)
-                if kernel_size != 0:
-                    filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7},
-                               {'type': 'mean', 'window': 5},
-                               {'type': 'mean', 'window': 5}]
-                    # 滤波
-                    list_x = preprocess_data(list_x, filters)
-                    list_y = preprocess_data(list_y, filters)
-
-                print("length of list after filter")
-                print(len(list_x))
-                # 滤波完是浮点数，需要转成int
-                list_x = list(map(int, list_x))
-                list_y = list(map(int, list_y))
-
-                # 组合
-                coordinates = []
-                for i in range(len(list_x)):
-                    coordinate = [list_x[i], list_y[i], list_t[i]]
-                    coordinates.append(coordinate)
-                # 去除开始结束的gaze点
-                coordinates = coordinates[2:-1]
-                # 去除前后200ms的gaze点
-                begin = 0
-                end = -1
-                for i, coordinate in enumerate(coordinates):
-                    if coordinate[2] - coordinates[0][2] > 500:
-                        begin = i
-                        break
-                print("begin:%d" % begin)
-                for i in range(len(coordinates) - 1, -1, -1):
-                    if coordinates[-1][2] - coordinates[i][2] > 500:
-                        end = i
-                        break
-                coordinates = coordinates[begin:end]
-
-                fixations = get_fixations(coordinates)
-                # 按行切割gaze点
-                pre_fixation = fixations[0]
-                distance = 600
-                row_fixations = []
-                tmp = []
-                sum_y = 0
-                for fixation in fixations:
-                    if get_euclid_distance(fixation[0], pre_fixation[0], fixation[1], pre_fixation[1]) > distance:
-                        mean_y = int(sum_y / len(tmp))
-                        for item in tmp:
-                            if item[1] > mean_y + 20:
-                                item[1] = mean_y + 20
-                            if item[1] < mean_y - 20:
-                                item[1] = mean_y - 20
-                        row_fixations.append(tmp)
-                        tmp = [fixation]
-                        sum_y = 0
-                    else:
-                        tmp.append(fixation)
-                        sum_y += fixation[1]
-                    pre_fixation = fixation
-
-                base_path = "static\\data\\heatmap\\" + str(exp.user) + "\\" + str(pageData.id) + "\\"
-
-                if not os.path.exists(base_path + "heat\\"):
-                    os.mkdir(base_path + "heat\\")
-                for i, item in enumerate(row_fixations):
-                    name = "1"
-                    for j in range(i):
-                        name += "1"
-                    print(item)
-                    myHeatmap.draw_heat_map(item, base_path + "heat\\" + name + ".png", base_path + "background.png")
-
-                import glob
-
-                print(base_path)
-                img_list = glob.glob(base_path + "heat\\" + "*.png")
-                img_list.sort()
-                print(img_list)
-                join_images_vertical(img_list, base_path + "row_heat.png")
-
-                image = cv2.imread(base_path + "row_heat.png")
-                cv2.putText(
-                    image,
-                    str(pageData.id),  # text内容必须是str格式的
-                    (700, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7,
-                    (0, 255, 0),
-                    2,
-                )
-                cv2.imwrite("static\\data\\heatmap\\row_level_heat\\" + str(pageData.id) + ".png", image)
-                shutil.rmtree(base_path + "heat\\")
-            success += 1
-            logger.info("成功生成 %d条,失败 %d条" % (success, fail))
-        except:
-            fail += 1
-            logger.info("成功生成 %d条,失败 %d条" % (success, fail))
     return HttpResponse(1)
 
 
@@ -777,7 +658,7 @@ def get_row_level_fixations(page_data_id, kernel_size):
             break
     coordinates = coordinates[begin:end]
 
-    fixations = get_fixations(coordinates)
+    fixations = detect_fixations(coordinates)
     # 按行切割gaze点
     pre_fixation = fixations[0]
     distance = 600
@@ -790,6 +671,9 @@ def get_row_level_fixations(page_data_id, kernel_size):
         else:
             tmp.append(fixation)
         pre_fixation = fixation
+
+    if len(tmp) != 0:
+        row_fixations.append(tmp)
 
     base_path = "static\\data\\heatmap\\" + str(exp.first().user) + "\\" + str(page_data_id) + "\\"
 
@@ -997,6 +881,7 @@ def get_all_heatmap(request):
         json_file.write(result_json)
 
     return JsonResponse(result_dict, json_dumps_params={"ensure_ascii": False}, safe=False)
+
 
 def set_title(blk, title):
     """设置图片标题"""
@@ -1319,6 +1204,7 @@ def get_top_word_of_visual(hotspot, word_locations, background, word_list):
     list2 = list(set(top_dict["visual"]))
     list2.sort(key=top_dict["visual"].index)
     return list2
+
 
 def get_para_by_word_index(pre_fixation, para_list):
     for i, para in enumerate(para_list):
