@@ -1,6 +1,4 @@
 import base64
-import copy
-import datetime
 import json
 import math
 import os
@@ -9,7 +7,6 @@ import shutil
 import cv2
 import numpy as np
 import pandas as pd
-import torch
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from loguru import logger
@@ -18,7 +15,7 @@ from PIL import Image
 
 from action.models import Dictionary, Experiment, PageData, Paragraph, Text, Translation
 from feature.utils import keep_row, detect_fixations
-from onlineReading.utils import cm_2_pixel, get_euclid_distance, translate
+from onlineReading.utils import get_euclid_distance, translate
 from pyheatmap import myHeatmap
 from semantic_attention import (  # generate_sentence_difficulty,
     generate_sentence_attention,
