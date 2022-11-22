@@ -3,6 +3,7 @@ import datetime
 import json
 import math
 import os
+import time
 
 import cv2
 import matplotlib.pyplot as plt
@@ -256,7 +257,9 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
 
     img = cv2.imread(background)
     for i, coordinate in enumerate(coordinates):
-        # print(coordinate[2])
+        print(coordinate[2])
+        coordinate[0] = int(coordinate[0])
+        coordinate[1] = int(coordinate[1])
         cv2.circle(
             img,
             (coordinate[0], coordinate[1]),
@@ -746,8 +749,6 @@ def get_saccade(fixations, location):
             pre_fixation = fixation
             # 4. 更新pre row
             pre_row = now_row
-    print("qxy")
-    print(qxy)
     return (
         saccade_times,
         forward_saccade_times / saccade_times if saccade_times != 0 else 0,
@@ -755,114 +756,6 @@ def get_saccade(fixations, location):
         sum_saccade_length / saccade_times if saccade_times != 0 else 0,
         sum_saccade_angle / saccade_times if saccade_times != 0 else 0,
     )
-
-
-def corr(path):
-    """
-    计算变量之间的相关性
-    :param path:
-    :return:
-    """
-    import pandas
-
-    data = pandas.read_csv(path)
-    # print(data)
-
-    # print(data[['is_understand','mean_fixations_duration','fixation_duration','second_pass_duration','number_of_fixations','reading_times']])
-    print(
-        data[
-            [
-                "is_understand",
-                "mean_fixations_duration",
-                "fixation_duration",
-                "second_pass_duration",
-                "number_of_fixations",
-                "reading_times",
-            ]
-        ].corr()
-    )
-
-
-def kmeans_classifier(feature):
-    """
-    kmeans分类器
-    :return:
-    """
-    from sklearn.cluster import KMeans
-
-    kmeans = KMeans(n_clusters=2).fit(feature)
-    predicted = kmeans.labels_
-    print(kmeans.cluster_centers_)
-    # 输出的0和1与实际标签并不是对应的，假设我们认为1一定比0多
-    is_0 = 0
-    for predict in predicted:
-        if predict == 0:
-            is_0 += 1
-    if is_0 / len(predicted) > 0.5:
-        # 0的数量多，则标签是相反的
-        for i, predict in enumerate(predicted):
-            if predict == 1:
-                predicted[i] = 0
-            else:
-                predicted[i] = 1
-    return predicted
-
-
-def evaluate(path, classifier, feature):
-    """
-    评估分类器的性能
-    :return:
-    """
-    import numpy as np
-    import pandas as pd
-
-    reader = pd.read_csv(path)
-
-    is_understand = reader["is_understand"]
-
-    feature = reader[feature]
-    feature = np.array(feature)
-    feature = feature.reshape(-1, 1)
-
-    # 分类器
-    if classifier == "kmeans":
-        predicted = kmeans_classifier(feature)
-    else:
-        # 默认使用kmeans分类器
-        predicted = kmeans_classifier(feature)
-
-    # 计算TP等
-    tp = 0
-    fp = 0
-    tn = 0
-    fn = 0
-    for i in range(len(is_understand)):
-        if is_understand[i] == 0 and predicted[i] == 0:
-            tp += 1
-        if is_understand[i] == 0 and predicted[i] == 1:
-            fn += 1
-        if is_understand[i] == 1 and predicted[i] == 1:
-            tn += 1
-        if is_understand[i] == 1 and predicted[i] == 0:
-            fp += 1
-    print("tp:%d fp:%d tn:%d fn:%d" % (tp, fp, tn, fn))
-    # 计算指标
-    accuracy = (tp + tn) / (tp + tn + fp + fn)
-    precision = tp / (tp + fp)
-    recall = tp / (tp + fn)
-    f1 = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
-    from sklearn.metrics import roc_auc_score
-
-    y_true = is_understand
-    y_pred = predicted
-    auc = roc_auc_score(y_true, y_pred)
-    auc = 1 - auc if auc < 0.5 else auc
-
-    print("precision：%f" % precision)
-    print("recall：%f" % recall)
-    print("f1 score: %f" % f1)
-    print("auc:%f" % auc)
-    print("accuracy：%f" % accuracy)
 
 
 def standard_deviation(data_list):
@@ -896,29 +789,6 @@ def ocr(img_path):
     im_show.show()
 
 
-def get_sematic_heat_map():
-    import urllib
-
-    from pyheatmap.heatmap import HeatMap
-
-    url = "https://raw.github.com/oldj/pyheatmap/master/examples/test_data.txt"
-    sdata = urllib.request.urlopen(url).read().decode().strip().split(",")
-    print("s_data")
-    print(sdata)
-    data = []
-    for ln in sdata:
-        a = ln.split(",")
-        if len(a) != 2:
-            continue
-        a = [int(i) for i in a]
-        data.append(a)
-
-    # start painting
-    hm = HeatMap(data)
-    hm.clickmap(save_as="hit.png")
-    hm.heatmap(save_as="heat.png")
-
-
 def meanFilter(data, win):
     length = len(data)
     res = np.zeros(length)
@@ -932,15 +802,6 @@ def meanFilter(data, win):
                 n += 1
         res[i] = s / n
     return res
-
-
-def preprocess_data(data, win):
-    data = signal.medfilt(data, kernel_size=win)
-    data = signal.medfilt(data, kernel_size=win)
-    data = meanFilter(data, 5)
-    data = meanFilter(data, 5)
-    # data = meanFilter(data, win)
-    return data
 
 
 def get_importance(text):
@@ -1210,39 +1071,6 @@ def pixel_2_cm(pixel):
     return pixel * cmPerPix
 
 
-def get_test_heatmap():
-    import pandas as pd
-
-    csv = pd.read_csv("static\\data\\dataset\\cnn.csv")
-    gaze_x = csv["gaze_x"]
-    gaze_y = csv["gaze_y"]
-    gaze_x_filter = csv["gaze_x_filter"]
-    gaze_y_filter = csv["gaze_y_filter"]
-
-    coordinate1 = []
-    coordinate2 = []
-    for i in range(len(gaze_x)):
-        tmp1 = (int(gaze_x[i]), int(gaze_y[i]))
-        tmp2 = (int(gaze_x_filter[i]), int(gaze_y_filter[i]))
-        coordinate1.append(tmp1)
-        coordinate2.append(tmp2)
-
-    apply_heatmap(
-        "static\\background\\img.png",
-        coordinate1,
-        "static\\background\\gaze_before.png",
-        0.4,
-        "gaze_before",
-    )
-    apply_heatmap(
-        "static\\background\\img.png",
-        coordinate2,
-        "static\\background\\gaze_after.png",
-        0.4,
-        "gaze_after",
-    )
-
-
 def split_csv(exp_id):
     filename = "static\\data\\dataset\\10-31-43.csv"
     df = pd.read_csv(filename)
@@ -1267,6 +1095,66 @@ def get_para_from_txt(path, tar_page):
                 word_num += int(paras[-1])
         dict[article_id] = {"para_1": para_1, "word_num": word_num + 1}
     return dict
+
+
+class Timer:
+    def __init__(self, name):
+        self.elapsed = 0
+        self.name = name
+
+    def __enter__(self):
+        self.start = time.perf_counter()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end = time.perf_counter()
+        self.elapsed = round((self.end - self.start) * 1000, 2)
+        logger.info(f"执行{self.name}用时{self.elapsed}ms")
+
+
+def preprocess_data(data, filters):
+    cnt = 0
+    for filter in filters:
+        if filter['type'] == "median":
+            data = signal.medfilt(data, kernel_size=filter['window'])
+            cnt += 1
+        if filter['type'] == 'mean':
+            data = meanFilter(data, filter['window'])
+            cnt += 1
+    # data = meanFilter(data, win)
+    return data
+
+
+def format_gaze(gaze_x: str, gaze_y: str, gaze_t: str, use_filter=True, begin_time: int = 500,
+                end_time: int = 500) -> list:
+    list_x = list(map(float, gaze_x.split(",")))
+    list_y = list(map(float, gaze_y.split(",")))
+    list_t = list(map(float, gaze_t.split(",")))
+
+    # 时序滤波
+    if use_filter:
+        filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7}, {'type': 'mean', 'window': 5},
+                   {'type': 'mean', 'window': 5}]
+        list_x = preprocess_data(list_x, filters)
+        list_y = preprocess_data(list_y, filters)
+
+    list_x = list(map(int, list_x))
+    list_y = list(map(int, list_y))
+    list_t = list(map(int, list_t))
+    assert len(list_x) == len(list_y) == len(list_t)
+    gaze_points = [[list_x[i], list_y[i], list_t[i]] for i in range(len(list_x))]
+
+    begin = 0
+    end = 0
+    for i, gaze in enumerate(gaze_points):
+        if gaze[2] - gaze_points[0][2] > begin_time:
+            begin = i
+            break
+    for i in range(len(gaze_points) - 1, 0, -1):
+        if gaze_points[-1][2] - gaze_points[i][2] > end_time:
+            end = i
+            break
+    assert begin < end
+    return gaze_points[begin:end]
 
 
 if __name__ == "__main__":
