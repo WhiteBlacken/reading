@@ -101,7 +101,7 @@ def get_paragraph_and_translation(request):
 
     article_id = request.GET.get("article_id", 20)
 
-    paragraphs = Paragraph.objects.filter(article_id=article_id).first()
+    paragraphs = Paragraph.objects.filter(article_id=article_id)
     para_dict = {}
     para = 0
     logger.info("--实验开始--")
