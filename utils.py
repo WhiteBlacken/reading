@@ -3,6 +3,7 @@ import datetime
 import json
 import math
 import os
+import random
 import time
 
 import cv2
@@ -15,8 +16,13 @@ from paddleocr import PaddleOCR
 from paddleocr.tools.infer.utility import draw_ocr
 from PIL import Image
 from scipy import signal
-
+from scipy.stats import pearsonr
+from sklearn.cluster import KMeans
+from sklearn.metrics import roc_auc_score, cohen_kappa_score
 from onlineReading import settings
+import matplotlib
+import matplotlib.pyplot as plt
+from sklearn.mixture import GaussianMixture
 
 
 def get_fixations(coordinates, min_duration=100, max_duration=1200, max_distance=140):
@@ -127,12 +133,22 @@ def get_item_index_x_y(location, x, y):
     # 解析location
     location = json.loads(location)
 
-    index = 0
-    for word in location:
+    # 先找是否正好在范围内
+    for i, word in enumerate(location):
         if word["left"] <= x <= word["right"] and word["top"] <= y <= word["bottom"]:
-            return index
-        index = index + 1
-    return -1
+            return i
+    # 如果不在范围内,找最近的单词
+    min_dist = 100
+    index = -1
+    for i, word in enumerate(location):
+        center_x = (word["left"] + word['right']) / 2
+        center_y = (word['top'] + word['bottom']) / 2
+        dist = get_euclid_distance(x, center_x, y, center_y)
+        if dist < min_dist:
+            min_dist = dist
+            index = i
+
+    return index
 
 
 def get_word_and_location(location):
@@ -985,7 +1001,334 @@ def format_gaze(gaze_x: str, gaze_y: str, gaze_t: str, use_filter=True, begin_ti
     return gaze_points[begin:end]
 
 
+def compute_corr(filename: str, feature_of_word: list, feature_of_sentence: list, show_word: bool = True,
+                 show_sentence: bool = True, show_wander: bool = True, user: str = None):
+    data = pd.read_csv(filename)
+    pc_list = []
+    if user:
+        data = data.loc[(data['word_watching'] == 1) & (data['user'] == user)]
+    else:
+        data = data.loc[(data['word_watching'] == 1)]
+    print(f"有效数据数量{len(data)}条")
+    if show_word:
+        print("---------word_understand---------")
+        for feature in feature_of_word:
+            col_data = np.array(data[feature])
+            word_understand = np.array(data['word_understand'])
+            pc = pearsonr(col_data, word_understand)
+            pc_list.append(pc[0])
+
+    if show_sentence:
+        print("\n---------sentence_understand---------")
+        for feature in feature_of_sentence:
+            col_data = np.array(data[feature])
+            word_understand = np.array(data['sentence_understand'])
+            pc = pearsonr(col_data, word_understand)
+            print(f"{feature}与sentence understanding:")
+            print(f"相关系数：{pc[0]}")
+            print(f"p value：{pc[1]}")
+            print("--------------------")
+
+    if show_wander:
+        print("\n---------mind_wandering---------")
+        for feature in feature_of_sentence:
+            col_data = np.array(data[feature])
+            word_understand = np.array(data['mind_wandering'])
+            pc = pearsonr(col_data, word_understand)
+            print(f"{feature}与mind wandering:")
+            print(f"相关系数：{pc[0]}")
+            print(f"p value：{pc[1]}")
+            print("--------------------")
+
+
+def kmeans_classifier(feature):
+    """
+    kmeans分类器
+    :return:
+    """
+    print("feature")
+    print(feature)
+    kmeans = KMeans(n_clusters=2).fit(feature)
+    predicted = kmeans.labels_
+    print(kmeans.cluster_centers_)
+    # 输出的0和1与实际标签并不是对应的，假设我们认为1一定比0多
+
+    if np.mean(predicted) > 0.5:
+        predict_list = predicted
+    else:
+        predict_list = [1 - x for x in predicted]
+
+    return predict_list
+
+
+def gmm_classifier(feature):
+    """
+    kmeans分类器
+    :return:
+    """
+
+    gmm = GaussianMixture(n_components=2, covariance_type='full', random_state=0)
+    gmm.fit(feature)
+    predicted = gmm.predict(feature)
+    # 输出的0和1与实际标签并不是对应的，假设我们认为1一定比0多
+
+    if np.mean(predicted) > 0.5:
+        predict_list = predicted
+    else:
+        predict_list = [1 - x for x in predicted]
+
+    return predict_list
+
+
+def evaluate(data, features: list, label="word_understand", classifier="kmeans"):
+    """
+    评估分类器的性能
+    :return:
+    """
+    import numpy as np
+
+    is_understand = np.array(data[label].to_list())
+
+    feature = [[row[features[0]], row[features[1]]] for index, row in data.iterrows()]
+    feature = np.array(feature)
+    for feat in feature:
+        print(feat)
+
+    # 分类器
+    if classifier == "kmeans":
+        predicted = np.array(kmeans_classifier(feature))
+    if classifier == "gmm":
+        predicted = np.array(gmm_classifier(feature))
+    if classifier == "random":
+        predicted = np.array([random.randint(0, 1) for i in range(len(feature))])
+    # 计算TP等
+    tp = np.sum((is_understand == 0) & (predicted == 0))
+    print(np.sum((is_understand == 0) & (predicted == 0)))
+    fp = np.sum((is_understand == 1) & (predicted == 0))
+    tn = np.sum((is_understand == 1) & (predicted == 1))
+    fn = np.sum((is_understand == 0) & (predicted == 1))
+
+    print(f"fp:{fp}")
+    print(f"fn:{fn}")
+
+    print(type(tp))
+    # 计算指标
+    accuracy = (tp + tn) / (tp + tn + fp + fn)
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    f1 = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
+
+    y_true = is_understand
+    y_pred = predicted
+    auc = roc_auc_score(y_true, y_pred)
+    auc = 1 - auc if auc < 0.5 else auc
+
+    kappa = cohen_kappa_score(is_understand, predicted)
+    # print("precision：%f" % precision)
+    # print("recall：%f" % recall)
+    # print("f1 score: %f" % f1)
+    # print("auc:%f" % auc)
+    # print("accuracy：%f" % accuracy)
+    # print("kappa:%f" % kappa)
+    return accuracy, precision, recall, f1, kappa, auc
+
+
+def plot_bar(data_list: list, labels: list, features: list, x_label, y_label="Proportion", ylim: float = 1.3, title=""):
+    matplotlib.rc("font", family='MicroSoft YaHei')
+
+    data_list = [np.array(list(map(abs, x))) for x in data_list]
+
+    length = len(features)
+    x = np.arange(length)  # 横坐标范围
+
+    plt.figure()
+    total_width, n = 0.8, len(labels)  # 柱状图总宽度，有几组数据
+    width = total_width / n  # 单个柱状图的宽度
+
+    loc = [x - width / n]
+    for i in range(n):
+        if i == 0:
+            continue
+        loc.append(loc[-1] + width)
+
+    plt.ylabel(y_label)  # 纵坐标label
+    plt.xlabel(x_label)  # 纵坐标label
+    for i, label in enumerate(labels):
+        plt.bar(loc[i], data_list[i], width=width, label=label)
+
+    plt.xticks(x, features)
+    # plt.title("relevance between features and sentence understanding")
+    plt.legend()  # 给出图例
+    # plt.ylim(0.0, 1.3)
+    plt.title(title)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_distribution(data, feature, bin, y_label="Proportion", label="sentence_understand", title=None, labels=[]):
+    dat = data[feature]
+
+    step = int((max(dat) - min(dat)) / bin)
+
+    assert step > 0
+    range_list = []
+    tmp = int(min(dat))
+    for i in range(bin):
+        range_list.append(tmp)
+        tmp += step
+
+    range_list.append(math.ceil(max(dat)))
+
+    understand = []
+    not_understand = []
+
+    for index in data[label].index:
+        if data[label][index] == 0:
+            not_understand.append(data[feature][index])
+        if data[label][index] == 1:
+            understand.append(data[feature][index])
+
+    dict = {
+        labels[0]: understand,
+        labels[1]: not_understand
+    }
+    result_list, x_ticks = draw_hist_bar(
+        dict,
+        range_list,
+        0.3,
+        feature,
+        y_label,
+        title,
+        labels=labels
+    )
+    return result_list, x_ticks
+
+
+def draw_hist_bar(nums_dict, ranges, width, x_label=None, y_label=None, title=None, labels=[]):
+    counts_dict = {k: [0 for _ in range(len(ranges) - 1)] for k in nums_dict}
+    for k, nums in nums_dict.items():
+        for num in nums:
+            idx = -1
+            for i, item in enumerate(ranges):
+                if i == 0:
+                    continue
+                if ranges[i - 1] <= num < item:
+                    idx = i - 1
+            if idx != -1 and idx < len(ranges) - 1:
+                counts_dict[k][idx] += 1
+    x_ticks = ['[%s, %s)' % (ranges[i - 1], ranges[i]) for i in range(1, len(ranges))]
+    g_count = len(counts_dict)
+
+    print(counts_dict)
+    nums_of_understand = counts_dict[labels[0]]
+    nums_of_not_understand = counts_dict[labels[1]]
+    understand = []
+    not_understand = []
+    for i in range(len(counts_dict[labels[0]])):
+        a = counts_dict[labels[0]][i]
+        b = counts_dict[labels[1]][i]
+        if a + b != 0:
+            understand.append(a / (a + b))
+            not_understand.append(b / (a + b))
+        else:
+            understand.append(0)
+            not_understand.append(0)
+    counts_dict[labels[0]] = understand
+    counts_dict[labels[1]] = not_understand
+
+    x = np.arange(len(x_ticks)) - (g_count - 1) * width / 2
+    for k, counts in counts_dict.items():
+        plt.bar(x, counts, width, label=k)
+        x += width
+    print(np.arange(len(x_ticks)))
+    plt.xticks(np.arange(len(x_ticks)), x_ticks)
+    plt.legend()
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
+    plt.tight_layout()
+    plt.show()
+    return [nums_of_understand, nums_of_not_understand], x_ticks
+
+
+def get_complete_gaze_data_index(dat):
+    index_list = []
+    experiment_id = dat['experiment_id'][0]
+    for index, row in dat.iterrows():
+        if row['experiment_id'] != experiment_id:
+            index_list.append(index - 1)
+            experiment_id = row['experiment_id']
+    return index_list
+
+
 if __name__ == "__main__":
-    path = "static\\data\\other\\paraLoc.txt"
-    dict = get_para_from_txt(path, 1)
-    print(dict)
+    data = pd.read_csv('jupyter/dataset/max_min_norm_data.csv')
+    # dat = data.loc[(data['word_watching'] > 0)]
+    dat = data
+
+    feature = 'backward_times_of_sentence'
+    label = "sentence_understand"
+    labels = ['understand', 'not_understand']
+
+    dat[feature] = dat[feature] * 10
+    print(dat[feature].describe())
+    data_list, x_ticks = plot_distribution(dat, feature, 5, title="proportion of different label",
+                                           label=label, labels=labels)
+
+    print(data_list)
+
+    count_list = []
+    for data in data_list:
+        count_list.append([i / sum(data) for i in data])
+
+    plot_bar(count_list, labels=labels, features=x_ticks,
+             x_label=feature, y_label="proportion", title="proportion on different range")
+
+    # assert 1 > 2
+
+    # plot_distribution(data,'backward_times_of_sentence',4)
+    #
+    # plot_distribution(data,'backward_times_of_sentence',3)
+
+    # plot_bar(data_list: list, labels: list, features: list, ylim: float = 1.3):
+    # data = pd.read_csv('jupyter/dataset/all-gaze.csv')
+    #
+
+    assert 1 > 2
+    data = pd.read_csv('jupyter/dataset/2022-11-26-all.csv')
+    dat = data.loc[(data['backward_times_of_sentence'] > 0)]
+    feature_of_word = ['reading_times', 'number_of_fixations', 'fixation_duration', 'average_fixation_duration']
+    feature_of_sentence = ['second_pass_dwell_time_of_sentence', 'total_dwell_time_of_sentence',
+                           'reading_times_of_sentence', 'saccade_times_of_sentence', 'forward_times_of_sentence',
+                           'backward_times_of_sentence']
+
+    accuracy_list = []
+    precision_list = []
+    recall_list = []
+    f1_list = []
+    kappa_list = []
+    auc_list = []
+    # for feature in feature_of_word:
+    accuracy, precision, recall, f1, kappa, auc = evaluate(dat, features=["backward_times_of_sentence",
+                                                                          "saccade_times_of_sentence"],
+                                                           label="sentence_understand",
+                                                           classifier="kmeans")
+    accuracy_list.append(accuracy)
+    precision_list.append(precision)
+    recall_list.append(recall)
+    f1_list.append(f1)
+    auc_list.append(auc)
+    kappa_list.append(kappa)
+    print(accuracy_list)
+    print(precision_list)
+    print(recall_list)
+    print(f1_list)
+    print(kappa_list)
+    print(auc_list)
+    # data_list = [accuracy_list, precision_list, recall_list, f1_list, kappa_list]
+
+    # labels = ['accuracy', 'precision', 'recall', 'F1 score', 'Cohen Kappa Score']
+    # features = ['second pass dwell time', 'total dwell time',
+    #             'reading times', 'saccade times ', 'forward times',
+    #             'backward times']
+    # plot_bar(data_list, labels, features)

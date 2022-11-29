@@ -125,24 +125,26 @@ def generate_tmp_pic(request):
 
 
 def get_dataset(request):
-    optimal_list = [
-        [574, 580],
-        [582],
-        [585, 588],
-        [590, 591],
-        [595, 598],
-        [600, 605],
-        [609, 610],
-        [613, 619],
-        [622, 625],
-        [628],
-        [630, 631],
-        [634],
-        [636],
-        [637, 641],
-    ]
+    # optimal_list = [
+    #     [574, 580],
+    #     [582],
+    #     [585, 588],
+    #     [590, 591],
+    #     [595, 598],
+    #     [600, 605],
+    #     [609, 610],
+    #     [613, 619],
+    #     [622, 625],
+    #     [628],
+    #     [630, 631],
+    #     [634],
+    #     [636],
+    #     [637, 641],
+    # ]
+    optimal_list = [[577, 578]]
 
-    users = ['luqi', 'qxy', 'zhaoyifeng', 'ln']
+    # users = ['luqi', 'qxy', 'zhaoyifeng', 'ln']
+    # users = ['qxy']
     experiment_list_select = []
     for item in optimal_list:
         if len(item) == 2:
@@ -150,7 +152,8 @@ def get_dataset(request):
                 experiment_list_select.append(i)
         if len(item) == 1:
             experiment_list_select.append(item[0])
-    experiments = Experiment.objects.filter(is_finish=True).filter(id__in=experiment_list_select).filter(user__in=users)
+    # experiments = Experiment.objects.filter(is_finish=True).filter(id__in=experiment_list_select).filter(user__in=users)
+    experiments = Experiment.objects.filter(is_finish=True).filter(id__in=experiment_list_select)
     print(len(experiments))
     # 超参
     interval = 2 * 1000
@@ -175,6 +178,8 @@ def get_dataset(request):
     mind_wandering_all = []
     reading_times_all = []
     number_of_fixations_all = []
+    fixation_duration_all = []
+    average_fixation_duration_all = []
     second_pass_dwell_time_of_sentence_all = []
     total_dwell_time_of_sentence_all = []
     reading_times_of_sentence_all = []
@@ -235,6 +240,8 @@ def get_dataset(request):
             # 特征相关
             number_of_fixations = [0 for _ in range(word_num)]
             reading_times = [0 for _ in range(word_num)]
+            fixation_duration = [0 for _ in range(word_num)]
+            average_fixation_duration = [0 for _ in range(word_num)]
             reading_times_of_sentence = [0 for _ in range(word_num)]  # 相对的
             second_pass_dwell_time_of_sentence = [0 for _ in range(word_num)]  # 相对的
             total_dwell_time_of_sentence = [0 for _ in range(word_num)]  # 相对的
@@ -242,14 +249,16 @@ def get_dataset(request):
             forward_times_of_sentence = [0 for _ in range(word_num)]
             backward_times_of_sentence = [0 for _ in range(word_num)]
 
+            pre_word_index = -1
             for i, gaze_points in enumerate(gaze_points_list):
                 print("---正在处理第%d页---" % i)
                 begin = 0
                 for j, gaze in enumerate(gaze_points):
                     if gaze[2] - gaze_points[begin][2] > interval:
                         (
-                            num_of_fixation_this_page,
-                            reading_times_this_page,
+                            num_of_fixation_this_time,
+                            reading_times_this_time,
+                            fixation_duration_this_time,
                             reading_times_of_sentence_in_word_this_page,
                             second_pass_dwell_time_of_sentence_in_word_this_page,
                             total_dwell_time_of_sentence_in_word_this_page,
@@ -257,20 +266,28 @@ def get_dataset(request):
                             forward_times_of_sentence_word_level_this_page,
                             backward_times_of_sentence_word_level_this_page,
                             is_watching,
+                            pre_word
                         ) = eye_gaze_to_feature(gaze_points[0:j], words_per_page[i], sentences_per_page[i],
-                                                locations_per_page[i], begin)
-
+                                                locations_per_page[i], begin, pre_word_index)
+                        pre_word_index = pre_word
                         word_watching = [0 for _ in range(word_num)]
 
                         begin_index = words_num_until_page[i - 1] if i > 0 else 0
+                        # for item in is_watching:
+                        #     word_watching[item + begin_index] = 1
+
                         for item in is_watching:
-                            if num_of_fixation_this_page[item] != 0 and reading_times_this_page[item] != 0:
+                            if num_of_fixation_this_time[item] > 0 and reading_times_this_time[item] > 0:
                                 word_watching[item + begin_index] = 1
 
                         cnt = 0
                         for x in range(begin_index, words_num_until_page[i]):
-                            number_of_fixations[x] = num_of_fixation_this_page[cnt]
-                            reading_times[x] = reading_times_this_page[cnt]
+                            number_of_fixations[x] = num_of_fixation_this_time[cnt]
+                            reading_times[x] = reading_times_this_time[cnt]
+                            fixation_duration[x] = fixation_duration_this_time[cnt]
+
+                            average_fixation_duration[x] = fixation_duration[x] / number_of_fixations[x] if \
+                                number_of_fixations[x] != 0 else 0
                             reading_times_of_sentence[x] = reading_times_of_sentence_in_word_this_page[cnt]  # 相对的
                             second_pass_dwell_time_of_sentence[
                                 x
@@ -294,6 +311,8 @@ def get_dataset(request):
                         mind_wandering_all.extend(mind_wandering)
                         reading_times_all.extend(reading_times)
                         number_of_fixations_all.extend(number_of_fixations)
+                        fixation_duration_all.extend(fixation_duration)
+                        average_fixation_duration_all.extend(average_fixation_duration)
                         # sentence level
                         second_pass_dwell_time_of_sentence_all.extend(second_pass_dwell_time_of_sentence)
                         total_dwell_time_of_sentence_all.extend(total_dwell_time_of_sentence)
@@ -336,6 +355,8 @@ def get_dataset(request):
                     # word level
                     "reading_times": reading_times_all,
                     "number_of_fixations": number_of_fixations_all,
+                    "fixation_duration": fixation_duration_all,
+                    "average_fixation_duration": average_fixation_duration_all,
                     # sentence level
                     "second_pass_dwell_time_of_sentence": second_pass_dwell_time_of_sentence_all,
                     "total_dwell_time_of_sentence": total_dwell_time_of_sentence_all,
@@ -345,7 +366,7 @@ def get_dataset(request):
                     "backward_times_of_sentence": backward_times_of_sentence_all,
                 }
             )
-            path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + ".csv"
+            path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "test-all.csv"
 
             if os.path.exists(path):
                 df.to_csv(path, index=False, mode="a", header=False)
@@ -364,6 +385,8 @@ def get_dataset(request):
             mind_wandering_all = []
             reading_times_all = []
             number_of_fixations_all = []
+            fixation_duration_all = []
+            average_fixation_duration_all = []
             second_pass_dwell_time_of_sentence_all = []
             total_dwell_time_of_sentence_all = []
             reading_times_of_sentence_all = []
@@ -394,7 +417,7 @@ def get_dataset(request):
             "acc": acc,
         }
     )
-    path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "-gaze.csv"
+    path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "test-all-gaze.csv"
     if os.path.exists(path):
         data.to_csv(path, index=False, mode="a", header=False)
     else:
