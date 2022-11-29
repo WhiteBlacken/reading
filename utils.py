@@ -7,6 +7,7 @@ import random
 import time
 
 import cv2
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -18,11 +19,11 @@ from PIL import Image
 from scipy import signal
 from scipy.stats import pearsonr
 from sklearn.cluster import KMeans
-from sklearn.metrics import roc_auc_score, cohen_kappa_score
-from onlineReading import settings
-import matplotlib
-import matplotlib.pyplot as plt
+from sklearn.metrics import cohen_kappa_score, roc_auc_score
 from sklearn.mixture import GaussianMixture
+
+from feature.utils import in_danger_zone
+from onlineReading import settings
 
 
 def get_fixations(coordinates, min_duration=100, max_duration=1200, max_distance=140):
@@ -128,21 +129,25 @@ def reading_times(words_fixations):
     return reading_times
 
 
-def get_item_index_x_y(location, x, y):
+def get_item_index_x_y(location, x, y, pre_fix_word_index=-1, danger_zone=None):
     """根据所有item的位置，当前给出的x,y,判断其在哪个item里 分为word level和row level"""
     # 解析location
+    if danger_zone is None:
+        danger_zone = []
     location = json.loads(location)
 
     # 先找是否正好在范围内
     for i, word in enumerate(location):
+        if in_danger_zone(y, danger_zone):
+            return pre_fix_word_index
         if word["left"] <= x <= word["right"] and word["top"] <= y <= word["bottom"]:
             return i
     # 如果不在范围内,找最近的单词
     min_dist = 100
     index = -1
     for i, word in enumerate(location):
-        center_x = (word["left"] + word['right']) / 2
-        center_y = (word['top'] + word['bottom']) / 2
+        center_x = (word["left"] + word["right"]) / 2
+        center_y = (word["top"] + word["bottom"]) / 2
         dist = get_euclid_distance(x, center_x, y, center_y)
         if dist < min_dist:
             min_dist = dist
@@ -442,13 +447,13 @@ def get_saccade_info(fixations):
     sum_angle = 0
     for i in range(len(fixations) - 1):
         if (
-                get_euclid_distance(
-                    fixations[i][0],
-                    fixations[i + 1][0],
-                    fixations[i][1],
-                    fixations[i + 1][1],
-                )
-                > 500
+            get_euclid_distance(
+                fixations[i][0],
+                fixations[i + 1][0],
+                fixations[i][1],
+                fixations[i + 1][1],
+            )
+            > 500
         ):
             saccade_times = saccade_times + 1
             sum_angle = sum_angle + get_saccade_angle(fixations[i], fixations[i + 1])
@@ -958,26 +963,31 @@ class Timer:
 def preprocess_data(data, filters):
     cnt = 0
     for filter in filters:
-        if filter['type'] == "median":
-            data = signal.medfilt(data, kernel_size=filter['window'])
+        if filter["type"] == "median":
+            data = signal.medfilt(data, kernel_size=filter["window"])
             cnt += 1
-        if filter['type'] == 'mean':
-            data = meanFilter(data, filter['window'])
+        if filter["type"] == "mean":
+            data = meanFilter(data, filter["window"])
             cnt += 1
     # data = meanFilter(data, win)
     return data
 
 
-def format_gaze(gaze_x: str, gaze_y: str, gaze_t: str, use_filter=True, begin_time: int = 500,
-                end_time: int = 500) -> list:
+def format_gaze(
+    gaze_x: str, gaze_y: str, gaze_t: str, use_filter=True, begin_time: int = 500, end_time: int = 500
+) -> list:
     list_x = list(map(float, gaze_x.split(",")))
     list_y = list(map(float, gaze_y.split(",")))
     list_t = list(map(float, gaze_t.split(",")))
 
     # 时序滤波
     if use_filter:
-        filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7}, {'type': 'mean', 'window': 5},
-                   {'type': 'mean', 'window': 5}]
+        filters = [
+            {"type": "median", "window": 7},
+            {"type": "median", "window": 7},
+            {"type": "mean", "window": 5},
+            {"type": "mean", "window": 5},
+        ]
         list_x = preprocess_data(list_x, filters)
         list_y = preprocess_data(list_y, filters)
 
@@ -1001,20 +1011,27 @@ def format_gaze(gaze_x: str, gaze_y: str, gaze_t: str, use_filter=True, begin_ti
     return gaze_points[begin:end]
 
 
-def compute_corr(filename: str, feature_of_word: list, feature_of_sentence: list, show_word: bool = True,
-                 show_sentence: bool = True, show_wander: bool = True, user: str = None):
+def compute_corr(
+    filename: str,
+    feature_of_word: list,
+    feature_of_sentence: list,
+    show_word: bool = True,
+    show_sentence: bool = True,
+    show_wander: bool = True,
+    user: str = None,
+):
     data = pd.read_csv(filename)
     pc_list = []
     if user:
-        data = data.loc[(data['word_watching'] == 1) & (data['user'] == user)]
+        data = data.loc[(data["word_watching"] == 1) & (data["user"] == user)]
     else:
-        data = data.loc[(data['word_watching'] == 1)]
+        data = data.loc[(data["word_watching"] == 1)]
     print(f"有效数据数量{len(data)}条")
     if show_word:
         print("---------word_understand---------")
         for feature in feature_of_word:
             col_data = np.array(data[feature])
-            word_understand = np.array(data['word_understand'])
+            word_understand = np.array(data["word_understand"])
             pc = pearsonr(col_data, word_understand)
             pc_list.append(pc[0])
 
@@ -1022,7 +1039,7 @@ def compute_corr(filename: str, feature_of_word: list, feature_of_sentence: list
         print("\n---------sentence_understand---------")
         for feature in feature_of_sentence:
             col_data = np.array(data[feature])
-            word_understand = np.array(data['sentence_understand'])
+            word_understand = np.array(data["sentence_understand"])
             pc = pearsonr(col_data, word_understand)
             print(f"{feature}与sentence understanding:")
             print(f"相关系数：{pc[0]}")
@@ -1033,7 +1050,7 @@ def compute_corr(filename: str, feature_of_word: list, feature_of_sentence: list
         print("\n---------mind_wandering---------")
         for feature in feature_of_sentence:
             col_data = np.array(data[feature])
-            word_understand = np.array(data['mind_wandering'])
+            word_understand = np.array(data["mind_wandering"])
             pc = pearsonr(col_data, word_understand)
             print(f"{feature}与mind wandering:")
             print(f"相关系数：{pc[0]}")
@@ -1067,7 +1084,7 @@ def gmm_classifier(feature):
     :return:
     """
 
-    gmm = GaussianMixture(n_components=2, covariance_type='full', random_state=0)
+    gmm = GaussianMixture(n_components=2, covariance_type="full", random_state=0)
     gmm.fit(feature)
     predicted = gmm.predict(feature)
     # 输出的0和1与实际标签并不是对应的，假设我们认为1一定比0多
@@ -1134,7 +1151,7 @@ def evaluate(data, features: list, label="word_understand", classifier="kmeans")
 
 
 def plot_bar(data_list: list, labels: list, features: list, x_label, y_label="Proportion", ylim: float = 1.3, title=""):
-    matplotlib.rc("font", family='MicroSoft YaHei')
+    matplotlib.rc("font", family="MicroSoft YaHei")
 
     data_list = [np.array(list(map(abs, x))) for x in data_list]
 
@@ -1188,19 +1205,8 @@ def plot_distribution(data, feature, bin, y_label="Proportion", label="sentence_
         if data[label][index] == 1:
             understand.append(data[feature][index])
 
-    dict = {
-        labels[0]: understand,
-        labels[1]: not_understand
-    }
-    result_list, x_ticks = draw_hist_bar(
-        dict,
-        range_list,
-        0.3,
-        feature,
-        y_label,
-        title,
-        labels=labels
-    )
+    dict = {labels[0]: understand, labels[1]: not_understand}
+    result_list, x_ticks = draw_hist_bar(dict, range_list, 0.3, feature, y_label, title, labels=labels)
     return result_list, x_ticks
 
 
@@ -1216,7 +1222,7 @@ def draw_hist_bar(nums_dict, ranges, width, x_label=None, y_label=None, title=No
                     idx = i - 1
             if idx != -1 and idx < len(ranges) - 1:
                 counts_dict[k][idx] += 1
-    x_ticks = ['[%s, %s)' % (ranges[i - 1], ranges[i]) for i in range(1, len(ranges))]
+    x_ticks = ["[%s, %s)" % (ranges[i - 1], ranges[i]) for i in range(1, len(ranges))]
     g_count = len(counts_dict)
 
     print(counts_dict)
@@ -1253,27 +1259,28 @@ def draw_hist_bar(nums_dict, ranges, width, x_label=None, y_label=None, title=No
 
 def get_complete_gaze_data_index(dat):
     index_list = []
-    experiment_id = dat['experiment_id'][0]
+    experiment_id = dat["experiment_id"][0]
     for index, row in dat.iterrows():
-        if row['experiment_id'] != experiment_id:
+        if row["experiment_id"] != experiment_id:
             index_list.append(index - 1)
-            experiment_id = row['experiment_id']
+            experiment_id = row["experiment_id"]
     return index_list
 
 
 if __name__ == "__main__":
-    data = pd.read_csv('jupyter/dataset/max_min_norm_data.csv')
+    data = pd.read_csv("jupyter/dataset/max_min_norm_data.csv")
     # dat = data.loc[(data['word_watching'] > 0)]
     dat = data
 
-    feature = 'backward_times_of_sentence'
+    feature = "backward_times_of_sentence"
     label = "sentence_understand"
-    labels = ['understand', 'not_understand']
+    labels = ["understand", "not_understand"]
 
     dat[feature] = dat[feature] * 10
     print(dat[feature].describe())
-    data_list, x_ticks = plot_distribution(dat, feature, 5, title="proportion of different label",
-                                           label=label, labels=labels)
+    data_list, x_ticks = plot_distribution(
+        dat, feature, 5, title="proportion of different label", label=label, labels=labels
+    )
 
     print(data_list)
 
@@ -1281,8 +1288,14 @@ if __name__ == "__main__":
     for data in data_list:
         count_list.append([i / sum(data) for i in data])
 
-    plot_bar(count_list, labels=labels, features=x_ticks,
-             x_label=feature, y_label="proportion", title="proportion on different range")
+    plot_bar(
+        count_list,
+        labels=labels,
+        features=x_ticks,
+        x_label=feature,
+        y_label="proportion",
+        title="proportion on different range",
+    )
 
     # assert 1 > 2
 
@@ -1295,12 +1308,17 @@ if __name__ == "__main__":
     #
 
     assert 1 > 2
-    data = pd.read_csv('jupyter/dataset/2022-11-26-all.csv')
-    dat = data.loc[(data['backward_times_of_sentence'] > 0)]
-    feature_of_word = ['reading_times', 'number_of_fixations', 'fixation_duration', 'average_fixation_duration']
-    feature_of_sentence = ['second_pass_dwell_time_of_sentence', 'total_dwell_time_of_sentence',
-                           'reading_times_of_sentence', 'saccade_times_of_sentence', 'forward_times_of_sentence',
-                           'backward_times_of_sentence']
+    data = pd.read_csv("jupyter/dataset/2022-11-26-all.csv")
+    dat = data.loc[(data["backward_times_of_sentence"] > 0)]
+    feature_of_word = ["reading_times", "number_of_fixations", "fixation_duration", "average_fixation_duration"]
+    feature_of_sentence = [
+        "second_pass_dwell_time_of_sentence",
+        "total_dwell_time_of_sentence",
+        "reading_times_of_sentence",
+        "saccade_times_of_sentence",
+        "forward_times_of_sentence",
+        "backward_times_of_sentence",
+    ]
 
     accuracy_list = []
     precision_list = []
@@ -1309,10 +1327,12 @@ if __name__ == "__main__":
     kappa_list = []
     auc_list = []
     # for feature in feature_of_word:
-    accuracy, precision, recall, f1, kappa, auc = evaluate(dat, features=["backward_times_of_sentence",
-                                                                          "saccade_times_of_sentence"],
-                                                           label="sentence_understand",
-                                                           classifier="kmeans")
+    accuracy, precision, recall, f1, kappa, auc = evaluate(
+        dat,
+        features=["backward_times_of_sentence", "saccade_times_of_sentence"],
+        label="sentence_understand",
+        classifier="kmeans",
+    )
     accuracy_list.append(accuracy)
     precision_list.append(precision)
     recall_list.append(recall)
