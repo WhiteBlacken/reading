@@ -167,6 +167,23 @@ hsl_to_rgb(s)
 
 def draw_heat_map(data, heatmap_name, base):
     # 开始绘制
+    # for i, dat in enumerate(data):
+    #     if i > 3:
+    #         if data[i][1] < sum([data[j][1] for j in range(i)]) / i - 20:
+    #             data[i][1] = data[i][1] + 8
+    #             if data[i][1] < sum([data[j][1] for j in range(i)]) / i - 30:
+    #                 data[i][1] = sum([data[j][1] for j in range(i)]) / i - 20
+    #         elif data[i][1] > sum([data[j][1] for j in range(i)]) / i + 20:
+    #             data[i][1] = data[i][1] - 8
+    #             if data[i][1] > sum([data[j][1] for j in range(i)]) / i + 30:
+    #                 data[i][1] = sum([data[j][1] for j in range(i)]) / i + 20
+    #         if data[i - 1][0] > data[i][0] > data[i - 1][0] - 30:
+    #             data[i][0] = data[i][0] - 30
+    #         elif data[i - 1][0] < data[i][0] < data[i - 1][0] + 30:
+    #             data[i][0] = data[i][0] + 30
+    for i, dat in enumerate(data):
+        data[i][0] = round(data[i][0])
+        data[i][1] = round(data[i][1])
     hm = MyHeatMap(data=data)
     assert len(data) > 0
     assert len(data[0]) == 2

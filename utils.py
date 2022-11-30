@@ -227,45 +227,26 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
     import matplotlib.pyplot as plt
 
     img = cv2.imread(background)
-    # plt.rc('pdf', fonttype=42)
-    # c1 = coordinates[0:6]
-    # c2 = coordinates[7:-1]
-    # coordinates = c1 + c2
-    # coordinates[0][1] = coordinates[0][1] - 14
-    for i, coordinate in enumerate(coordinates):
-        if i > 0:
-            if coordinates[i][1] < coordinates[i - 1][1] - 22:
-                coordinates[i][1] = coordinates[i][1] + 10
-                if coordinates[i][1] < coordinates[i - 1][1] - 44:
-                    coordinates[i][1] = coordinates[i - 1][1] - 20
-            elif coordinates[i][1] > coordinates[i - 1][1] + 22:
-                coordinates[i][1] = coordinates[i][1] - 10
-                if coordinates[i][1] > coordinates[i - 1][1] + 44:
-                    coordinates[i][1] = coordinates[i - 1][1] + 20
-            if coordinates[i - 1][0] > coordinates[i][0] > coordinates[i - 1][0] - 30:
-                coordinates[i][0] = coordinates[i][0] - 30
-            elif coordinates[i - 1][0] < coordinates[i][0] < coordinates[i - 1][0] + 30:
-                coordinates[i][0] = coordinates[i][0] + 30
+    # if len(coordinates) > 8:
+    #     coordinates.pop(8)
+    #     coordinates.pop(7)
 
-    coordinates_tmp = []
-    for i, coordinate in enumerate(coordinates):
-        coordinates[i][1] = coordinates[i][1] - 30
-        if i % 2 == 0:
-            coordinates_tmp.append(coordinates[i])
-    coordinates = coordinates_tmp
-    coordinates.pop(0)
+    # for i in range(4):
+    #     if len(coordinates) > 6:
+    #         coordinates[i + 3][0] = coordinates[i + 3][0] + 10
+    #         coordinates[i + 3][1] = coordinates[i + 3][1] - 20
 
     img = cv2.imread(background)
     for i, coordinate in enumerate(coordinates):
-        print(coordinate[2])
+        # print(coordinate[2])
         coordinate[0] = int(coordinate[0])
         coordinate[1] = int(coordinate[1])
         cv2.circle(
             img,
             (coordinate[0], coordinate[1]),
-            3,
+            cal_fix_radius(coordinate[2]),
             (0, 0, 255),
-            -1,
+            2,
         )
         if i > 0:
             cv2.line(
@@ -275,106 +256,39 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
                 (0, 0, 255),
                 1,
             )
-        # if i % 2 == 0:
-        #     # 标序号 间隔着标序号
-        #     cv2.putText(
-        #         img,
-        #         str(i),
-        #         (coordinate[0], coordinate[1]),
-        #         cv2.FONT_HERSHEY_SIMPLEX,
-        #         0.7,
-        #         (0, 0, 0),
-        #         2,
-        #     )
-    s = save_path.split('.')[0] + '.png'
-    cv2.imwrite(s, img, [int(cv2.IMWRITE_PNG_COMPRESSION), 0])
-    img = plt.imread(s)
+
+    cv2.imwrite(save_path, img, [int(cv2.IMWRITE_PNG_COMPRESSION), 0])
+    img = plt.imread(save_path)
     fig = plt.figure()
     ax = fig.add_subplot()
     ax.imshow(img)
     plt.axis('off')
     for i, coordinate in enumerate(coordinates):
-        if i % 3 == 0:
-            if i == 12:
-                ax.text(coordinate[0],
-                        coordinate[1] + cal_fix_radius(coordinate[2]) + 15, str(i),
-                        family='Times New Roman', fontsize=7, verticalalignment='center',
-                        horizontalalignment='center', color="black")
-            # if i == 12:
-            #     ax.text(coordinate[0] - cal_fix_radius(coordinate[2]) - 15,
-            #             coordinate[1] + cal_fix_radius(coordinate[2]) + 15, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # elif i == 15:
-            #     ax.text(coordinate[0],
-            #             coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # elif i == 18:
-            #     ax.text(coordinate[0] + cal_fix_radius(coordinate[2]) + 15,
-            #             coordinate[1] - cal_fix_radius(coordinate[2]) - 15, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # elif i == 21:
-            #     ax.text(coordinate[0],
-            #             coordinate[1] - cal_fix_radius(coordinate[2]) - 20, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # if i == 0:
-            #     ax.text(coordinate[0] - cal_fix_radius(coordinate[2]) - 10, coordinate[1] - cal_fix_radius(coordinate[2]) - 10, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # elif i == 3:
-            #     ax.text(coordinate[0], coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # elif i == 9:
-            #     ax.text(coordinate[0] - cal_fix_radius(coordinate[2]) - 15, coordinate[1] + cal_fix_radius(coordinate[2]) + 15, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # elif i == 12:
-            #     ax.text(coordinate[0],
-            #             coordinate[1] - cal_fix_radius(coordinate[2]) - 20, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # elif i == 15:
-            #     ax.text(coordinate[0] - cal_fix_radius(coordinate[2]) - 15,
-            #             coordinate[1] - cal_fix_radius(coordinate[2]) - 15, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # if i == 0:
-            #     ax.text(coordinate[0], coordinate[1] - cal_fix_radius(coordinate[2]) - 10, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # if i == 18:
-            #     ax.text(coordinate[0] - cal_fix_radius(coordinate[2]) - 24, coordinate[1], str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # elif i == 21:
-            #     ax.text(coordinate[0] + cal_fix_radius(coordinate[2]) + 22, coordinate[1] - 5, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # elif i == 3 or i == 9:
-            #     ax.text(coordinate[0], coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            # elif i == 6 or i == 9:
-            #     ax.text(coordinate[0], coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
-            #             family='Times New Roman', fontsize=7, verticalalignment='center',
-            #             horizontalalignment='center', color="black")
-            else:
-                ax.text(cal_annotate_loc(i, coordinates)[0], cal_annotate_loc(i, coordinates)[1], str(i),
-                        family='Times New Roman', fontsize=7, verticalalignment='center',
-                        horizontalalignment='center', color="black")
-        # else:
-        #     ax.text(coordinate[0], coordinate[1], str(i + 1), fontsize=5, verticalalignment='center',
-        #             horizontalalignment='center', color="tomato")
-    plt.show()
-    fig.savefig(save_path, dpi=1000)
+        # if i % 3 == 0:
+        #     if i == 3 or i == 6:
+        #         ax.text(coordinate[0],
+        #                 coordinate[1] - cal_fix_radius(coordinate[2]) - 20, str(i),
+        #                 family='Times New Roman', fontsize=7, verticalalignment='center',
+        #                 horizontalalignment='center', color="black")
+        #     elif i == 9 or i == 12:
+        #         ax.text(coordinate[0],
+        #                 coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
+        #                 family='Times New Roman', fontsize=7, verticalalignment='center',
+        #                 horizontalalignment='center', color="black")
+        #     else:
+        if i % 5 == 0:
+            ax.text(cal_annotate_loc(i, coordinates)[0], cal_annotate_loc(i, coordinates)[1], str(i),
+                family='Times New Roman', fontsize=7, verticalalignment='center',
+                horizontalalignment='center', color="black")
+    # else:
+    #     ax.text(coordinate[0], coordinate[1], str(i + 1), fontsize=5, verticalalignment='center',
+    #             horizontalalignment='center', color="tomato")
+    # plt.show()
+    fig.savefig(save_path, dpi=200)
 
 
 def cal_fix_radius(fix_duration):
-    rad = (fix_duration - 100) / 5
+    rad = (fix_duration - 100) / 18
     if rad > 22:
         return 22
     if rad < 4:
@@ -1049,8 +963,10 @@ def join_images_vertical(img_list, save_path):
     vertical_size = 0
     horizontal_size = 0
 
-    for img in img_list:
+    for i, img in enumerate(img_list):
         image = Image.open(img)
+        # if i == 1:
+        #     image.save("static\\data\\heatmap\\qxy\\1484\\qxy_sentence_observation_5_2.png")
         horizontal_size = image.size[0]
         vertical_size += image.size[1]
     joint = Image.new("RGB", (horizontal_size, vertical_size))
