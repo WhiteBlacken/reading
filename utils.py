@@ -22,7 +22,6 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import cohen_kappa_score, roc_auc_score
 from sklearn.mixture import GaussianMixture
 
-<<<<<<< HEAD
 from onlineReading import settings
 
 
@@ -32,11 +31,6 @@ def in_danger_zone(x: int, y: int, danger_zone: list):
             return True
     return False
 
-=======
-from feature.utils import in_danger_zone
-from onlineReading import settings
-
->>>>>>> 1efa452 (veritical dift)
 
 def get_fixations(coordinates, min_duration=100, max_duration=1200, max_distance=140):
     """
@@ -153,8 +147,6 @@ def get_item_index_x_y(location, x, y, pre_fix_word_index=-1, danger_zone=None):
         y = (loc["top"] + loc["bottom"]) / 2
     # 先找是否正好在范围内
     for i, word in enumerate(location):
-        if in_danger_zone(y, danger_zone):
-            return pre_fix_word_index
         if word["left"] <= x <= word["right"] and word["top"] <= y <= word["bottom"]:
             return i
     # 如果不在范围内,找最近的单词
