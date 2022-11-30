@@ -1,6 +1,4 @@
 import base64
-import copy
-import datetime
 import json
 import math
 import os
@@ -9,7 +7,6 @@ import shutil
 import cv2
 import numpy as np
 import pandas as pd
-import torch
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from loguru import logger
@@ -17,8 +14,8 @@ from matplotlib import pyplot as plt
 from PIL import Image
 
 from action.models import Dictionary, Experiment, PageData, Paragraph, Text, Translation
-from feature.utils import keep_row, detect_fixations
-from onlineReading.utils import cm_2_pixel, get_euclid_distance, translate
+from feature.utils import detect_fixations, keep_row
+from onlineReading.utils import get_euclid_distance, translate
 from pyheatmap import myHeatmap
 from semantic_attention import (  # generate_sentence_difficulty,
     generate_sentence_attention,
@@ -28,11 +25,12 @@ from semantic_attention import (  # generate_sentence_difficulty,
     nlp,
 )
 from utils import (
+    Timer,
     calculate_identity,
     calculate_similarity,
     find_threshold,
+    format_gaze,
     generate_pic_by_base64,
-    get_fixations,
     get_importance,
     get_item_index_x_y,
     get_para_from_txt,
@@ -43,7 +41,8 @@ from utils import (
     join_two_image,
     paint_bar_graph,
     paint_gaze_on_pic,
-    x_y_t_2_coordinate, Timer, format_gaze, preprocess_data,
+    preprocess_data,
+    x_y_t_2_coordinate,
 )
 
 
@@ -122,8 +121,8 @@ def get_paragraph_and_translation(request):
                     # 句子翻译前先查表
                     translations = (
                         Translation.objects.filter(article_id=article_id)
-                            .filter(para_id=para)
-                            .filter(sentence_id=sentence_id)
+                        .filter(para_id=para)
+                        .filter(sentence_id=sentence_id)
                     )
                     if translations:
                         sentence_zh = translations.first().txt
@@ -378,7 +377,7 @@ def get_visual_heatmap(request):
         base_path,
         word_list,
         word_locations,
-        top_dict
+        top_dict,
     )
 
     # 将spatial和temporal结合
@@ -391,102 +390,30 @@ def get_visual_heatmap(request):
 
 
 def get_row_level_fixations_map(request):
-    page_data_ids = request.GET.get("id").split(',')
-    print(page_data_ids)
-    for page_data_id in page_data_ids:
-        pageData = PageData.objects.get(id=page_data_id)
-        exp = Experiment.objects.filter(id=pageData.experiment_id)
-        kernel_size = int(request.GET.get("window", 0))
+    print("执行了")
+    page_data_id = request.GET.get("id")
+    pageData = PageData.objects.get(id=page_data_id)
+    exp = Experiment.objects.filter(id=pageData.experiment_id)
 
-        gaze_x = pageData.gaze_x
-        gaze_y = pageData.gaze_y
-        gaze_t = pageData.gaze_t
-        """
-        1.
-        清洗数据
-        """
-        list_x = list(map(float, gaze_x.split(",")))
-        list_y = list(map(float, gaze_y.split(",")))
-        list_t = list(map(float, gaze_t.split(",")))
+    begin = request.GET.get("begin", 0)
+    end = request.GET.get("end", -1)
+    coordinates = format_gaze(pageData.gaze_x, pageData.gaze_y, pageData.gaze_t)[begin:end]
 
-        if kernel_size != 0:
-            filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7}, {'type': 'mean', 'window': 5},
-                       {'type': 'mean', 'window': 5}]
-            # 滤波
-            list_x = preprocess_data(list_x, filters)
-            list_y = preprocess_data(list_y, filters)
+    fixations = detect_fixations(coordinates)
 
-        print("length of list after filter")
-        print(len(list_x))
-        # 滤波完是浮点数，需要转成int
-        list_x = list(map(int, list_x))
-        list_y = list(map(int, list_y))
+    # 按行切割gaze点
+    pre_fixation = fixations[0]
+    distance = 600
+    row_fixations = []
+    tmp = []
 
-        # 组合
-        coordinates = []
-        for i in range(len(list_x)):
-            coordinate = [list_x[i], list_y[i], list_t[i]]
-            coordinates.append(coordinate)
-        # 去除开始结束的gaze点
-        coordinates = coordinates[2:-1]
-        # 去除前后200ms的gaze点
-        begin = 0
-        end = -1
-        for i, coordinate in enumerate(coordinates):
-            if coordinate[2] - coordinates[0][2] > 300:
-                begin = i
-                break
-        print("begin:%d" % begin)
-        for i in range(len(coordinates) - 1, -1, -1):
-            if coordinates[-1][2] - coordinates[i][2] > 300:
-                end = i
-                break
-        print("end:%d" % end)
-        coordinates = coordinates[begin:end]
-
-        fixations = detect_fixations(coordinates)
-        # 按行切割gaze点
-        pre_fixation = fixations[0]
-        distance = 600
-        row_fixations = []
-        tmp = []
-        print(len(fixations))
-        row_cnt = 1
-        for fixation in fixations:
-            if get_euclid_distance(fixation[0], pre_fixation[0], fixation[1], pre_fixation[1]) > distance \
-                    and fixation[0] < pre_fixation[0]:
-
-                # if row_cnt == 19:
-                #     tmp.append(fixation)
-                # else:
-                # if row_cnt == 11:
-                #     row_fixations.append(tmp[11:41])
-                #     row_fixations.append(tmp[41:])
-                # else:
-                # for i, fix in enumerate(tmp):
-                #     if i > 3:
-                #         if tmp[i][1] < sum([tmp[j][1] for j in range(i)]) / i - 20:
-                #             tmp[i][1] = tmp[i][1] + 8
-                #             if tmp[i][1] < sum([tmp[j][1] for j in range(i)]) / i - 30:
-                #                 tmp[i][1] = sum([tmp[j][1] for j in range(i)]) / i - 20
-                #         elif tmp[i][1] > sum([tmp[j][1] for j in range(i)]) / i + 20:
-                #             tmp[i][1] = tmp[i][1] - 8
-                #             if tmp[i][1] > sum([tmp[j][1] for j in range(i)]) / i + 30:
-                #                 tmp[i][1] = sum([tmp[j][1] for j in range(i)]) / i + 20
-                #         if tmp[i - 1][0] > tmp[i][0] > tmp[i - 1][0] - 30:
-                #             tmp[i][0] = tmp[i][0] - 30
-                #         elif tmp[i - 1][0] < tmp[i][0] < tmp[i - 1][0] + 30:
-                #             tmp[i][0] = tmp[i][0] + 30
-                # if row_cnt == 2 or row_cnt == 4 or row_cnt == 6:
-                #     row_fixations[len(row_fixations)-1] = row_fixations[len(row_fixations)-1] + tmp
-                # else:
-                row_fixations.append(tmp)
-                tmp = [fixation]
-                row_cnt += 1
-            else:
-                tmp.append(fixation)
-            pre_fixation = fixation
-        if len(tmp) != 0:
+    row_cnt = 1
+    for fixation in fixations:
+        if get_euclid_distance(fixation[0], pre_fixation[0], fixation[1], pre_fixation[1]) > distance:
+            row_cnt += 1
+            # if row_cnt == 19:
+            #     tmp.append(fixation)
+            # else:
             row_fixations.append(tmp)
             # row_fixations[len(row_fixations) - 1] = row_fixations[len(row_fixations) - 1] + tmp
         base_path = "static\\data\\heatmap\\" + str(exp.first().user) + "\\" + str(page_data_id) + "\\"
@@ -555,8 +482,12 @@ def get_row_level_heatmap(request):
     print(len(list_x))
     print("kernel_size:%d" % kernel_size)
     if kernel_size != 0:
-        filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7}, {'type': 'mean', 'window': 5},
-                   {'type': 'mean', 'window': 5}]
+        filters = [
+            {"type": "median", "window": 7},
+            {"type": "median", "window": 7},
+            {"type": "mean", "window": 5},
+            {"type": "mean", "window": 5},
+        ]
         # 滤波
         list_x = preprocess_data(list_x, filters)
         list_y = preprocess_data(list_y, filters)
@@ -690,8 +621,12 @@ def get_row_level_fixations(page_data_id, kernel_size):
     print(len(list_x))
     print("kernel_size:%d" % kernel_size)
     if kernel_size != 0:
-        filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7}, {'type': 'mean', 'window': 5},
-                   {'type': 'mean', 'window': 5}]
+        filters = [
+            {"type": "median", "window": 7},
+            {"type": "median", "window": 7},
+            {"type": "mean", "window": 5},
+            {"type": "mean", "window": 5},
+        ]
         # 滤波
         list_x = preprocess_data(list_x, filters)
         list_y = preprocess_data(list_y, filters)
@@ -964,14 +899,14 @@ def set_title(blk, title):
 
 
 def get_word_level_nlp_attention(
-        texts,
-        page_data_id,
-        top_dict,
-        background,
-        word_list,
-        word_locations,
-        username,
-        base_path,
+    texts,
+    page_data_id,
+    top_dict,
+    background,
+    word_list,
+    word_locations,
+    username,
+    base_path,
 ):
     logger.info("word level attention正在分析....")
     nlp_attentions = ["topic_relevant", "word_attention", "word_difficulty"]
@@ -996,7 +931,7 @@ def get_word_level_nlp_attention(
         alpha = 0.3  # 设置覆盖图片的透明度
         blk = np.zeros(image.shape, np.uint8)
         # (1080, 1920, 3)
-        blk[0:image.shape[0] - 1, 0:image.shape[1] - 1] = 255
+        blk[0 : image.shape[0] - 1, 0 : image.shape[1] - 1] = 255
         print(image.shape)
         title = str(page_data_id) + "-" + str(username) + "-" + str(attention)
         # 设置标题
@@ -1031,14 +966,14 @@ def get_word_level_nlp_attention(
 
 
 def get_sentence_level_nlp_attention(
-        texts,
-        sentence_list,
-        background,
-        word_locations,
-        page_data_id,
-        top_sentence_dict,
-        username,
-        base_path,
+    texts,
+    sentence_list,
+    background,
+    word_locations,
+    page_data_id,
+    top_sentence_dict,
+    username,
+    base_path,
 ):
     logger.info("sentence level attention正在分析....")
     sentence_attentions = ["sentence_attention", "sentence_difficulty"]
@@ -1074,7 +1009,7 @@ def get_sentence_level_nlp_attention(
         color = 255
         alpha = 0.3  # 设置覆盖图片的透明度
         blk = np.zeros(image.shape, np.uint8)
-        blk[0:image.shape[0] - 1, 0:image.shape[1] - 1] = 255
+        blk[0 : image.shape[0] - 1, 0 : image.shape[1] - 1] = 255
 
         title = str(page_data_id) + "-" + str(username) + "-" + attention
         set_title(blk, title)
@@ -1121,16 +1056,16 @@ def get_sentence_level_nlp_attention(
 
 
 def get_visual_attention(
-        page_data_id,
-        username,
-        gaze_x,
-        gaze_y,
-        gaze_t,
-        background,
-        base_path,
-        word_list,
-        word_locations,
-        top_dict,
+    page_data_id,
+    username,
+    gaze_x,
+    gaze_y,
+    gaze_t,
+    background,
+    base_path,
+    word_list,
+    word_locations,
+    top_dict,
 ):
     logger.info("visual attention正在分析....")
 
@@ -1485,9 +1420,8 @@ def gaze_to_input(coordinates, window):
         # 计算速度、方向，作为模型输入
         time = (coordinates[end][2] - coordinates[begin][2]) / 100
         speed = (
-                get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1],
-                                    coordinates[end][1])
-                / time
+            get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1], coordinates[end][1])
+            / time
         )
         direction = math.atan2(coordinates[end][1] - coordinates[begin][1], coordinates[end][0] - coordinates[begin][0])
         coordinate.append(speed)
@@ -1545,9 +1479,8 @@ def coor_to_input(coordinates, window):
         # 计算速度、方向，作为模型输入
         time = (coordinates[end][2] - coordinates[begin][2]) / 100
         speed = (
-                get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1],
-                                    coordinates[end][1])
-                / time
+            get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1], coordinates[end][1])
+            / time
         )
         direction = math.atan2(coordinates[end][1] - coordinates[begin][1], coordinates[end][0] - coordinates[begin][0])
         coordinate.append(speed)
@@ -1640,7 +1573,7 @@ def get_fixation_by_time(request):
 
     # 2. 准备gaze点
     row = -1
-    csv = "jupyter\\dataset\\2022-11-20-test-gaze.csv"
+    csv = "jupyter\\dataset\\all-gaze-time.csv"
     file = pd.read_csv(csv)
     for i, r in file.iterrows():
         if str(r["experiment_id"]) == exp_id and str(r["time"]) == time:
@@ -1662,8 +1595,12 @@ def get_fixation_by_time(request):
     print(type(list_x))
     # 时序滤波
     if filter:
-        filters = [{'type': 'median', 'window': 7}, {'type': 'median', 'window': 7}, {'type': 'mean', 'window': 5},
-                   {'type': 'mean', 'window': 5}]
+        filters = [
+            {"type": "median", "window": 7},
+            {"type": "median", "window": 7},
+            {"type": "mean", "window": 5},
+            {"type": "mean", "window": 5},
+        ]
         list_x = preprocess_data(list_x, filters)
         list_y = preprocess_data(list_y, filters)
 
