@@ -17,7 +17,10 @@ from django.urls import path
 
 from . import views
 
-urlpatterns = [path("check/", views.classify_gaze_2_label_in_pic),
-               path("tmp_pic/", views.generate_tmp_pic),
-               path("dataset/", views.get_dataset),
-               path("interval/", views.get_interval_dataset)]
+urlpatterns = [
+    path("check/", views.classify_gaze_2_label_in_pic),
+    path("tmp_pic/", views.generate_tmp_pic),
+    path("dataset/", views.get_dataset),
+    path("interval/", views.get_interval_dataset),
+    path("fix_word_map/", views.add_fixation_to_word),
+]
