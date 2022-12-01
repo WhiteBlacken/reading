@@ -52,11 +52,19 @@ def add_fixation_to_word(request):
     fix_index_list = []
 
     pre_fix_word_index = -1
-    border, rows, danger_zone = textarea(pageData.location)
     word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)  # 获取单词和句子对应的index
     for i, fix in enumerate(fixations):
+        # 取前三个fix坐标的均值
+        j = i - 1
+        pre_fixations = []
+        while j > 0:
+            if i - j > 3:
+                break
+            pre_fixations.append(fixations[j])
+            j -= 1
+        print(pre_fixations)
         index = get_item_index_x_y(
-            pageData.location, fix[0], fix[1], pre_fix_word_index=pre_fix_word_index, danger_zone=danger_zone, cnt=i
+            pageData.location, fix[0], fix[1], pre_fix_word_index=pre_fix_word_index, cnt=i, pre_fixation=pre_fixations
         )
         if index != -1:
             word_index_list.append(word_list[index])
