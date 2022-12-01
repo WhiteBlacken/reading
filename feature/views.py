@@ -35,6 +35,51 @@ TODO list
 """
 
 
+def add_fixation_to_word(request):
+    page_data_id = request.GET.get("id")
+    begin = request.GET.get("begin", 0)
+    end = request.GET.get("end", -1)
+    pageData = PageData.objects.get(id=page_data_id)
+
+    gaze_points = format_gaze(pageData.gaze_x, pageData.gaze_y, pageData.gaze_t)[begin:end]
+    # generate fixations
+    fixations = detect_fixations(gaze_points)  # todo:default argument should be adjust to optimal--fixed
+    # 单独对y轴做滤波
+    fixations = keep_row(fixations)
+
+    word_index_list = []
+    page_id_list = []
+    fix_index_list = []
+
+    pre_fix_word_index = -1
+    border, rows, danger_zone = textarea(pageData.location)
+    word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)  # 获取单词和句子对应的index
+    for i, fix in enumerate(fixations):
+        index = get_item_index_x_y(
+            pageData.location, fix[0], fix[1], pre_fix_word_index=pre_fix_word_index, danger_zone=danger_zone, cnt=i
+        )
+        if index != -1:
+            word_index_list.append(word_list[index])
+            fix_index_list.append(i)
+            page_id_list.append(pageData.id)
+            pre_fix_word_index = index
+
+    df = pd.DataFrame(
+        {
+            "word": word_index_list,
+            "fix_index": fix_index_list,
+            "page_id": page_id_list,
+        }
+    )
+    path = "jupyter\\dataset\\" + "fix-word-map.csv"
+
+    if os.path.exists(path):
+        df.to_csv(path, index=False, mode="a", header=False)
+    else:
+        df.to_csv(path, index=False, mode="a")
+    return JsonResponse({"status": "ok"})
+
+
 def classify_gaze_2_label_in_pic(request):
     page_data_id = request.GET.get("id")
     begin = request.GET.get("begin", 0)
@@ -134,7 +179,7 @@ def get_dataset(request):
     #     [636],
     #     [637, 641],
     # ]
-    optimal_list = [[598, 599]]
+    optimal_list = [[603, 604]]
 
     # users = ['luqi', 'qxy', 'zhaoyifeng', 'ln']
     # users = ['qxy']
@@ -368,7 +413,7 @@ def get_dataset(request):
                         "backward_times_of_sentence": backward_times_of_sentence_all,
                     }
                 )
-                path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "test-all.csv"
+                path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "-test-all.csv"
 
                 if os.path.exists(path):
                     df.to_csv(path, index=False, mode="a", header=False)
@@ -421,7 +466,7 @@ def get_dataset(request):
             "acc": acc,
         }
     )
-    path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "test-all-gaze.csv"
+    path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "-test-all-gaze.csv"
     if os.path.exists(path):
         data.to_csv(path, index=False, mode="a", header=False)
     else:
