@@ -341,7 +341,9 @@ def textarea(locations: str, danger_r=8) -> tuple:
             rows.append(row)
 
             row_length = row["right"] - row["left"]
-            range_x = [row["left"] + (1 / 5) * row_length, row["right"]]
+            range_x = [row["left"]
+                       + (1 / 5) * row_length
+                       , row["right"]]
             range_y = [loc["top"] - danger_r, loc["top"] + danger_r]
             zone = [range_x, range_y]
             danger_zone.append(zone)
