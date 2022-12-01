@@ -135,17 +135,20 @@ def reading_times(words_fixations):
     return reading_times
 
 
-def get_item_index_x_y(location, x, y, pre_fix_word_index=-1, danger_zone=None, cnt=0):
+def get_item_index_x_y(location, x, y, pre_fix_word_index=-1, cnt=0, pre_fixation=None, dist=7):
     """根据所有item的位置，当前给出的x,y,判断其在哪个item里 分为word level和row level"""
     # 解析location
-    if danger_zone is None:
-        danger_zone = []
     location = json.loads(location)
 
-    if in_danger_zone(x, y, danger_zone) and pre_fix_word_index != -1:
+    if pre_fixation is not None:
         loc = location[pre_fix_word_index]
-        y = (loc["top"] + loc["bottom"]) / 2
-        print(f"{cnt}在danger zone")
+        x_list = [x[0] for x in pre_fixation]
+        y_list = [x[1] for x in pre_fixation]
+        pre_x = np.mean(np.array(x_list))
+        pre_y = np.mean(np.array(y_list))
+
+        if math.fabs(y - pre_y) <= dist and pre_x - x < 500:
+            y = (loc["top"] + loc["bottom"]) / 2
     # 先找是否正好在范围内
     for i, word in enumerate(location):
         if word["left"] <= x <= word["right"] and word["top"] <= y <= word["bottom"]:
