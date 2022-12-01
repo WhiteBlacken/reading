@@ -210,7 +210,7 @@ def gaze_map(gaze_points: list, background: str, base_path: str, filename: str) 
 def show_fixations_and_saccades(fixations: list, saccades: list, background: str):
     canvas = cv2.imread(background)
     canvas = paint_fixations(canvas, fixations)
-    # canvas = paint_saccades(canvas, saccades)
+    canvas = paint_saccades(canvas, saccades)
 
     return canvas
 
@@ -229,7 +229,7 @@ def paint_line_on_fixations(fixations: list, lines: list, background: str):
     return canvas
 
 
-def paint_fixations(image, fixations, interval=1, label=1, line=True):
+def paint_fixations(image, fixations, interval=1, label=3, line=True):
     canvas = image
     fixations = [x for i, x in enumerate(fixations) if i % interval == 0]
     for i, fix in enumerate(fixations):

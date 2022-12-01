@@ -391,32 +391,45 @@ def get_visual_heatmap(request):
 
 def get_row_level_fixations_map(request):
     print("执行了")
-    page_data_id = request.GET.get("id")
-    pageData = PageData.objects.get(id=page_data_id)
-    exp = Experiment.objects.filter(id=pageData.experiment_id)
+    page_data_ids = request.GET.get("id").split(',')
+    print(page_data_ids)
+    for page_data_id in page_data_ids:
+        pageData = PageData.objects.get(id=page_data_id)
+        exp = Experiment.objects.filter(id=pageData.experiment_id)
 
-    begin = request.GET.get("begin", 0)
-    end = request.GET.get("end", -1)
-    coordinates = format_gaze(pageData.gaze_x, pageData.gaze_y, pageData.gaze_t)[begin:end]
+        begin = request.GET.get("begin", 0)
+        end = request.GET.get("end", -1)
+        coordinates = format_gaze(pageData.gaze_x, pageData.gaze_y, pageData.gaze_t)[begin:end]
+        fixations = detect_fixations(coordinates)
 
-    fixations = detect_fixations(coordinates)
-
-    # 按行切割gaze点
-    pre_fixation = fixations[0]
-    distance = 600
-    row_fixations = []
-    tmp = []
-
-    row_cnt = 1
-    for fixation in fixations:
-        if get_euclid_distance(fixation[0], pre_fixation[0], fixation[1], pre_fixation[1]) > distance:
-            row_cnt += 1
-            # if row_cnt == 19:
-            #     tmp.append(fixation)
-            # else:
+        # 按行切割gaze点
+        pre_fixation = fixations[0]
+        distance = 600
+        row_fixations = []
+        tmp = []
+        # print("fixations: " + str(fixations))
+        row_cnt = 1
+        for fixation in fixations:
+            if get_euclid_distance(fixation[0], pre_fixation[0], fixation[1], pre_fixation[1]) > distance:
+                row_cnt += 1
+                # if row_cnt == 19:
+                #     tmp.append(fixation)
+                # else:
+                row_fixations.append(tmp)
+                tmp = [fixation]
+            else:
+                tmp.append(fixation)
+            pre_fixation = fixation
+        if len(tmp) != 0:
             row_fixations.append(tmp)
-            # row_fixations[len(row_fixations) - 1] = row_fixations[len(row_fixations) - 1] + tmp
+                # row_fixations[len(row_fixations) - 1] = row_fixations[len(row_fixations) - 1] + tmp
         base_path = "static\\data\\heatmap\\" + str(exp.first().user) + "\\" + str(page_data_id) + "\\"
+
+        page_data = PageData.objects.get(id=page_data_id)
+        path = "static/data/heatmap/" + str(exp.first().user) + "/" + str(page_data_id) + "/"
+        filename = "background.png"
+
+        generate_pic_by_base64(page_data.image, path, filename)
 
         if not os.path.exists(base_path + "fixation\\"):
             os.makedirs(base_path + "fixation\\")
@@ -438,11 +451,6 @@ def get_row_level_fixations_map(request):
             #             fixs[i][0] = coordinates[i][0] - 30
             #         elif fixs[i - 1][0] < fixs[i][0] < fixs[i - 1][0] + 30:
             #             fixs[i][0] = fixs[i][0] + 30
-            page_data = PageData.objects.get(id=page_data_id)
-            path = "static/data/heatmap/" + str(exp.first().user) + "/" + str(page_data_id) + "/"
-            filename = "background.png"
-
-            generate_pic_by_base64(page_data.image, path, filename)
             # if i == 1:
             #     paint_gaze_on_pic(fixs, path + filename,
             #                       base_path + str(exp.first().user) + "_sentence_observation_5_" + str(i+1) + ".png")

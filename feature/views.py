@@ -66,6 +66,7 @@ def classify_gaze_2_label_in_pic(request):
     # generate saccades
     saccades, velocities = detect_saccades(fixations)  # todo:default argument should be adjust to optimal
     # plt using fixations and saccade
+    print("fixations: " + str(fixations[36][2]) + ", " + str(fixations[37][2]) + ", " + str(fixations[38][2]))
     fixation_map = show_fixations_and_saccades(fixations, saccades, background)
 
     # todo 减少IO操作

@@ -292,18 +292,18 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
     ax.imshow(img)
     plt.axis('off')
     for i, coordinate in enumerate(coordinates):
-        # if i % 3 == 0:
-        #     if i == 3 or i == 6:
-        #         ax.text(coordinate[0],
-        #                 coordinate[1] - cal_fix_radius(coordinate[2]) - 20, str(i),
-        #                 family='Times New Roman', fontsize=7, verticalalignment='center',
-        #                 horizontalalignment='center', color="black")
-        #     elif i == 9 or i == 12:
-        #         ax.text(coordinate[0],
-        #                 coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
-        #                 family='Times New Roman', fontsize=7, verticalalignment='center',
-        #                 horizontalalignment='center', color="black")
-        #     else:
+    #     # if i % 3 == 0:
+    #     #     if i == 3 or i == 6:
+    #     #         ax.text(coordinate[0],
+    #     #                 coordinate[1] - cal_fix_radius(coordinate[2]) - 20, str(i),
+    #     #                 family='Times New Roman', fontsize=7, verticalalignment='center',
+    #     #                 horizontalalignment='center', color="black")
+    #     #     elif i == 9 or i == 12:
+    #     #         ax.text(coordinate[0],
+    #     #                 coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
+    #     #                 family='Times New Roman', fontsize=7, verticalalignment='center',
+    #     #                 horizontalalignment='center', color="black")
+    #     #     else:
         if i % 5 == 0:
             ax.text(cal_annotate_loc(i, coordinates)[0], cal_annotate_loc(i, coordinates)[1], str(i),
                 family='Times New Roman', fontsize=7, verticalalignment='center',
@@ -311,7 +311,7 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
     # else:
     #     ax.text(coordinate[0], coordinate[1], str(i + 1), fontsize=5, verticalalignment='center',
     #             horizontalalignment='center', color="tomato")
-    # plt.show()
+    plt.show()
     fig.savefig(save_path, dpi=200)
 
 
