@@ -28,7 +28,14 @@ from feature.utils import (
 )
 from onlineReading.views import compute_label, coor_to_input
 from pyheatmap import myHeatmap
-from utils import format_gaze, generate_pic_by_base64, get_item_index_x_y, get_word_and_sentence_from_text
+from semantic_attention import get_word_difficulty
+from utils import (
+    format_gaze,
+    generate_pic_by_base64,
+    get_index_in_row_only_use_x,
+    get_item_index_x_y,
+    get_word_and_sentence_from_text,
+)
 
 """
 所有与eye gaze计算的函数都写在这里
@@ -55,11 +62,11 @@ def add_fixation_to_word(request):
     page_id_list = []
     fix_index_list = []
 
-    pre_fix_word_index = -1
     word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)  # 获取单词和句子对应的index
     border, rows, danger_zone, len_per_word = textarea(pageData.location)
     locations = json.loads(pageData.location)
 
+    assert len(word_list) == len(locations)
     adjust_fixations = []
     # 确定初始的位置
     for i, fix in enumerate(fixations):
@@ -117,6 +124,8 @@ def add_fixation_to_word(request):
 
     # 按行调整fixation
     result_fixations = []
+    row_sequence = []
+    row_level_fix = []
     for i, sequence in enumerate(sequence_fixations):
         y_list = np.array([x[1] for x in sequence])
         y_mean = np.mean(y_list)
@@ -128,22 +137,62 @@ def add_fixation_to_word(request):
             row_index_this_fix = row_index_of_sequence(rows, y)
             rows_per_fix.append(row_index_this_fix)
         print(f"fix偏移占比{1 - np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix)}")
-        print("-----------------")
-        if np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix) < 0.5:
+        if np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix) < 1.1:
             # 根据语义去调整fix的位置
-            [row_index - 1, row_index, row_index + 1] if row_index > 0 else [row_index, row_index + 1]
-
+            candidate_rows = [row_index - 1, row_index, row_index + 1] if row_index > 0 else [row_index, row_index + 1]
+            final_row = -1
+            max_corr = -1
+            for i, candidate_row in enumerate(candidate_rows):
+                row = rows[candidate_row]
+                words = word_list[row["begin_index"] : row["end_index"] + 1]
+                word_loc_in_row = locations[row["begin_index"] : row["end_index"] + 1]
+                # familiar_score = [get_word_familiar_rate(x) for x in words]  # text feature
+                familiar_score = [get_word_difficulty(x) for x in words]  # text feature
+                # 归一化 且familiar score是越大越简单，对取值进行了翻转(1-x)
+                # familiar_score = [1 - (x - min(familiar_score)) / (max(familiar_score) - min(familiar_score)) for x in
+                #                   familiar_score]
+                familiar_score = [
+                    (x - min(familiar_score)) / (max(familiar_score) - min(familiar_score)) for x in familiar_score
+                ]
+                number_of_fixations = [0 for _ in words]
+                for fix in sequence:
+                    index = get_index_in_row_only_use_x(word_loc_in_row, fix[0])
+                    if index != -1:
+                        number_of_fixations[index] += 1
+                # print(words)
+                # print(familiar_score)
+                # print(number_of_fixations)
+                corr = sum(np.multiply(familiar_score, number_of_fixations))
+                if corr > max_corr:
+                    final_row = candidate_row
+                    max_corr = corr
+                print(f"相关性大小:{corr}")
+            if final_row != -1:
+                print(f"将行号右{row_index}改为{final_row}")
+                row_index = final_row
+            print("------")
         if row_index != -1:
             adjust_y = (rows[row_index]["top"] + rows[row_index]["bottom"]) / 2
             result_fixation = [[x[0], adjust_y, x[2]] for x in sequence]
             result_fixations.extend(result_fixation)
+<<<<<<< HEAD
         else:
             print("error")
+=======
+            row_sequence.append(row_index)
+            row_level_fix.append(result_fixation)
+>>>>>>> 8f9f0bd (save work)
     # 重要的就是把有可能的错的行挑出来
     base_path = "pic\\" + str(page_data_id) + "\\"
     background = generate_pic_by_base64(pageData.image, base_path, "background.png")
     fix_img = show_fixations(result_fixations, background)
     cv2.imwrite(base_path + "fix_adjust.png", fix_img)
+    print(f"row_index:{row_sequence}")
+
+    row_level_pic = []
+    for fix in row_level_fix:
+        row_level_pic.append(show_fixations(fix, background))
+
     return HttpResponse(1)
     for i, fix in enumerate(fixations):
         # 取前三个fix坐标的均值
@@ -155,14 +204,11 @@ def add_fixation_to_word(request):
             pre_fixations.append(fixations[j])
             j -= 1
         print(pre_fixations)
-        index = get_item_index_x_y(
-            pageData.location, fix[0], fix[1], pre_fix_word_index=pre_fix_word_index, pre_fixation=pre_fixations
-        )
+        index = get_item_index_x_y(pageData.location, fix[0], fix[1])
         if index != -1:
             word_index_list.append(word_list[index])
             fix_index_list.append(i)
             page_id_list.append(pageData.id)
-            pre_fix_word_index = index
 
     df = pd.DataFrame(
         {

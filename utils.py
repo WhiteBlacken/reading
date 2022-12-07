@@ -135,6 +135,13 @@ def reading_times(words_fixations):
     return reading_times
 
 
+def get_index_in_row_only_use_x(row: list, x: int):
+    for i, word in enumerate(row):
+        if word["left"] <= x <= word["right"]:
+            return i
+    return -1
+
+
 def get_item_index_x_y(location, x, y):
     """根据所有item的位置，当前给出的x,y,判断其在哪个item里 分为word level和row level"""
     # 解析location
@@ -983,16 +990,15 @@ def join_two_image(img_1, img_2, save_path, flag="horizontal"):  # 默认是水�
 
 
 # 处理n张图的垂直拼接
-def join_images_vertical(img_list, save_path):
+def join_images_vertical(img_list, save_path, is_filename=True):
     vertical_size = 0
     horizontal_size = 0
 
     for i, img in enumerate(img_list):
         image = Image.open(img)
-        # if i == 1:
-        #     image.save("static\\data\\heatmap\\qxy\\1484\\qxy_sentence_observation_5_2.png")
         horizontal_size = image.size[0]
         vertical_size += image.size[1]
+
     joint = Image.new("RGB", (horizontal_size, vertical_size))
 
     x = 0

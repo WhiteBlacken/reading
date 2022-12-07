@@ -62,6 +62,18 @@ def get_word_familiar_rate(word_text):
     return word_fam_map.get(capital_word, 0)
 
 
+def get_word_difficulty(word_text):
+    score = 0
+    fam = get_word_familiar_rate(word_text)
+    if textstat.syllable_count(word_text) > 2:
+        score += 1
+    if len(word_text) > 7:
+        score += 1
+    if fam < 482:
+        score += 1
+    return score
+
+
 def get_docx_text(docx_path):
     document = Document(docx_path)
     read_text = ""
