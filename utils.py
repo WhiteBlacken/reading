@@ -749,6 +749,10 @@ def meanFilter(data, win):
     return res
 
 
+def normalize(data: list) -> list:
+    return [(x - min(data)) / (max(data) - min(data)) for x in data]
+
+
 def get_importance(text):
     """获取单词的重要性"""
     from keybert import KeyBERT
