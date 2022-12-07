@@ -78,9 +78,20 @@ def add_fixation_to_word(request):
     sequence_fixations = []
     begin_index = 0
     for i, fix in enumerate(adjust_fixations):
+        sequence = adjust_fixations[begin_index: i]
+        y_list = np.array([x[1] for x in sequence])
+        y_mean = np.mean(y_list)
+        row_index = row_index_of_sequence(rows, y_mean)
+        word_num_in_row = rows[row_index]['end_index'] - rows[row_index]['begin_index'] + 1
         for j in range(i, begin_index, -1):
-            if adjust_fixations[j][4] - fix[4] > 13:
-                sequence_fixations.append(adjust_fixations[begin_index : j + 1])
+            if adjust_fixations[j][4] - fix[4] > int(word_num_in_row / 2):
+                # tmp = adjust_fixations[begin_index : j + 1]
+                # data = pd.DataFrame(tmp, columns=['x', 'y', 't', 'index', 'index_in_row', 'row_index'])
+                # if len(set(data['row_index'])) > 1:
+                #     row_indexs = list(data['row_index'])
+                #     for row_ind in range(len(row_indexs)):
+
+                sequence_fixations.append(adjust_fixations[begin_index: j + 1])
                 begin_index = i
                 break
     if begin_index != len(adjust_fixations) - 1:
