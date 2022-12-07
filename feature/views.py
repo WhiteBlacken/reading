@@ -74,6 +74,10 @@ def add_fixation_to_word(request):
             if index_in_row != -1:
                 adjust_fix = [fix[0], fix[1], fix[2], index, index_in_row, row_index]
                 adjust_fixations.append(adjust_fix)
+            # else:
+            #     print('index_in_row: ' + str(i))
+        # else:
+        #     print('index: ' + str(i))
     # 切割子序列
     sequence_fixations = []
     begin_index = 0
@@ -85,20 +89,27 @@ def add_fixation_to_word(request):
         word_num_in_row = rows[row_ind]['end_index'] - rows[row_ind]['begin_index'] + 1
         for j in range(i, begin_index, -1):
             if adjust_fixations[j][4] - fix[4] > int(word_num_in_row / 2):
-                tmp = adjust_fixations[begin_index : j + 1]
+                tmp = adjust_fixations[begin_index: j + 1]
                 mean_interval = 0
                 for f in range(1, len(tmp)):
-                    mean_interval = mean_interval + (tmp[f][0] - tmp[f-1][0])
+                    mean_interval = mean_interval + abs(tmp[f][0] - tmp[f-1][0])
                 mean_interval = mean_interval / (len(tmp) - 1)
+                print("mean_interval: " + str(round(mean_interval, 3)))
                 data = pd.DataFrame(tmp, columns=['x', 'y', 't', 'index', 'index_in_row', 'row_index'])
                 if len(set(data['row_index'])) > 1:
                     row_indexs = list(data['row_index'])
-                    for ind in range(len(row_indexs)):
+                    start = 0
+                    for ind in range(start, len(row_indexs)):
                         if row_indexs[ind] < row_indexs[ind-1] and abs(tmp[ind][0] - tmp[ind-1][0]) > mean_interval * 2:
-                            sequence_fixations.append(tmp[0:ind])
-                            sequence_fixations.append(tmp[ind:-1])
+                            sequence_fixations.append(tmp[start:ind])
+                            start = ind
+                    if 0 < start < len(row_indexs) - 1:
+                        sequence_fixations.append(tmp[start: -1])
+                    elif start == 0:
+                        sequence_fixations.append(tmp)
                 else:
-                    sequence_fixations.append(adjust_fixations[begin_index: j + 1])
+                    sequence_fixations.append(tmp)
+                # sequence_fixations.append(adjust_fixations[begin_index:i])
                 begin_index = i
                 break
     if begin_index != len(adjust_fixations) - 1:
@@ -111,6 +122,7 @@ def add_fixation_to_word(request):
         y_mean = np.mean(y_list)
         row_index = row_index_of_sequence(rows, y_mean)
         print(f"定位在第{row_index}行")
+        print(len(sequence))
         rows_per_fix = []
         for y in y_list:
             row_index_this_fix = row_index_of_sequence(rows, y)
@@ -125,6 +137,8 @@ def add_fixation_to_word(request):
             adjust_y = (rows[row_index]["top"] + rows[row_index]["bottom"]) / 2
             result_fixation = [[x[0], adjust_y, x[2]] for x in sequence]
             result_fixations.extend(result_fixation)
+        else:
+            print("error")
     # 重要的就是把有可能的错的行挑出来
     base_path = "pic\\" + str(page_data_id) + "\\"
     background = generate_pic_by_base64(pageData.image, base_path, "background.png")

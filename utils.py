@@ -753,9 +753,9 @@ def get_importance(text):
 
 
 def get_word_and_sentence_from_text(content):
-    print(content)
+    # print(content)
     sentences = content.replace("...", ".").replace("..", ".").split(".")
-    print(sentences)
+    # print(sentences)
     sentence_list = []
     word_list = []
     cnt = 0

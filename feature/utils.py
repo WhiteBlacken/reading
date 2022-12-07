@@ -235,7 +235,7 @@ def paint_line_on_fixations(fixations: list, lines: list, background: str):
     return canvas
 
 
-def paint_fixations(image, fixations, interval=1, label=3, line=True):
+def paint_fixations(image, fixations, interval=1, label=1, line=True):
     canvas = image
     fixations = [x for i, x in enumerate(fixations) if i % interval == 0]
     for i, fix in enumerate(fixations):
@@ -384,8 +384,8 @@ def textarea(locations: str, danger_r=8) -> tuple:
         "right": rows[0]["right"],  # 实际上right不完全相同
         "bottom": rows[-1]["bottom"],
     }
-    print("word_num")
-    print(word_num_per_row)
+    # print("word_num")
+    # print(word_num_per_row)
     return border, rows, danger_zone, (rows[0]["right"] - rows[0]["left"]) / word_num_per_row
 
 
