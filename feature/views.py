@@ -3,8 +3,9 @@ import json
 import os
 
 import cv2
+import numpy as np
 import pandas as pd
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 
 # Create your views here.
 from loguru import logger
@@ -19,8 +20,11 @@ from feature.utils import (
     join_images,
     keep_row,
     paint_fixations,
+    row_index_of_sequence,
+    show_fixations,
     show_fixations_and_saccades,
     textarea,
+    word_index_in_row,
 )
 from onlineReading.views import compute_label, coor_to_input
 from pyheatmap import myHeatmap
@@ -53,6 +57,62 @@ def add_fixation_to_word(request):
 
     pre_fix_word_index = -1
     word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)  # 获取单词和句子对应的index
+    border, rows, danger_zone, len_per_word = textarea(pageData.location)
+    locations = json.loads(pageData.location)
+
+    adjust_fixations = []
+    # 确定初始的位置
+    for i, fix in enumerate(fixations):
+        index, find_near = get_item_index_x_y(pageData.location, fix[0], fix[1])
+        if index != -1:
+            if find_near:
+                # 此处是为了可视化看起来清楚
+                loc = locations[index]
+                fix[0] = (loc["left"] + loc["right"]) / 2
+                fix[1] = (loc["top"] + loc["bottom"]) / 2
+            index_in_row = word_index_in_row(rows, index)
+            if index_in_row != -1:
+                adjust_fix = [fix[0], fix[1], fix[2], index, index_in_row]
+                adjust_fixations.append(adjust_fix)
+    # 切割子序列
+    sequence_fixations = []
+    begin_index = 0
+    for i, fix in enumerate(adjust_fixations):
+        for j in range(i, begin_index, -1):
+            if adjust_fixations[j][4] - fix[4] > 13:
+                sequence_fixations.append(adjust_fixations[begin_index : j + 1])
+                begin_index = i
+                break
+    if begin_index != len(adjust_fixations) - 1:
+        sequence_fixations.append(adjust_fixations[begin_index:-1])
+
+    # 按行调整fixation
+    result_fixations = []
+    for i, sequence in enumerate(sequence_fixations):
+        y_list = np.array([x[1] for x in sequence])
+        y_mean = np.mean(y_list)
+        row_index = row_index_of_sequence(rows, y_mean)
+        print(f"定位在第{row_index}行")
+        rows_per_fix = []
+        for y in y_list:
+            row_index_this_fix = row_index_of_sequence(rows, y)
+            rows_per_fix.append(row_index_this_fix)
+        print(f"fix偏移占比{1 - np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix)}")
+        print("-----------------")
+        if np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix) < 0.5:
+            # 根据语义去调整fix的位置
+            [row_index - 1, row_index, row_index + 1] if row_index > 0 else [row_index, row_index + 1]
+
+        if row_index != -1:
+            adjust_y = (rows[row_index]["top"] + rows[row_index]["bottom"]) / 2
+            result_fixation = [[x[0], adjust_y, x[2]] for x in sequence]
+            result_fixations.extend(result_fixation)
+    # 重要的就是把有可能的错的行挑出来
+    base_path = "pic\\" + str(page_data_id) + "\\"
+    background = generate_pic_by_base64(pageData.image, base_path, "background.png")
+    fix_img = show_fixations(result_fixations, background)
+    cv2.imwrite(base_path + "fix_adjust.png", fix_img)
+    return HttpResponse(1)
     for i, fix in enumerate(fixations):
         # 取前三个fix坐标的均值
         j = i - 1
@@ -64,7 +124,7 @@ def add_fixation_to_word(request):
             j -= 1
         print(pre_fixations)
         index = get_item_index_x_y(
-            pageData.location, fix[0], fix[1], pre_fix_word_index=pre_fix_word_index, cnt=i, pre_fixation=pre_fixations
+            pageData.location, fix[0], fix[1], pre_fix_word_index=pre_fix_word_index, pre_fixation=pre_fixations
         )
         if index != -1:
             word_index_list.append(word_list[index])

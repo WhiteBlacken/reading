@@ -23,7 +23,8 @@ from scipy import signal
 from scipy.spatial.distance import pdist
 
 import onlineReading.utils
-from utils import get_item_index_x_y
+
+# from utils import get_item_index_x_y
 
 # 设备相关信息（目前仅支持一种设备）
 
@@ -206,6 +207,12 @@ def gaze_map(gaze_points: list, background: str, base_path: str, filename: str) 
     return base_path + filename
 
 
+def show_fixations(fixations: list, background: str):
+    canvas = cv2.imread(background)
+    canvas = paint_fixations(canvas, fixations)
+    return canvas
+
+
 def show_fixations_and_saccades(fixations: list, saccades: list, background: str):
     canvas = cv2.imread(background)
     canvas = paint_fixations(canvas, fixations)
@@ -327,16 +334,24 @@ def textarea(locations: str, danger_r=8) -> tuple:
     pre_top = locations[0]["top"]
     begin_left = locations[0]["left"]
 
+    word_num_per_row = 0
+    first_row = True
+    begin_index = 0
     for i, loc in enumerate(locations):
+        if first_row:
+            word_num_per_row += 1
         if i == 0:
             continue
         if loc["top"] != pre_top:
+            first_row = False
             # 发生了换行
             row = {
                 "left": begin_left,
                 "top": locations[i - 1]["top"],
                 "right": locations[i - 1]["right"],
                 "bottom": locations[i - 1]["bottom"],
+                "begin_index": begin_index,
+                "end_index": i - 1,
             }
             rows.append(row)
 
@@ -350,10 +365,18 @@ def textarea(locations: str, danger_r=8) -> tuple:
 
             pre_top = loc["top"]
             begin_left = loc["left"]
+            begin_index = i
 
         if i == len(locations) - 1:
             # 最后一行不可能发生换行
-            row = {"left": begin_left, "top": loc["top"], "right": loc["right"], "bottom": loc["bottom"]}
+            row = {
+                "left": begin_left,
+                "top": loc["top"],
+                "right": loc["right"],
+                "bottom": loc["bottom"],
+                "begin_index": begin_index,
+                "end_index": i,
+            }
             rows.append(row)
     border = {
         "left": rows[0]["left"],
@@ -361,7 +384,9 @@ def textarea(locations: str, danger_r=8) -> tuple:
         "right": rows[0]["right"],  # 实际上right不完全相同
         "bottom": rows[-1]["bottom"],
     }
-    return border, rows, danger_zone
+    print("word_num")
+    print(word_num_per_row)
+    return border, rows, danger_zone, (rows[0]["right"] - rows[0]["left"]) / word_num_per_row
 
 
 def detect_wrap(fixations: list, rows: list) -> list:
@@ -505,6 +530,20 @@ def eye_gaze_to_feature(gaze, word_list, sentence_list, words_location, begin, p
     )
 
 
+def word_index_in_row(rows, word_index):
+    for i, row in enumerate(rows):
+        if row["end_index"] >= word_index >= row["begin_index"]:
+            return word_index - row["begin_index"]
+    return -1
+
+
+def row_index_of_sequence(rows, y):
+    for i, row in enumerate(rows):
+        if row["bottom"] >= y >= row["top"]:
+            return i
+    return -1
+
+
 if __name__ == "__main__":
     gaze_data = [[2, 3, 3], [2, 3, 3], [3, 3, 3]]
     gaze_data1 = [[2, 3], [2, 3], [3, 3]]
@@ -560,7 +599,8 @@ if __name__ == "__main__":
 
     # 测试文本区域的分割
     location = '[{"left":330,"top":95,"right":435.109375,"bottom":147},{"left":435.109375,"top":95,"right":506,"bottom":147},{"left":506,"top":95,"right":627.59375,"bottom":147},{"left":627.59375,"top":95,"right":734.171875,"bottom":147},{"left":734.171875,"top":95,"right":809.953125,"bottom":147},{"left":809.953125,"top":95,"right":865.109375,"bottom":147},{"left":865.109375,"top":95,"right":938.46875,"bottom":147},{"left":938.46875,"top":95,"right":1044.28125,"bottom":147},{"left":1044.28125,"top":95,"right":1118.265625,"bottom":147},{"left":1118.265625,"top":95,"right":1243.421875,"bottom":147},{"left":1243.421875,"top":95,"right":1282.53125,"bottom":147},{"left":1282.53125,"top":95,"right":1382.421875,"bottom":147},{"left":1382.421875,"top":95,"right":1440.578125,"bottom":147},{"left":1440.578125,"top":95,"right":1568.078125,"bottom":147},{"left":1568.078125,"top":95,"right":1638.1875,"bottom":147},{"left":1638.1875,"top":95,"right":1746.53125,"bottom":147},{"left":330,"top":147,"right":405.953125,"bottom":199},{"left":405.953125,"top":147,"right":444.171875,"bottom":199},{"left":444.171875,"top":147,"right":497.515625,"bottom":199},{"left":497.515625,"top":147,"right":613.734375,"bottom":199},{"left":613.734375,"top":147,"right":653.734375,"bottom":199},{"left":653.734375,"top":147,"right":791.0625,"bottom":199},{"left":791.0625,"top":147,"right":902.59375,"bottom":199},{"left":902.59375,"top":147,"right":948.640625,"bottom":199},{"left":948.640625,"top":147,"right":1001.984375,"bottom":199},{"left":1001.984375,"top":147,"right":1101.703125,"bottom":199},{"left":1101.703125,"top":147,"right":1170.203125,"bottom":199},{"left":1170.203125,"top":147,"right":1252.25,"bottom":199},{"left":1252.25,"top":147,"right":1299.375,"bottom":199},{"left":1299.375,"top":147,"right":1399.421875,"bottom":199},{"left":1399.421875,"top":147,"right":1464.40625,"bottom":199},{"left":1464.40625,"top":147,"right":1543.65625,"bottom":199},{"left":1543.65625,"top":147,"right":1637.765625,"bottom":199},{"left":1637.765625,"top":147,"right":1689.484375,"bottom":199},{"left":330,"top":199,"right":448.46875,"bottom":251},{"left":448.46875,"top":199,"right":541.5,"bottom":251},{"left":541.5,"top":199,"right":624.484375,"bottom":251},{"left":624.484375,"top":199,"right":733.171875,"bottom":251},{"left":733.171875,"top":199,"right":788.328125,"bottom":251},{"left":788.328125,"top":199,"right":849.375,"bottom":251},{"left":849.375,"top":199,"right":956.5,"bottom":251},{"left":956.5,"top":199,"right":1080.46875,"bottom":251},{"left":1080.46875,"top":199,"right":1126.515625,"bottom":251},{"left":1126.515625,"top":199,"right":1179.859375,"bottom":251},{"left":1179.859375,"top":199,"right":1294.625,"bottom":251},{"left":1294.625,"top":199,"right":1333.734375,"bottom":251},{"left":1333.734375,"top":199,"right":1387.078125,"bottom":251},{"left":1387.078125,"top":199,"right":1440.515625,"bottom":251},{"left":1440.515625,"top":199,"right":1545.203125,"bottom":251},{"left":1545.203125,"top":199,"right":1675.015625,"bottom":251},{"left":1675.015625,"top":199,"right":1748.71875,"bottom":251},{"left":330,"top":251,"right":485.25,"bottom":303},{"left":485.25,"top":251,"right":554.03125,"bottom":303},{"left":554.03125,"top":251,"right":624.921875,"bottom":303},{"left":624.921875,"top":251,"right":678.265625,"bottom":303},{"left":678.265625,"top":251,"right":738.375,"bottom":303},{"left":738.375,"top":251,"right":853.109375,"bottom":303},{"left":853.109375,"top":251,"right":951.796875,"bottom":303},{"left":951.796875,"top":251,"right":990.90625,"bottom":303},{"left":990.90625,"top":251,"right":1059.796875,"bottom":303},{"left":1059.796875,"top":251,"right":1118.875,"bottom":303},{"left":1118.875,"top":251,"right":1240.96875,"bottom":303},{"left":1240.96875,"top":251,"right":1289.71875,"bottom":303},{"left":1289.71875,"top":251,"right":1333.875,"bottom":303},{"left":1333.875,"top":251,"right":1415.5625,"bottom":303},{"left":1415.5625,"top":251,"right":1508.59375,"bottom":303},{"left":1508.59375,"top":251,"right":1565.375,"bottom":303},{"left":1565.375,"top":251,"right":1644.03125,"bottom":303},{"left":1644.03125,"top":251,"right":1725.9375,"bottom":303},{"left":330,"top":303,"right":453.328125,"bottom":355},{"left":453.328125,"top":303,"right":538.875,"bottom":355},{"left":538.875,"top":303,"right":626.28125,"bottom":355},{"left":626.28125,"top":303,"right":738.328125,"bottom":355},{"left":738.328125,"top":303,"right":778.328125,"bottom":355},{"left":778.328125,"top":303,"right":844.4375,"bottom":355},{"left":844.4375,"top":303,"right":921.46875,"bottom":355},{"left":921.46875,"top":303,"right":1003.609375,"bottom":355},{"left":1003.609375,"top":303,"right":1062.6875,"bottom":355},{"left":1062.6875,"top":303,"right":1156.78125,"bottom":355},{"left":1156.78125,"top":303,"right":1274.9375,"bottom":355},{"left":1274.9375,"top":303,"right":1318.96875,"bottom":355},{"left":1318.96875,"top":303,"right":1372.3125,"bottom":355},{"left":1372.3125,"top":303,"right":1475.0625,"bottom":355},{"left":1475.0625,"top":303,"right":1614.71875,"bottom":355},{"left":1614.71875,"top":303,"right":1709.421875,"bottom":355},{"left":1709.421875,"top":303,"right":1746.609375,"bottom":355},{"left":330,"top":355,"right":383.34375,"bottom":407},{"left":383.34375,"top":355,"right":455.53125,"bottom":407},{"left":455.53125,"top":355,"right":530.15625,"bottom":407},{"left":530.15625,"top":355,"right":657.9375,"bottom":407},{"left":657.9375,"top":355,"right":736.390625,"bottom":407},{"left":736.390625,"top":355,"right":769.890625,"bottom":407},{"left":769.890625,"top":355,"right":909.40625,"bottom":407},{"left":909.40625,"top":355,"right":949.40625,"bottom":407},{"left":949.40625,"top":355,"right":1010.953125,"bottom":407},{"left":1010.953125,"top":355,"right":1085.171875,"bottom":407},{"left":1085.171875,"top":355,"right":1124.28125,"bottom":407},{"left":1124.28125,"top":355,"right":1177.625,"bottom":407},{"left":1177.625,"top":355,"right":1253.265625,"bottom":407},{"left":1253.265625,"top":355,"right":1312.671875,"bottom":407},{"left":1312.671875,"top":355,"right":1402.78125,"bottom":407},{"left":1402.78125,"top":355,"right":1497.859375,"bottom":407},{"left":1497.859375,"top":355,"right":1535.046875,"bottom":407},{"left":1535.046875,"top":355,"right":1588.390625,"bottom":407},{"left":1588.390625,"top":355,"right":1721.59375,"bottom":407},{"left":1721.59375,"top":355,"right":1786.65625,"bottom":407},{"left":330,"top":407,"right":420.28125,"bottom":459},{"left":420.28125,"top":407,"right":502.875,"bottom":459},{"left":502.875,"top":407,"right":562.28125,"bottom":459},{"left":562.28125,"top":407,"right":645.25,"bottom":459},{"left":645.25,"top":407,"right":710.640625,"bottom":459},{"left":710.640625,"top":407,"right":768.796875,"bottom":459},{"left":768.796875,"top":407,"right":890,"bottom":459},{"left":890,"top":407,"right":920.078125,"bottom":459},{"left":920.078125,"top":407,"right":1044.078125,"bottom":459},{"left":1044.078125,"top":407,"right":1099.234375,"bottom":459},{"left":1099.234375,"top":407,"right":1198.65625,"bottom":459},{"left":1198.65625,"top":407,"right":1294.828125,"bottom":459},{"left":1294.828125,"top":407,"right":1377.421875,"bottom":459},{"left":1377.421875,"top":407,"right":1486.765625,"bottom":459},{"left":1486.765625,"top":407,"right":1523.953125,"bottom":459},{"left":1523.953125,"top":407,"right":1577.296875,"bottom":459},{"left":1577.296875,"top":407,"right":1716.984375,"bottom":459},{"left":330,"top":459,"right":444.8125,"bottom":511},{"left":444.8125,"top":459,"right":504.21875,"bottom":511},{"left":504.21875,"top":459,"right":557.5625,"bottom":511},{"left":557.5625,"top":459,"right":605.34375,"bottom":511},{"left":605.34375,"top":459,"right":715.328125,"bottom":511},{"left":715.328125,"top":459,"right":754.4375,"bottom":511},{"left":754.4375,"top":459,"right":847.453125,"bottom":511},{"left":847.453125,"top":459,"right":918.578125,"bottom":511},{"left":918.578125,"top":459,"right":962.578125,"bottom":511},{"left":962.578125,"top":459,"right":1058.84375,"bottom":511},{"left":1058.84375,"top":459,"right":1123.546875,"bottom":511},{"left":1123.546875,"top":459,"right":1228.328125,"bottom":511},{"left":1228.328125,"top":459,"right":1306.78125,"bottom":511},{"left":1306.78125,"top":459,"right":1426.53125,"bottom":511},{"left":1426.53125,"top":459,"right":1538.890625,"bottom":511},{"left":1538.890625,"top":459,"right":1629.859375,"bottom":511},{"left":1629.859375,"top":459,"right":1731.21875,"bottom":511},{"left":330,"top":511,"right":430.15625,"bottom":563},{"left":430.15625,"top":511,"right":467.34375,"bottom":563},{"left":467.34375,"top":511,"right":520.6875,"bottom":563},{"left":520.6875,"top":511,"right":660.375,"bottom":563},{"left":660.375,"top":511,"right":780.96875,"bottom":563},{"left":780.96875,"top":511,"right":812.96875,"bottom":563},{"left":812.96875,"top":511,"right":896.796875,"bottom":563},{"left":896.796875,"top":511,"right":984.40625,"bottom":563},{"left":984.40625,"top":511,"right":1037.75,"bottom":563},{"left":1037.75,"top":511,"right":1126.828125,"bottom":563},{"left":1126.828125,"top":511,"right":1232.71875,"bottom":563},{"left":1232.71875,"top":511,"right":1315.3125,"bottom":563},{"left":1315.3125,"top":511,"right":1354.421875,"bottom":563},{"left":1354.421875,"top":511,"right":1400.546875,"bottom":563},{"left":1400.546875,"top":511,"right":1440.546875,"bottom":563},{"left":1440.546875,"top":511,"right":1498.78125,"bottom":563},{"left":1498.78125,"top":511,"right":1634.484375,"bottom":563},{"left":1634.484375,"top":511,"right":1678.546875,"bottom":563},{"left":1678.546875,"top":511,"right":1752.3125,"bottom":563},{"left":330,"top":563,"right":428.734375,"bottom":615},{"left":428.734375,"top":563,"right":474.859375,"bottom":615},{"left":474.859375,"top":563,"right":553.421875,"bottom":615},{"left":553.421875,"top":563,"right":612.828125,"bottom":615},{"left":612.828125,"top":563,"right":710.15625,"bottom":615},{"left":710.15625,"top":563,"right":763.5,"bottom":615},{"left":763.5,"top":563,"right":837.8125,"bottom":615},{"left":837.8125,"top":563,"right":876.921875,"bottom":615},{"left":876.921875,"top":563,"right":1004.578125,"bottom":615},{"left":1004.578125,"top":563,"right":1102.9375,"bottom":615},{"left":1102.9375,"top":563,"right":1181,"bottom":615},{"left":1181,"top":563,"right":1256.515625,"bottom":615},{"left":1256.515625,"top":563,"right":1325.40625,"bottom":615},{"left":1325.40625,"top":563,"right":1408.625,"bottom":615},{"left":1408.625,"top":563,"right":1468.03125,"bottom":615},{"left":1468.03125,"top":563,"right":1521.375,"bottom":615},{"left":1521.375,"top":563,"right":1613.546875,"bottom":615},{"left":1613.546875,"top":563,"right":1665.265625,"bottom":615},{"left":1665.265625,"top":563,"right":1763.140625,"bottom":615},{"left":330,"top":615,"right":395.0625,"bottom":667},{"left":395.0625,"top":615,"right":473.828125,"bottom":667},{"left":473.828125,"top":615,"right":551.71875,"bottom":667},{"left":551.71875,"top":615,"right":692.71875,"bottom":667},{"left":692.71875,"top":615,"right":752.125,"bottom":667},{"left":752.125,"top":615,"right":844.859375,"bottom":667},{"left":844.859375,"top":615,"right":903.015625,"bottom":667},{"left":903.015625,"top":615,"right":1016.828125,"bottom":667},{"left":1016.828125,"top":615,"right":1144.609375,"bottom":667},{"left":1144.609375,"top":615,"right":1236.453125,"bottom":667},{"left":1236.453125,"top":615,"right":1269.953125,"bottom":667},{"left":1269.953125,"top":615,"right":1378.609375,"bottom":667},{"left":1378.609375,"top":615,"right":1440.546875,"bottom":667},{"left":1440.546875,"top":615,"right":1564.546875,"bottom":667},{"left":1564.546875,"top":615,"right":1643,"bottom":667},{"left":1643,"top":615,"right":1697.109375,"bottom":667},{"left":1697.109375,"top":615,"right":1788.234375,"bottom":667},{"left":330,"top":667,"right":400.46875,"bottom":719},{"left":400.46875,"top":667,"right":476.65625,"bottom":719},{"left":476.65625,"top":667,"right":589.015625,"bottom":719},{"left":589.015625,"top":667,"right":626.203125,"bottom":719},{"left":626.203125,"top":667,"right":679.546875,"bottom":719},{"left":679.546875,"top":667,"right":745.0625,"bottom":719},{"left":745.0625,"top":667,"right":838.484375,"bottom":719},{"left":838.484375,"top":667,"right":877.59375,"bottom":719},{"left":877.59375,"top":667,"right":946.03125,"bottom":719},{"left":946.03125,"top":667,"right":986.03125,"bottom":719},{"left":986.03125,"top":667,"right":1094.375,"bottom":719},{"left":1094.375,"top":667,"right":1123.640625,"bottom":719},{"left":1123.640625,"top":667,"right":1244.84375,"bottom":719},{"left":1244.84375,"top":667,"right":1274.921875,"bottom":719},{"left":1274.921875,"top":667,"right":1357.640625,"bottom":719},{"left":1357.640625,"top":667,"right":1417.046875,"bottom":719},{"left":1417.046875,"top":667,"right":1470.390625,"bottom":719},{"left":1470.390625,"top":667,"right":1553.109375,"bottom":719},{"left":1553.109375,"top":667,"right":1632.8125,"bottom":719},{"left":1632.8125,"top":667,"right":1712.640625,"bottom":719},{"left":1712.640625,"top":667,"right":1782.1875,"bottom":719},{"left":330,"top":719,"right":409.75,"bottom":771},{"left":409.75,"top":719,"right":489.3125,"bottom":771},{"left":489.3125,"top":719,"right":533.34375,"bottom":771},{"left":533.34375,"top":719,"right":609.53125,"bottom":771},{"left":609.53125,"top":719,"right":677.3125,"bottom":771},{"left":677.3125,"top":719,"right":736.390625,"bottom":771},{"left":736.390625,"top":719,"right":837.09375,"bottom":771},{"left":837.09375,"top":719,"right":900.125,"bottom":771},{"left":900.125,"top":719,"right":929.390625,"bottom":771},{"left":929.390625,"top":719,"right":992.75,"bottom":771},{"left":992.75,"top":719,"right":1080.640625,"bottom":771},{"left":1080.640625,"top":719,"right":1163.578125,"bottom":771},{"left":1163.578125,"top":719,"right":1287.015625,"bottom":771},{"left":1287.015625,"top":719,"right":1438.25,"bottom":771},{"left":1438.25,"top":719,"right":1477.359375,"bottom":771},{"left":1477.359375,"top":719,"right":1588.984375,"bottom":771},{"left":1588.984375,"top":719,"right":1714.90625,"bottom":771},{"left":330,"top":771,"right":428.28125,"bottom":823},{"left":428.28125,"top":771,"right":481.625,"bottom":823},{"left":481.625,"top":771,"right":562.671875,"bottom":823},{"left":562.671875,"top":771,"right":680.0625,"bottom":823},{"left":680.0625,"top":771,"right":775.609375,"bottom":823},{"left":775.609375,"top":771,"right":827.328125,"bottom":823},{"left":827.328125,"top":771,"right":958.59375,"bottom":823},{"left":958.59375,"top":771,"right":1016.828125,"bottom":823},{"left":1016.828125,"top":771,"right":1142.328125,"bottom":823},{"left":1142.328125,"top":771,"right":1225.921875,"bottom":823},{"left":1225.921875,"top":771,"right":1361.203125,"bottom":823},{"left":1361.203125,"top":771,"right":1505.3125,"bottom":823},{"left":1505.3125,"top":771,"right":1576.203125,"bottom":823},{"left":1576.203125,"top":771,"right":1765.3125,"bottom":823},{"left":330,"top":823,"right":451.8125,"bottom":875},{"left":451.8125,"top":823,"right":544.828125,"bottom":875},{"left":544.828125,"top":823,"right":653.765625,"bottom":875},{"left":653.765625,"top":823,"right":801.34375,"bottom":875},{"left":801.34375,"top":823,"right":951.484375,"bottom":875},{"left":951.484375,"top":823,"right":1057.71875,"bottom":875},{"left":1057.71875,"top":823,"right":1153.265625,"bottom":875},{"left":1153.265625,"top":823,"right":1190.453125,"bottom":875},{"left":1190.453125,"top":823,"right":1248.6875,"bottom":875},{"left":1248.6875,"top":823,"right":1370.78125,"bottom":875},{"left":1370.78125,"top":823,"right":1419.53125,"bottom":875},{"left":1419.53125,"top":823,"right":1472.875,"bottom":875},{"left":1472.875,"top":823,"right":1558.84375,"bottom":875},{"left":1558.84375,"top":823,"right":1621.078125,"bottom":875},{"left":1621.078125,"top":823,"right":1684.609375,"bottom":875},{"left":1684.609375,"top":823,"right":1717.5,"bottom":875},{"left":1717.5,"top":823,"right":1787.78125,"bottom":875},{"left":330,"top":875,"right":369.109375,"bottom":927},{"left":369.109375,"top":875,"right":527.84375,"bottom":927},{"left":527.84375,"top":875,"right":589.96875,"bottom":927},{"left":589.96875,"top":875,"right":656.015625,"bottom":927},{"left":656.015625,"top":875,"right":735.84375,"bottom":927},{"left":735.84375,"top":875,"right":800.984375,"bottom":927},{"left":800.984375,"top":875,"right":879.515625,"bottom":927},{"left":879.515625,"top":875,"right":948.40625,"bottom":927},{"left":948.40625,"top":875,"right":1022.203125,"bottom":927},{"left":1022.203125,"top":875,"right":1106.6875,"bottom":927},{"left":1106.6875,"top":875,"right":1155.4375,"bottom":927},{"left":1155.4375,"top":875,"right":1213.671875,"bottom":927},{"left":1213.671875,"top":875,"right":1281.453125,"bottom":927},{"left":1281.453125,"top":875,"right":1310.71875,"bottom":927},{"left":1310.71875,"top":875,"right":1402.984375,"bottom":927},{"left":1402.984375,"top":875,"right":1433.703125,"bottom":927},{"left":1433.703125,"top":875,"right":1499.75,"bottom":927},{"left":1499.75,"top":875,"right":1557.453125,"bottom":927},{"left":1557.453125,"top":875,"right":1599.5,"bottom":927},{"left":1599.5,"top":875,"right":1668.390625,"bottom":927},{"left":1668.390625,"top":875,"right":1774.75,"bottom":927}]'
-    location = json.loads(location)
-    border, rows, danger_zone = textarea(location)
-    print(border)
-    print(rows)
+    # location = json.loads(location)
+    border, rows, danger_zone, len_per_word = textarea(location)
+
+    word_index = 1
+    print(word_index_in_row(rows, 20))
