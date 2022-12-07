@@ -533,8 +533,8 @@ def eye_gaze_to_feature(gaze, word_list, sentence_list, words_location, begin, p
 def word_index_in_row(rows, word_index):
     for i, row in enumerate(rows):
         if row["end_index"] >= word_index >= row["begin_index"]:
-            return word_index - row["begin_index"]
-    return -1
+            return i, word_index - row["begin_index"]
+    return -1, -1
 
 
 def row_index_of_sequence(rows, y):

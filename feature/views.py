@@ -70,9 +70,9 @@ def add_fixation_to_word(request):
                 loc = locations[index]
                 fix[0] = (loc["left"] + loc["right"]) / 2
                 fix[1] = (loc["top"] + loc["bottom"]) / 2
-            index_in_row = word_index_in_row(rows, index)
+            row_index, index_in_row = word_index_in_row(rows, index)
             if index_in_row != -1:
-                adjust_fix = [fix[0], fix[1], fix[2], index, index_in_row]
+                adjust_fix = [fix[0], fix[1], fix[2], index, index_in_row, row_index]
                 adjust_fixations.append(adjust_fix)
     # 切割子序列
     sequence_fixations = []
@@ -81,17 +81,24 @@ def add_fixation_to_word(request):
         sequence = adjust_fixations[begin_index: i]
         y_list = np.array([x[1] for x in sequence])
         y_mean = np.mean(y_list)
-        row_index = row_index_of_sequence(rows, y_mean)
-        word_num_in_row = rows[row_index]['end_index'] - rows[row_index]['begin_index'] + 1
+        row_ind = row_index_of_sequence(rows, y_mean)
+        word_num_in_row = rows[row_ind]['end_index'] - rows[row_ind]['begin_index'] + 1
         for j in range(i, begin_index, -1):
             if adjust_fixations[j][4] - fix[4] > int(word_num_in_row / 2):
-                # tmp = adjust_fixations[begin_index : j + 1]
-                # data = pd.DataFrame(tmp, columns=['x', 'y', 't', 'index', 'index_in_row', 'row_index'])
-                # if len(set(data['row_index'])) > 1:
-                #     row_indexs = list(data['row_index'])
-                #     for row_ind in range(len(row_indexs)):
-
-                sequence_fixations.append(adjust_fixations[begin_index: j + 1])
+                tmp = adjust_fixations[begin_index : j + 1]
+                mean_interval = 0
+                for f in range(1, len(tmp)):
+                    mean_interval = mean_interval + (tmp[f][0] - tmp[f-1][0])
+                mean_interval = mean_interval / (len(tmp) - 1)
+                data = pd.DataFrame(tmp, columns=['x', 'y', 't', 'index', 'index_in_row', 'row_index'])
+                if len(set(data['row_index'])) > 1:
+                    row_indexs = list(data['row_index'])
+                    for ind in range(len(row_indexs)):
+                        if row_indexs[ind] < row_indexs[ind-1] and abs(tmp[ind][0] - tmp[ind-1][0]) > mean_interval * 2:
+                            sequence_fixations.append(tmp[0:ind])
+                            sequence_fixations.append(tmp[ind:-1])
+                else:
+                    sequence_fixations.append(adjust_fixations[begin_index: j + 1])
                 begin_index = i
                 break
     if begin_index != len(adjust_fixations) - 1:
