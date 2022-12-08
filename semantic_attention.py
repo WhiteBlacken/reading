@@ -7,10 +7,10 @@ from textstat import textstat
 from transformers import BertForMaskedLM, BertTokenizer, XLNetModel, XLNetTokenizerFast
 
 nlp = spacy.load("en_core_web_lg")
-tokenizer = XLNetTokenizerFast.from_pretrained("xlnet-base-cased")
-model = XLNetModel.from_pretrained("xlnet-base-cased", output_attentions=True)
-bert_tokenizer = BertTokenizer.from_pretrained("bert-base-cased")
-bert_model = BertForMaskedLM.from_pretrained("bert-base-cased")
+tokenizer = XLNetTokenizerFast.from_pretrained(r"D:\qxy\pre-trained-model\xlnet-base-cased")
+model = XLNetModel.from_pretrained(r"D:\qxy\pre-trained-model\xlnet-base-cased", output_attentions=True)
+bert_tokenizer = BertTokenizer.from_pretrained(r"D:\qxy\pre-trained-model\bert-base-cased")
+bert_model = BertForMaskedLM.from_pretrained(r"D:\qxy\pre-trained-model\bert-base-cased")
 
 f = open("mrc2.dct", "r")
 word_fam_map = {}
@@ -60,6 +60,18 @@ for line in f:
 def get_word_familiar_rate(word_text):
     capital_word = word_text.upper()
     return word_fam_map.get(capital_word, 0)
+
+
+def get_word_difficulty(word_text):
+    score = 0
+    fam = get_word_familiar_rate(word_text)
+    if textstat.syllable_count(word_text) > 2:
+        score += 1
+    if len(word_text) > 7:
+        score += 1
+    if fam < 482:
+        score += 1
+    return score
 
 
 def get_docx_text(docx_path):
