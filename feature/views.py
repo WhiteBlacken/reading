@@ -28,13 +28,15 @@ from feature.utils import (
 )
 from onlineReading.views import compute_label, coor_to_input
 from pyheatmap import myHeatmap
-from semantic_attention import generate_word_attention
+from semantic_attention import generate_word_attention, get_word_difficulty
 from utils import (
     format_gaze,
     generate_pic_by_base64,
     get_importance,
+    get_index_in_row_only_use_x,
     get_item_index_x_y,
     get_word_and_sentence_from_text,
+    normalize,
 )
 
 """
@@ -61,6 +63,12 @@ def add_fixation_to_word(request):
     word_index_list = []
     page_id_list = []
     fix_index_list = []
+
+    use_not_blank_assumption = True
+    use_nlp_assumption = False
+
+    importance = get_importance(pageData.texts)
+    word_attention = generate_word_attention(pageData.texts)
 
     word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)  # 获取单词和句子对应的index
     border, rows, danger_zone, len_per_word = textarea(pageData.location)
@@ -141,58 +149,65 @@ def add_fixation_to_word(request):
         for y in y_list:
             row_index_this_fix = row_index_of_sequence(rows, y)
             rows_per_fix.append(row_index_this_fix)
-        print(f"fix偏移占比{1 - np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix)}")
-        # if np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix) < 1.1:
-        #     # 根据语义去调整fix的位置
-        #     candidate_rows = [row_index - 1, row_index, row_index + 1] if row_index > 0 else [row_index, row_index + 1]
-        #     final_row = -1
-        #     max_corr = -1
-        #     for j, candidate_row in enumerate(candidate_rows):
-        #         row = rows[candidate_row]
-        #         words = word_list[row["begin_index"]: row["end_index"] + 1]
-        #         word_loc_in_row = locations[row["begin_index"]: row["end_index"] + 1]
-        #         # nlp feature
-        #         difficulty_level = [get_word_difficulty(x) for x in words]  # text feature
-        #         difficulty_level = normalize(difficulty_level)
-        #
-        #         importance_level = [0 for _ in words]
-        #         attention_level = [0 for _ in words]
-        #         for q, word in enumerate(words):
-        #             for impo in importance:
-        #                 if impo[0] == word:
-        #                     importance_level[q] = impo[1]
-        #             for att in word_attention:
-        #                 if att[0] == word:
-        #                     attention_level[q] = att[1]
-        #         importance_level = normalize(importance_level)
-        #         attention_level = normalize(attention_level)
-        #
-        #         number_of_fixations = [0 for _ in words]
-        #         for fix in sequence:
-        #             index = get_index_in_row_only_use_x(word_loc_in_row, fix[0])
-        #             if index != -1:
-        #                 number_of_fixations[index] += 1
-        #         nlp_feature = [difficulty_level[i] + importance_level[i] + attention_level[i] for i in
-        #                        range(len(words))]
-        #         corr = sum(np.multiply(nlp_feature, number_of_fixations))
-        #         print(corr)
-        #         if corr > max_corr:
-        #             final_row = candidate_row
-        #             max_corr = corr
-        #         tmp_list = []
-        #         for x in range(len(words)):
-        #             tmp = (words[x], nlp_feature[x], number_of_fixations[x])
-        #             tmp_list.append(tmp)
-        #         print(tmp_list)
-        #         print("------")
-        #     if final_row != -1:
-        #         print(f"将行号右{row_index}改为{final_row}")
-        #         row_index = final_row
-        #     print("------")
-        # 假设不会出现空行
-        if row_index > now_max_row + 1:
-            row_index = now_max_row + 1
+        # print(f"fix偏移占比{1 - np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix)}")
+
+        if use_nlp_assumption:
+            if np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix) < 1.1:
+                # 根据语义去调整fix的位置
+                candidate_rows = (
+                    [row_index - 1, row_index, row_index + 1] if row_index > 0 else [row_index, row_index + 1]
+                )
+                final_row = -1
+                max_corr = -1
+                for j, candidate_row in enumerate(candidate_rows):
+                    row = rows[candidate_row]
+                    words = word_list[row["begin_index"] : row["end_index"] + 1]
+                    word_loc_in_row = locations[row["begin_index"] : row["end_index"] + 1]
+                    # nlp feature
+                    difficulty_level = [get_word_difficulty(x) for x in words]  # text feature
+                    difficulty_level = normalize(difficulty_level)
+
+                    importance_level = [0 for _ in words]
+                    attention_level = [0 for _ in words]
+                    for q, word in enumerate(words):
+                        for impo in importance:
+                            if impo[0] == word:
+                                importance_level[q] = impo[1]
+                        for att in word_attention:
+                            if att[0] == word:
+                                attention_level[q] = att[1]
+                    importance_level = normalize(importance_level)
+                    attention_level = normalize(attention_level)
+
+                    number_of_fixations = [0 for _ in words]
+                    for fix in sequence:
+                        index = get_index_in_row_only_use_x(word_loc_in_row, fix[0])
+                        if index != -1:
+                            number_of_fixations[index] += 1
+                    nlp_feature = [
+                        difficulty_level[i] + importance_level[i] + attention_level[i] for i in range(len(words))
+                    ]
+                    corr = sum(np.multiply(nlp_feature, number_of_fixations))
+                    print(corr)
+                    if corr > max_corr:
+                        final_row = candidate_row
+                        max_corr = corr
+                    tmp_list = []
+                    for x in range(len(words)):
+                        tmp = (words[x], nlp_feature[x], number_of_fixations[x])
+                        tmp_list.append(tmp)
+                    print(tmp_list)
+                    print("------")
+                if final_row != -1:
+                    print(f"将行号右{row_index}改为{final_row}")
+                    row_index = final_row
+                print("------")
+        if use_not_blank_assumption:
+            # 假设不会出现空行
+            if row_index > now_max_row + 1:
+                row_index = now_max_row + 1
         now_max_row = row_index
+
         if row_index != -1:
             adjust_y = (rows[row_index]["top"] + rows[row_index]["bottom"]) / 2
             result_fixation = [[x[0], adjust_y, x[2]] for x in sequence]
@@ -210,7 +225,10 @@ def add_fixation_to_word(request):
     fix_img = show_fixations(result_fixations, background)
     cv2.imwrite(base_path + "fix_adjust.png", fix_img)
 
-    label = {"1018": [0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 14]}
+    label = {
+        # "1015":[0,1]
+        "1018": [0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 14]
+    }
     assert len(label[page_data_id]) == len(row_sequence)
     correct_rate = sum(np.array(label[page_data_id]) == np.array(row_sequence)) / len(row_sequence)
     # 验证成功率
