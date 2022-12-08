@@ -88,7 +88,7 @@ def add_fixation_to_word(request):
         row_ind = row_index_of_sequence(rows, y_mean)
         word_num_in_row = rows[row_ind]['end_index'] - rows[row_ind]['begin_index'] + 1
         for j in range(i, begin_index, -1):
-            if adjust_fixations[j][4] - fix[4] > int(word_num_in_row / 2):
+            if adjust_fixations[j][4] - fix[4] > int(adjust_fixations[j][4] / 2):
                 tmp = adjust_fixations[begin_index: j + 1]
                 mean_interval = 0
                 for f in range(1, len(tmp)):
