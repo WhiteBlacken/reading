@@ -225,16 +225,16 @@ def add_fixation_to_word(request):
     fix_img = show_fixations(result_fixations, background)
     cv2.imwrite(base_path + "fix_adjust.png", fix_img)
 
-    label = {
-        # "1015":[0,1]
-        "1018": [0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 14]
-    }
-    assert len(label[page_data_id]) == len(row_sequence)
-    correct_rate = sum(np.array(label[page_data_id]) == np.array(row_sequence)) / len(row_sequence)
+    # label = {
+    #     # "1015":[0,1]
+    #     "1018": [0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 14]
+    # }
+    # assert len(label[page_data_id]) == len(row_sequence)
+    # correct_rate = sum(np.array(label[page_data_id]) == np.array(row_sequence)) / len(row_sequence)
     # 验证成功率
-    print(f"预测行：{row_sequence}")
-    print(f"标签行：{label[page_data_id]}")
-    print(f"成功率：{correct_rate}")
+    # print(f"预测行：{row_sequence}")
+    # print(f"标签行：{label[page_data_id]}")
+    # print(f"成功率：{correct_rate}")
 
     row_level_pic = []
     for fix in row_level_fix:
