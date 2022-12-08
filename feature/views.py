@@ -65,10 +65,7 @@ def add_fixation_to_word(request):
     fix_index_list = []
 
     use_not_blank_assumption = True
-    use_nlp_assumption = False
-
-    importance = get_importance(pageData.texts)
-    word_attention = generate_word_attention(pageData.texts)
+    use_nlp_assumption = True
 
     word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)  # 获取单词和句子对应的index
     border, rows, danger_zone, len_per_word = textarea(pageData.location)
@@ -89,10 +86,7 @@ def add_fixation_to_word(request):
             if index_in_row != -1:
                 adjust_fix = [fix[0], fix[1], fix[2], index, index_in_row, row_index]
                 adjust_fixations.append(adjust_fix)
-            # else:
-            #     print('index_in_row: ' + str(i))
-        # else:
-        #     print('index: ' + str(i))
+
     # 切割子序列
     sequence_fixations = []
     begin_index = 0
@@ -119,26 +113,31 @@ def add_fixation_to_word(request):
                             row_indexs[ind] < row_indexs[ind - 1]
                             and abs(tmp[ind][0] - tmp[ind - 1][0]) > mean_interval * 2
                         ):
-                            sequence_fixations.append(tmp[start:ind])
+                            if len(tmp[start:ind]) > 0:
+                                sequence_fixations.append(tmp[start:ind])
                             start = ind
                     if 0 < start < len(row_indexs) - 1:
-                        sequence_fixations.append(tmp[start:-1])
+                        if len(tmp[start:-1]) > 0:
+                            sequence_fixations.append(tmp[start:-1])
                     elif start == 0:
-                        sequence_fixations.append(tmp)
+                        if len(tmp) > 0:
+                            sequence_fixations.append(tmp)
                 else:
-                    sequence_fixations.append(tmp)
+                    if len(tmp) > 0:
+                        sequence_fixations.append(tmp)
                 # sequence_fixations.append(adjust_fixations[begin_index:i])
                 begin_index = i
                 break
     if begin_index != len(adjust_fixations) - 1:
         sequence_fixations.append(adjust_fixations[begin_index:-1])
     print(f"sequence len:{len(sequence_fixations)}")
+    cnt = 0
     for item in sequence_fixations:
-        print(item)
-    return HttpResponse(1)
+        print(f"从{cnt}开始裁剪")
+        cnt += len(item)
     # 按行调整fixation
-    generate_word_attention(pageData.texts)
-    get_importance(pageData.texts)
+    word_attention = generate_word_attention(pageData.texts)
+    importance = get_importance(pageData.texts)
     result_fixations = []
     row_sequence = []
     row_level_fix = []
@@ -155,7 +154,7 @@ def add_fixation_to_word(request):
         # print(f"fix偏移占比{1 - np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix)}")
 
         if use_nlp_assumption:
-            if np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix) < 1.1:
+            if np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix) < 0.3:
                 # 根据语义去调整fix的位置
                 candidate_rows = (
                     [row_index - 1, row_index, row_index + 1] if row_index > 0 else [row_index, row_index + 1]
@@ -226,13 +225,22 @@ def add_fixation_to_word(request):
 
     label = {
         # "1015":[0,1]
-        "1018": [0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 14]
+        "1018": [[0], [1], [2], [3], [4], [4], [4, 5], [5], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [14]]
     }
-    # assert len(label[page_data_id]) == len(row_sequence)
-    # correct_rate = sum(np.array(label[page_data_id]) == np.array(row_sequence)) / len(row_sequence)
-    # print(f"预测行：{row_sequence}")
-    # print(f"标签行：{label[page_data_id]}")
-    # print(f"成功率：{correct_rate}")
+
+    print(len(sequence_fixations))
+    print(len(label[page_data_id]))
+    print(len(row_sequence))
+
+    assert len(label[page_data_id]) == len(row_sequence)
+    correct_num = 0
+    for i, row in enumerate(row_sequence):
+        if row in label[page_data_id][i]:
+            correct_num += 1
+    correct_rate = correct_num / len(row_sequence)
+    print(f"预测行：{row_sequence}")
+    print(f"标签行：{label[page_data_id]}")
+    print(f"成功率：{correct_rate}")
 
     row_level_pic = []
     for fix in row_level_fix:
