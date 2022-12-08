@@ -98,41 +98,44 @@ def add_fixation_to_word(request):
     begin_index = 0
 
     for i, fix in enumerate(adjust_fixations):
-        sequence = adjust_fixations[begin_index: i]
+        sequence = adjust_fixations[begin_index:i]
         y_list = np.array([x[1] for x in sequence])
         y_mean = np.mean(y_list)
         row_ind = row_index_of_sequence(rows, y_mean)
-        word_num_in_row = rows[row_ind]['end_index'] - rows[row_ind]['begin_index'] + 1
+        word_num_in_row = rows[row_ind]["end_index"] - rows[row_ind]["begin_index"] + 1
         for j in range(i, begin_index, -1):
             if adjust_fixations[j][4] - fix[4] > int(word_num_in_row / 2):
-                tmp = adjust_fixations[begin_index: j + 1]
+                tmp = adjust_fixations[begin_index : j + 1]
                 mean_interval = 0
                 for f in range(1, len(tmp)):
-                    mean_interval = mean_interval + abs(tmp[f][0] - tmp[f-1][0])
+                    mean_interval = mean_interval + abs(tmp[f][0] - tmp[f - 1][0])
                 mean_interval = mean_interval / (len(tmp) - 1)
-                print("mean_interval: " + str(round(mean_interval, 3)))
-                data = pd.DataFrame(tmp, columns=['x', 'y', 't', 'index', 'index_in_row', 'row_index'])
-                if len(set(data['row_index'])) > 1:
-                    row_indexs = list(data['row_index'])
+                data = pd.DataFrame(tmp, columns=["x", "y", "t", "index", "index_in_row", "row_index"])
+                if len(set(data["row_index"])) > 1:
+                    row_indexs = list(data["row_index"])
                     start = 0
                     for ind in range(start, len(row_indexs)):
-                        if row_indexs[ind] < row_indexs[ind-1] and abs(tmp[ind][0] - tmp[ind-1][0]) > mean_interval * 2:
+                        if (
+                            row_indexs[ind] < row_indexs[ind - 1]
+                            and abs(tmp[ind][0] - tmp[ind - 1][0]) > mean_interval * 2
+                        ):
                             sequence_fixations.append(tmp[start:ind])
                             start = ind
                     if 0 < start < len(row_indexs) - 1:
-                        sequence_fixations.append(tmp[start: -1])
+                        sequence_fixations.append(tmp[start:-1])
                     elif start == 0:
                         sequence_fixations.append(tmp)
                 else:
                     sequence_fixations.append(tmp)
                 # sequence_fixations.append(adjust_fixations[begin_index:i])
                 begin_index = i
-                print(f"起始是：{begin_index}")
                 break
     if begin_index != len(adjust_fixations) - 1:
         sequence_fixations.append(adjust_fixations[begin_index:-1])
     print(f"sequence len:{len(sequence_fixations)}")
-
+    for item in sequence_fixations:
+        print(item)
+    return HttpResponse(1)
     # 按行调整fixation
     generate_word_attention(pageData.texts)
     get_importance(pageData.texts)
@@ -212,26 +215,21 @@ def add_fixation_to_word(request):
             adjust_y = (rows[row_index]["top"] + rows[row_index]["bottom"]) / 2
             result_fixation = [[x[0], adjust_y, x[2]] for x in sequence]
             result_fixations.extend(result_fixation)
-<<<<<<< HEAD
-        else:
-            print("error")
-=======
+
             row_sequence.append(row_index)
             row_level_fix.append(result_fixation)
->>>>>>> 8f9f0bd (save work)
     # 重要的就是把有可能的错的行挑出来
     base_path = "pic\\" + str(page_data_id) + "\\"
     background = generate_pic_by_base64(pageData.image, base_path, "background.png")
     fix_img = show_fixations(result_fixations, background)
     cv2.imwrite(base_path + "fix_adjust.png", fix_img)
 
-    # label = {
-    #     # "1015":[0,1]
-    #     "1018": [0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 14]
-    # }
+    label = {
+        # "1015":[0,1]
+        "1018": [0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 14]
+    }
     # assert len(label[page_data_id]) == len(row_sequence)
     # correct_rate = sum(np.array(label[page_data_id]) == np.array(row_sequence)) / len(row_sequence)
-    # 验证成功率
     # print(f"预测行：{row_sequence}")
     # print(f"标签行：{label[page_data_id]}")
     # print(f"成功率：{correct_rate}")
