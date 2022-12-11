@@ -145,6 +145,7 @@ def get_index_in_row_only_use_x(row: list, x: int):
 def get_item_index_x_y(location, x, y):
     """根据所有item的位置，当前给出的x,y,判断其在哪个item里 分为word level和row level"""
     # 解析location
+    # print(type(location))
     location = json.loads(location)
 
     # 先找是否正好在范围内
@@ -293,24 +294,31 @@ def paint_gaze_on_pic(coordinates: list, background: str, save_path: str) -> Non
     fig = plt.figure()
     ax = fig.add_subplot()
     ax.imshow(img)
-    plt.axis('off')
+    plt.axis("off")
     for i, coordinate in enumerate(coordinates):
-    #     # if i % 3 == 0:
-    #     #     if i == 3 or i == 6:
-    #     #         ax.text(coordinate[0],
-    #     #                 coordinate[1] - cal_fix_radius(coordinate[2]) - 20, str(i),
-    #     #                 family='Times New Roman', fontsize=7, verticalalignment='center',
-    #     #                 horizontalalignment='center', color="black")
-    #     #     elif i == 9 or i == 12:
-    #     #         ax.text(coordinate[0],
-    #     #                 coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
-    #     #                 family='Times New Roman', fontsize=7, verticalalignment='center',
-    #     #                 horizontalalignment='center', color="black")
-    #     #     else:
+        #     # if i % 3 == 0:
+        #     #     if i == 3 or i == 6:
+        #     #         ax.text(coordinate[0],
+        #     #                 coordinate[1] - cal_fix_radius(coordinate[2]) - 20, str(i),
+        #     #                 family='Times New Roman', fontsize=7, verticalalignment='center',
+        #     #                 horizontalalignment='center', color="black")
+        #     #     elif i == 9 or i == 12:
+        #     #         ax.text(coordinate[0],
+        #     #                 coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
+        #     #                 family='Times New Roman', fontsize=7, verticalalignment='center',
+        #     #                 horizontalalignment='center', color="black")
+        #     #     else:
         if i % 5 == 0:
-            ax.text(cal_annotate_loc(i, coordinates)[0], cal_annotate_loc(i, coordinates)[1], str(i),
-                family='Times New Roman', fontsize=7, verticalalignment='center',
-                horizontalalignment='center', color="black")
+            ax.text(
+                cal_annotate_loc(i, coordinates)[0],
+                cal_annotate_loc(i, coordinates)[1],
+                str(i),
+                family="Times New Roman",
+                fontsize=7,
+                verticalalignment="center",
+                horizontalalignment="center",
+                color="black",
+            )
     # else:
     #     ax.text(coordinate[0], coordinate[1], str(i + 1), fontsize=5, verticalalignment='center',
     #             horizontalalignment='center', color="tomato")

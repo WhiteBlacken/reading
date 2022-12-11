@@ -706,6 +706,142 @@ def get_dataset(request):
     return JsonResponse({"status": "ok"})
 
 
+def get_all_time_dataset(request):
+    optimal_list = [
+        [574, 580],
+        [582],
+        [585, 588],
+        [590, 591],
+        [595, 598],
+        [600, 605],
+        [609, 610],
+        [613, 619],
+        [622, 625],
+        [628],
+        [630, 631],
+        [634],
+        [636],
+        [637, 641],
+    ]
+    # optimal_list = [[630, 631]]
+
+    users = ["chenyuwang"]
+    # users = ['qxy']
+    experiment_list_select = []
+    for item in optimal_list:
+        if len(item) == 2:
+            for i in range(item[0], item[1] + 1):
+                experiment_list_select.append(i)
+        if len(item) == 1:
+            experiment_list_select.append(item[0])
+    experiments = Experiment.objects.filter(is_finish=True).filter(id__in=experiment_list_select).filter(user__in=users)
+    print(len(experiments))
+    # 超参
+    success = 0
+    fail = 0
+    starttime = datetime.datetime.now()
+    for experiment in experiments:
+        try:
+            page_data_list = PageData.objects.filter(experiment_id=experiment.id)
+
+            # 全文信息
+            words_per_page = []  # 每页的单词
+            words_of_article = []  # 整篇文本的单词
+            words_num_until_page = []  # 到该页为止的单词数量，便于计算
+            locations_per_page = []  # 每页的位置信息
+            # 标签信息
+            word_understand = []
+            # tmp
+            texts = ""
+            for page_data in page_data_list:
+                texts += page_data.texts
+            all_word_list, all_sentence_list = get_word_and_sentence_from_text(texts)  # 获取单词和句子对应的index
+            # 收集信息
+            word_num = len(all_word_list)
+            # 特征相关
+            number_of_fixations = [0 for _ in range(word_num)]
+            reading_times = [0 for _ in range(word_num)]
+            fixation_duration = [0 for _ in range(word_num)]
+
+            for i, page_data in enumerate(page_data_list):
+
+                word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)  # 获取单词和句子对应的index
+                words_location = json.loads(
+                    page_data.location
+                )  # [{'left': 330, 'top': 95, 'right': 435.109375, 'bottom': 147},...]
+                assert len(word_list) == len(words_location)  # 确保单词分割的是正确的
+                if len(words_num_until_page) == 0:
+                    words_num_until_page.append(len(word_list))
+                else:
+                    words_num_until_page.append(words_num_until_page[-1] + len(word_list))
+
+                words_per_page.append(word_list)
+                words_of_article.extend(word_list)
+
+                locations_per_page.append(page_data.location)
+                # 生成标签
+                word_understand_this_page, sentence_understand_in_page, mind_wander_in_page = compute_label(
+                    page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
+                )
+                word_understand.extend(word_understand_this_page)
+
+                gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+                result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
+                    gaze_points, page_data.texts, page_data.location, use_not_blank_assumption=True
+                )
+
+                """word level"""
+                begin = 0 if i == 0 else words_num_until_page[i - 1] - 1
+                pre_word_index = -1
+                for j, fixation in enumerate(result_fixations):
+
+                    index, isAdjust = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
+                    if index != -1:
+                        number_of_fixations[index + begin] += 1
+                        fixation_duration[index + begin] += fixation[2]
+                        if index != pre_word_index:
+                            reading_times[index + begin] += 1
+                            pre_word_index = index
+
+            # 生成手工数据集
+            df = pd.DataFrame(
+                {
+                    # 1. 实验信息相关
+                    "experiment_id": [experiment.id for _ in range(word_num)],
+                    "word": all_word_list,
+                    # # 2. label相关
+                    "word_understand": word_understand,
+                    # 3. 特征相关
+                    # word level
+                    "reading_times": reading_times,
+                    "number_of_fixations": number_of_fixations,
+                    "fixation_duration": fixation_duration,
+                    # "average_fixation_duration": average_fixation_duration_all,
+                }
+            )
+            path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "-test-chenyuwang-all.csv"
+
+            if os.path.exists(path):
+                df.to_csv(path, index=False, mode="a", header=False)
+            else:
+                df.to_csv(path, index=False, mode="a")
+
+            success += 1
+            endtime = datetime.datetime.now()
+            logger.info(
+                "成功生成%d条,失败%d条,耗时为%ss" % (success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
+            )
+        except:
+            fail += 1
+            endtime = datetime.datetime.now()
+            logger.info(
+                "成功生成%d条,失败%d条,耗时为%ss" % (success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
+            )
+
+    logger.info("成功生成%d条，失败%d条" % (success, fail))
+    return JsonResponse({"status": "ok"})
+
+
 def get_interval_dataset(request):
     optimal_list = [
         [574, 580],
