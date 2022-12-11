@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import random
 
 import cv2
 import numpy as np
@@ -48,7 +49,7 @@ TODO list
 """
 
 
-def process_fixations(gaze_points, texts, location, use_not_blank_assumption=False, use_nlp_assumption=False):
+def process_fixations(gaze_points, texts, location, use_not_blank_assumption=True, use_nlp_assumption=False):
     fixations = detect_fixations(gaze_points)
     fixations = keep_row(fixations)
 
@@ -124,14 +125,14 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Fal
     word_attention = generate_word_attention(texts)
     importance = get_importance(texts)
     result_fixations = []
-    row_sequence = []
     row_level_fix = []
+
+    result_rows = []
+    row_pass_time = [0 for _ in range(len(rows))]
     for i, sequence in enumerate(sequence_fixations):
         y_list = np.array([x[1] for x in sequence])
         y_mean = np.mean(y_list)
         row_index = row_index_of_sequence(rows, y_mean)
-        print(f"定位在第{row_index}行")
-        print(len(sequence))
         rows_per_fix = []
         for y in y_list:
             row_index_this_fix = row_index_of_sequence(rows, y)
@@ -192,17 +193,39 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Fal
         if use_not_blank_assumption:
             # 假设不会出现空行
             if row_index > now_max_row + 1:
-                row_index = now_max_row + 1
-        now_max_row = row_index
-
-        if row_index != -1:
-            adjust_y = (rows[row_index]["top"] + rows[row_index]["bottom"]) / 2
+                if row_pass_time[now_max_row] >= 2:
+                    print("执行了")
+                    random_number = random.randint(0, 1)
+                    if random_number == 0:
+                        # 把上一行拉下来
+                        # 这一行没定位错，上一行定位错了
+                        row_pass_time[result_rows[-1]] -= 1
+                        result_rows[-1] = now_max_row + 1
+                        row_pass_time[row_index] += 1
+                        result_rows.append(row_index)
+                    else:
+                        # 把下一行拉上去，这一行定位错了
+                        row_pass_time[now_max_row + 1] += 1
+                        result_rows.append(now_max_row + 1)
+                else:
+                    # 如果上一行没有回看，则直接把拉上来
+                    row_pass_time[now_max_row + 1] += 1
+                    result_rows.append(now_max_row + 1)
+            else:
+                row_pass_time[row_index] += 1
+                result_rows.append(row_index)
+            now_max_row = max(result_rows)
+    print(f"row_pass_time:{row_pass_time}")
+    assert sum(row_pass_time) == len(result_rows)
+    assert len(result_rows) == len(sequence_fixations)
+    for i, sequence in enumerate(sequence_fixations):
+        if result_rows[i] != -1:
+            adjust_y = (rows[result_rows[i]]["top"] + rows[result_rows[i]]["bottom"]) / 2
             result_fixation = [[x[0], adjust_y, x[2]] for x in sequence]
             result_fixations.extend(result_fixation)
-
-            row_sequence.append(row_index)
             row_level_fix.append(result_fixation)
-    return result_fixations, row_sequence, row_level_fix, sequence_fixations
+
+    return result_fixations, result_rows, row_level_fix, sequence_fixations
 
 
 def add_fixation_to_word(request):
@@ -250,10 +273,6 @@ def add_fixation_to_word(request):
         ],
     }
 
-    print(len(sequence_fixations))
-    print(len(label[page_data_id]))
-    print(len(row_sequence))
-
     assert len(label[page_data_id]) == len(row_sequence)
 
     # 找index
@@ -268,7 +287,7 @@ def add_fixation_to_word(request):
         if row in label[page_data_id][i]:
             correct_num += 1
         else:
-            print(sequences[i])
+            print(f"{sequences[i]}序列出错，label：{label[page_data_id][i]}，预测：{row}")
     correct_rate = correct_num / len(row_sequence)
     print(f"预测行：{row_sequence}")
     print(f"标签行：{label[page_data_id]}")
