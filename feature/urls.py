@@ -23,4 +23,5 @@ urlpatterns = [
     path("dataset/", views.get_dataset),
     path("interval/", views.get_interval_dataset),
     path("fix_word_map/", views.add_fixation_to_word),
+    path("dataset/all/", views.get_all_time_dataset),
 ]
