@@ -67,8 +67,8 @@ def add_fixation_to_word(request):
     use_not_blank_assumption = True
     use_nlp_assumption = False
 
-    importance = get_importance(pageData.texts)
-    word_attention = generate_word_attention(pageData.texts)
+    # importance = get_importance(pageData.texts)
+    # word_attention = generate_word_attention(pageData.texts)
 
     word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)  # 获取单词和句子对应的index
     border, rows, danger_zone, len_per_word = textarea(pageData.location)
@@ -105,7 +105,7 @@ def add_fixation_to_word(request):
         word_num_in_row = rows[row_ind]["end_index"] - rows[row_ind]["begin_index"] + 1
         for j in range(i, begin_index, -1):
             if adjust_fixations[j][4] - fix[4] > int(word_num_in_row / 2):
-                tmp = adjust_fixations[begin_index : j + 1]
+                tmp = adjust_fixations[begin_index: j + 1]
                 mean_interval = 0
                 for f in range(1, len(tmp)):
                     mean_interval = mean_interval + abs(tmp[f][0] - tmp[f - 1][0])
@@ -133,6 +133,12 @@ def add_fixation_to_word(request):
     if begin_index != len(adjust_fixations) - 1:
         sequence_fixations.append(adjust_fixations[begin_index:-1])
     print(f"sequence len:{len(sequence_fixations)}")
+    sequence_fixations = [i for i in sequence_fixations if i != []]
+    sum_seq = 0
+    for i in range(len(sequence_fixations)):
+        print(f"sequence {i}:{sum_seq} ---> {sum_seq + len(sequence_fixations[i])}")
+        sum_seq = sum_seq + len(sequence_fixations[i])
+    exit(0)
     for item in sequence_fixations:
         print(item)
     return HttpResponse(1)
@@ -226,6 +232,7 @@ def add_fixation_to_word(request):
 
     label = {
         # "1015":[0,1]
+        "1017": [],
         "1018": [0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 14]
     }
     # assert len(label[page_data_id]) == len(row_sequence)
