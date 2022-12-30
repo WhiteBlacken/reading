@@ -122,6 +122,7 @@ def detect_saccades(fixations: list, min_velocity: int = 70) -> tuple:
         + 400-600deg
         + https://blog.csdn.net/Kobe123brant/article/details/111264204
     """
+    print(f"fixations:{fixations}")
     saccades = []
     velocities = []
     # TODO 速度的阈值 实际测量的数据fixation之间的平均速度在50~60左右，暂取70 对应的大概是75%
@@ -356,9 +357,7 @@ def textarea(locations: str, danger_r: int = 8) -> tuple:
             rows.append(row)
 
             row_length = row["right"] - row["left"]
-            range_x = [row["left"]
-                       + (1 / 5) * row_length
-                       , row["right"]]
+            range_x = [row["left"] + (1 / 5) * row_length, row["right"]]
             range_y = [loc["top"] - danger_r, loc["top"] + danger_r]
             zone = [range_x, range_y]
             danger_zone.append(zone)
@@ -602,5 +601,4 @@ if __name__ == "__main__":
     # location = json.loads(location)
     border, rows, danger_zone, len_per_word = textarea(location)
 
-    word_index = 1
-    print(word_index_in_row(rows, 20))
+    print(len_per_word)
