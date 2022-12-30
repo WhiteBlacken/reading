@@ -1,5 +1,6 @@
 import datetime
 import json
+import math
 import os
 import random
 
@@ -12,12 +13,13 @@ from django.http import HttpResponse, JsonResponse
 from loguru import logger
 from PIL import Image
 
-from action.models import Experiment, PageData
+from action.models import Experiment, PageData, Paragraph
 from feature.utils import (
     detect_fixations,
     detect_saccades,
     eye_gaze_to_feature,
     gaze_map,
+    get_sentence_by_word,
     join_images,
     keep_row,
     paint_fixations,
@@ -70,7 +72,7 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
                 fix[1] = (loc["top"] + loc["bottom"]) / 2
             row_index, index_in_row = word_index_in_row(rows, index)
             if index_in_row != -1:
-                adjust_fix = [fix[0], fix[1], fix[2], index, index_in_row, row_index]
+                adjust_fix = [fix[0], fix[1], fix[2], index, index_in_row, row_index, fix[3], fix[4]]
                 adjust_fixations.append(adjust_fix)
 
     # 切割子序列
@@ -90,7 +92,9 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
                 for f in range(1, len(tmp)):
                     mean_interval = mean_interval + abs(tmp[f][0] - tmp[f - 1][0])
                 mean_interval = mean_interval / (len(tmp) - 1)
-                data = pd.DataFrame(tmp, columns=["x", "y", "t", "index", "index_in_row", "row_index"])
+                data = pd.DataFrame(
+                    tmp, columns=["x", "y", "t", "index", "index_in_row", "row_index", "begin_time", "end_time"]
+                )
                 if len(set(data["row_index"])) > 1:
                     row_indexs = list(data["row_index"])
                     start = 0
@@ -117,10 +121,9 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
     if begin_index != len(adjust_fixations) - 1:
         sequence_fixations.append(adjust_fixations[begin_index:-1])
     print(f"sequence len:{len(sequence_fixations)}")
-    cnt = 0
-    for item in sequence_fixations:
-        print(f"从{cnt}开始裁剪")
-        cnt += len(item)
+    # for item in sequence_fixations:
+    #     print(f"从{cnt}开始裁剪")
+    #     cnt += len(item)
     # 按行调整fixation
     word_attention = generate_word_attention(texts)
     importance = get_importance(texts)
@@ -221,10 +224,14 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
     for i, sequence in enumerate(sequence_fixations):
         if result_rows[i] != -1:
             adjust_y = (rows[result_rows[i]]["top"] + rows[result_rows[i]]["bottom"]) / 2
-            result_fixation = [[x[0], adjust_y, x[2]] for x in sequence]
+            result_fixation = [[x[0], adjust_y, x[2], x[6], x[7]] for x in sequence]
             result_fixations.extend(result_fixation)
             row_level_fix.append(result_fixation)
 
+    print(f"result_rows:{result_rows}")
+    print(f"max of result rows:{max(result_rows)}")
+    print(f"len of rows:{len(rows)}")
+    assert (max(result_rows) == len(rows) - 1) or (max(result_rows) == len(rows) - 2)
     return result_fixations, result_rows, row_level_fix, sequence_fixations
 
 
@@ -245,6 +252,44 @@ def add_fixation_to_word(request):
     fix_img = show_fixations(result_fixations, background)
     cv2.imwrite(base_path + "fix_adjust.png", fix_img)
 
+    word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
+
+    word_index_list = []
+    fix_index_list = []
+    page_id_list = []
+    experiment_id_list = []
+    words = []
+    for i, x in enumerate(result_fixations):
+        word_index, is_adjust = get_item_index_x_y(pageData.location, x[0], x[1])
+        word_index_list.append(word_index)
+        fix_index_list.append(i)
+        page_id_list.append(pageData.id)
+        experiment_id_list.append(pageData.experiment_id)
+        if word_index != -1:
+            words.append(word_list[word_index])
+        else:
+            words.append("-1")
+    print(len(word_index_list))
+    print(len(words))
+    print(len(fix_index_list))
+    print(len(page_id_list))
+    print(len(experiment_id_list))
+    df = pd.DataFrame(
+        {
+            "word_index": word_index_list,
+            "word": words,
+            "fix_index": fix_index_list,
+            "page_id": page_id_list,
+            "exp_id": experiment_id_list,
+        }
+    )
+    path = "jupyter\\dataset\\" + "fix-word-map-no-drift.csv"
+
+    if os.path.exists(path):
+        df.to_csv(path, index=False, mode="a", header=False)
+    else:
+        df.to_csv(path, index=False, mode="a")
+    return HttpResponse(1)
     label = {
         # "1016":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12]],
         "1232": [[0], [1], [2], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [11], [11], [11], [11], [12], [13]],
@@ -297,36 +342,6 @@ def add_fixation_to_word(request):
     for fix in row_level_fix:
         row_level_pic.append(show_fixations(fix, background))
     return HttpResponse(1)
-    for i, fix in enumerate(fixations):
-        # 取前三个fix坐标的均值
-        j = i - 1
-        pre_fixations = []
-        while j > 0:
-            if i - j > 3:
-                break
-            pre_fixations.append(fixations[j])
-            j -= 1
-        print(pre_fixations)
-        index = get_item_index_x_y(pageData.location, fix[0], fix[1])
-        if index != -1:
-            word_index_list.append(word_list[index])
-            fix_index_list.append(i)
-            page_id_list.append(pageData.id)
-
-    df = pd.DataFrame(
-        {
-            "word": word_index_list,
-            "fix_index": fix_index_list,
-            "page_id": page_id_list,
-        }
-    )
-    path = "jupyter\\dataset\\" + "fix-word-map.csv"
-
-    if os.path.exists(path):
-        df.to_csv(path, index=False, mode="a", header=False)
-    else:
-        df.to_csv(path, index=False, mode="a")
-    return JsonResponse({"status": "ok"})
 
 
 def classify_gaze_2_label_in_pic(request):
@@ -360,7 +375,7 @@ def classify_gaze_2_label_in_pic(request):
     # generate saccades
     saccades, velocities = detect_saccades(fixations)  # todo:default argument should be adjust to optimal
     # plt using fixations and saccade
-    print("fixations: " + str(fixations[36][2]) + ", " + str(fixations[37][2]) + ", " + str(fixations[38][2]))
+    # print("fixations: " + str(fixations[36][2]) + ", " + str(fixations[37][2]) + ", " + str(fixations[38][2]))
     fixation_map = show_fixations_and_saccades(fixations, saccades, background)
 
     # todo 减少IO操作
@@ -726,41 +741,50 @@ def get_dataset(request):
 
 
 def get_all_time_dataset(request):
-    optimal_list = [
-        [574, 580],
-        [582],
-        [585, 588],
-        [590, 591],
-        [595, 598],
-        [600, 605],
-        [609, 610],
-        [613, 619],
-        [622, 625],
-        [628],
-        [630, 631],
-        [634],
-        [636],
-        [637, 641],
+    experiment_list_select = [
+        590,
+        601,
+        586,
+        587,
+        588,
+        597,
+        598,
+        625,
+        630,
+        631,
+        641,
+        639,
+        622,
+        623,
+        624,
+        628,
+        617,
+        609,
+        636,
+        638,
+        640,
+        577,
+        591,
     ]
-    # optimal_list = [[630, 631]]
+    experiment_failed_list = [586, 624, 639]
+    user_remove_list = ["shiyubin"]
+    # experiment_list_select = [630]
+    path = "jupyter\\dataset\\" + "dat-with-label.csv"
+    experiments = (
+        Experiment.objects.filter(is_finish=True)
+        .filter(id__in=experiment_list_select)
+        .exclude(id__in=experiment_failed_list)
+        .exclude(user__in=user_remove_list)
+    )
+    print(f"一共会生成{len(experiments)}条数据")
 
-    users = ["chenyuwang"]
-    # users = ['qxy']
-    experiment_list_select = []
-    for item in optimal_list:
-        if len(item) == 2:
-            for i in range(item[0], item[1] + 1):
-                experiment_list_select.append(i)
-        if len(item) == 1:
-            experiment_list_select.append(item[0])
-    experiments = Experiment.objects.filter(is_finish=True).filter(id__in=experiment_list_select).filter(user__in=users)
-    print(len(experiments))
     # 超参
     success = 0
     fail = 0
     starttime = datetime.datetime.now()
     for experiment in experiments:
         try:
+            # page_data_list = PageData.objects.filter(id__in=[1300])
             page_data_list = PageData.objects.filter(experiment_id=experiment.id)
 
             # 全文信息
@@ -770,6 +794,8 @@ def get_all_time_dataset(request):
             locations_per_page = []  # 每页的位置信息
             # 标签信息
             word_understand = []
+            sentence_understand = []
+            mind_wandering = []
             # tmp
             texts = ""
             for page_data in page_data_list:
@@ -803,14 +829,20 @@ def get_all_time_dataset(request):
                     page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
                 )
                 word_understand.extend(word_understand_this_page)
+                sentence_understand.extend(sentence_understand_in_page)
+                mind_wandering.extend(mind_wander_in_page)
 
                 gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
                 result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
                     gaze_points, page_data.texts, page_data.location, use_not_blank_assumption=True
                 )
 
+                # fixations = detect_fixations(gaze_points)
+                # result_fixations = keep_row(fixations)
+
                 """word level"""
-                begin = 0 if i == 0 else words_num_until_page[i - 1] - 1
+                begin = 0 if i == 0 else words_num_until_page[i - 1]
+                print(f"words_num_until_page:{words_num_until_page}")
                 pre_word_index = -1
                 for j, fixation in enumerate(result_fixations):
 
@@ -827,9 +859,12 @@ def get_all_time_dataset(request):
                 {
                     # 1. 实验信息相关
                     "experiment_id": [experiment.id for _ in range(word_num)],
+                    "user": [experiment.user for _ in range(word_num)],
                     "word": all_word_list,
                     # # 2. label相关
                     "word_understand": word_understand,
+                    "sentence_understand": sentence_understand,
+                    "mind_wandering": mind_wandering,
                     # 3. 特征相关
                     # word level
                     "reading_times": reading_times,
@@ -838,7 +873,6 @@ def get_all_time_dataset(request):
                     # "average_fixation_duration": average_fixation_duration_all,
                 }
             )
-            path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "-test-chenyuwang-all.csv"
 
             if os.path.exists(path):
                 df.to_csv(path, index=False, mode="a", header=False)
@@ -856,8 +890,374 @@ def get_all_time_dataset(request):
             logger.info(
                 "成功生成%d条,失败%d条,耗时为%ss" % (success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
             )
+            experiment_failed_list.append(experiment.id)
 
     logger.info("成功生成%d条，失败%d条" % (success, fail))
+    logger.info(f"失败的experiment有:{experiment_failed_list}")
+    return JsonResponse({"status": "ok"})
+
+
+def get_gazes(fixation, page_data):
+    begin = fixation[3]
+    end = fixation[4]
+
+    return_gaze = []
+    gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+    for gaze in gaze_points:
+        if gaze[2] >= begin and gaze[2] <= end:
+            return_gaze.append(gaze)
+
+    return return_gaze
+
+
+def get_timestamp_dataset(request):
+    experiment_list_select = [
+        590,
+        601,
+        586,
+        587,
+        588,
+        597,
+        598,
+        625,
+        630,
+        631,
+        641,
+        639,
+        622,
+        623,
+        624,
+        628,
+        617,
+        609,
+        636,
+        638,
+        640,
+        577,
+        591,
+    ]
+    experiment_failed_list = [586, 624, 639]
+    user_remove_list = ["shiyubin"]
+    path = "jupyter\\dataset\\" + "handcraft-data.csv"
+    experiments = (
+        Experiment.objects.filter(is_finish=True)
+        .filter(id__in=experiment_list_select)
+        .exclude(id__in=experiment_failed_list)
+        .exclude(user__in=user_remove_list)
+    )
+    print(f"一共会生成{len(experiments)}条数据")
+
+    # cnn相关的特征
+    experiment_ids = []
+    times = []
+    gaze_x = []
+    gaze_y = []
+    gaze_t = []
+    speed = []
+    direction = []
+    acc = []
+    # 手工特征
+    experiment_id_all = []
+    user_all = []
+    article_id_all = []
+    time_all = []
+    word_all = []
+    word_watching_all = []
+    word_understand_all = []
+    sentence_understand_all = []
+    mind_wandering_all = []
+    reading_times_all = []
+    number_of_fixations_all = []
+    fixation_duration_all = []
+    second_pass_dwell_time_of_sentence_all = []
+    total_dwell_time_of_sentence_all = []
+    reading_times_of_sentence_all = []
+    saccade_times_of_sentence_all = []
+    forward_times_of_sentence_all = []
+    backward_times_of_sentence_all = []
+    # 超参
+    success = 0
+    fail = 0
+    starttime = datetime.datetime.now()
+    for experiment in experiments:
+        try:
+            page_data_list = PageData.objects.filter(experiment_id=experiment.id)
+
+            # 全文信息
+            words_per_page = []  # 每页的单词
+            words_of_article = []  # 整篇文本的单词
+            words_num_until_page = []  # 到该页为止的单词数量，便于计算
+            locations_per_page = []  # 每页的位置信息
+            # 标签信息
+            word_understand = []
+            sentence_understand = []
+            mind_wandering = []
+            # tmp
+            texts = ""
+            for page_data in page_data_list:
+                texts += page_data.texts
+            all_word_list, all_sentence_list = get_word_and_sentence_from_text(texts)  # 获取单词和句子对应的index
+            # 收集信息
+            word_num = len(all_word_list)
+            # 特征相关
+            number_of_fixations = [0 for _ in range(word_num)]
+            reading_times = [0 for _ in range(word_num)]
+            fixation_duration = [0 for _ in range(word_num)]
+
+            reading_times_of_sentence_tmp = [0 for _ in range(word_num)]
+            second_pass_dwell_time_of_sentence_tmp = [0 for _ in range(word_num)]
+            total_dwell_time_of_sentence_tmp = [0 for _ in range(word_num)]
+            saccade_times_of_sentence_tmp = [0 for _ in range(word_num)]
+            forward_times_of_sentence_tmp = [0 for _ in range(word_num)]
+            backward_times_of_sentence_tmp = [0 for _ in range(word_num)]
+
+            fixations_sequence = []
+
+            for i, page_data in enumerate(page_data_list):
+
+                word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)  # 获取单词和句子对应的index
+
+                reading_times_of_sentence = [0 for _ in sentence_list]
+                second_pass_dwell_time_of_sentence = [0 for _ in sentence_list]
+                total_dwell_time_of_sentence = [0 for _ in sentence_list]
+                saccade_times_of_sentence = [0 for _ in sentence_list]
+                forward_times_of_sentence = [0 for _ in sentence_list]
+                backward_times_of_sentence = [0 for _ in sentence_list]
+                words_location = json.loads(
+                    page_data.location
+                )  # [{'left': 330, 'top': 95, 'right': 435.109375, 'bottom': 147},...]
+                assert len(word_list) == len(words_location)  # 确保单词分割的是正确的
+                if len(words_num_until_page) == 0:
+                    words_num_until_page.append(len(word_list))
+                else:
+                    words_num_until_page.append(words_num_until_page[-1] + len(word_list))
+
+                words_per_page.append(word_list)
+                words_of_article.extend(word_list)
+
+                locations_per_page.append(page_data.location)
+                # 生成标签
+                word_understand_this_page, sentence_understand_in_page, mind_wander_in_page = compute_label(
+                    page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
+                )
+                word_understand.extend(word_understand_this_page)
+                sentence_understand.extend(sentence_understand_in_page)
+                mind_wandering.extend(mind_wander_in_page)
+
+                gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+                result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
+                    gaze_points, page_data.texts, page_data.location, use_not_blank_assumption=True
+                )
+                fixations_sequence.append(result_fixations)
+
+                """word level"""
+                begin = 0 if i == 0 else words_num_until_page[i - 1]
+                print(f"words_num_until_page:{words_num_until_page}")
+
+                pre_word_index = -1
+                for j, fixation in enumerate(result_fixations):
+
+                    index, isAdjust = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
+                    if index != -1:
+                        number_of_fixations[index + begin] += 1
+                        fixation_duration[index + begin] += fixation[2]
+                        if index != pre_word_index:
+                            reading_times[index + begin] += 1
+                            pre_word_index = index
+
+                """sentence level"""
+                pre_sentence_index = -1
+                for j, fixation in enumerate(result_fixations):
+                    index, isAdjust = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
+                    sentence_index = get_sentence_by_word(index, sentence_list)
+                    if sentence_index != -1:
+                        # 累积fixation duration
+                        total_dwell_time_of_sentence[sentence_index] += fixation[2]
+                        # 计算reading times
+                        if sentence_index != pre_sentence_index:
+                            reading_times_of_sentence[sentence_index] += 1
+                        # 只有在reading times是2时，才累积fixation duration
+                        if reading_times_of_sentence[sentence_index] == 2:
+                            second_pass_dwell_time_of_sentence[sentence_index] += fixation[2]
+                        pre_sentence_index = sentence_index
+
+                saccades, velocity = detect_saccades(result_fixations)
+                for saccade in saccades:
+                    sac_begin = saccade["begin"]
+                    sac_end = saccade["end"]
+                    begin_word, isAdjust = get_item_index_x_y(page_data.location, sac_begin[0], sac_begin[1])
+                    end_word, isAdjust = get_item_index_x_y(page_data.location, sac_end[0], sac_end[1])
+                    sentence_index = get_sentence_by_word(begin_word, sentence_list)
+                    saccade_times_of_sentence[sentence_index] += 1
+                    if end_word > begin_word:
+                        forward_times_of_sentence[sentence_index] += 1
+                    else:
+                        backward_times_of_sentence[sentence_index] += 1
+
+                for q, sentence in enumerate(sentence_list):
+                    scale = math.log((sentence[3] + 1))
+                    begin_index = sentence[1] + begin
+                    end_index = sentence[2] + begin
+                    length = end_index - begin_index
+
+                    reading_times_of_sentence_tmp[begin_index:end_index] = [
+                        reading_times_of_sentence[q] / scale for _ in range(length)
+                    ]
+                    second_pass_dwell_time_of_sentence_tmp[begin_index:end_index] = [
+                        second_pass_dwell_time_of_sentence[q] / scale for _ in range(length)
+                    ]
+                    total_dwell_time_of_sentence_tmp[begin_index:end_index] = [
+                        total_dwell_time_of_sentence[q] / scale for _ in range(length)
+                    ]
+                    saccade_times_of_sentence_tmp[begin_index:end_index] = [
+                        saccade_times_of_sentence[q] / scale for _ in range(length)
+                    ]
+                    forward_times_of_sentence_tmp[begin_index:end_index] = [
+                        forward_times_of_sentence[q] / scale for _ in range(length)
+                    ]
+                    backward_times_of_sentence_tmp[begin_index:end_index] = [
+                        backward_times_of_sentence[q] / scale for _ in range(length)
+                    ]
+            # 按照时间生成数据
+            time = 0
+            for i, fixations in enumerate(fixations_sequence):
+                begin = 0 if i == 0 else words_num_until_page[i - 1]
+
+                for fixation in fixations:
+                    index, isAdjust = get_item_index_x_y(page_data_list[i].location, fixation[0], fixation[1])
+                    experiment_id_all.extend([experiment.id for _ in range(word_num)])
+                    user_all.extend([experiment.user for _ in range(word_num)])
+                    article_id_all.extend([experiment.article_id for _ in range(word_num)])
+                    time_all.extend([time for _ in range(word_num)])
+                    word_all.extend(all_word_list)
+
+                    tmp = [0 for i in range(word_num)]
+                    if index != -1:
+                        tmp[index + begin] = 1
+                    word_watching_all.extend(tmp)
+
+                    word_understand_all.extend(word_understand)
+                    sentence_understand_all.extend(sentence_understand)
+                    mind_wandering_all.extend(mind_wandering)
+
+                    reading_times_all.extend(reading_times)
+                    number_of_fixations_all.extend(number_of_fixations)
+                    fixation_duration_all.extend(fixation_duration)
+
+                    second_pass_dwell_time_of_sentence_all.extend(second_pass_dwell_time_of_sentence_tmp)
+                    total_dwell_time_of_sentence_all.extend(total_dwell_time_of_sentence_tmp)
+                    reading_times_of_sentence_all.extend(reading_times_of_sentence_tmp)
+                    saccade_times_of_sentence_all.extend(saccade_times_of_sentence_tmp)
+                    forward_times_of_sentence_all.extend(forward_times_of_sentence_tmp)
+                    backward_times_of_sentence_all.extend(backward_times_of_sentence_tmp)
+
+                    experiment_ids.append(experiment.id)
+                    times.append(time)
+
+                    # 挑出对应的gaze点
+                    gazes = get_gazes(fixation, page_data_list[i])
+                    gaze_of_x = [x[0] for x in gazes]
+                    gaze_of_y = [x[1] for x in gazes]
+                    gaze_of_t = [x[2] for x in gazes]
+                    speed_now, direction_now, acc_now = coor_to_input(gazes, 8)
+                    assert len(gaze_of_x) == len(gaze_of_y) == len(speed_now) == len(direction_now) == len(acc_now)
+                    gaze_x.append(gaze_of_x)
+                    gaze_y.append(gaze_of_y)
+                    gaze_t.append(gaze_of_t)
+                    speed.append(speed_now)
+                    direction.append(direction_now)
+                    acc.append(acc_now)
+
+                    time += 1
+            # 生成手工数据集
+            df = pd.DataFrame(
+                {
+                    # 1. 实验信息相关
+                    "experiment_id": experiment_id_all,
+                    "user": user_all,
+                    "article_id": article_id_all,
+                    "time": time_all,
+                    "word": word_all,
+                    "word_watching": word_watching_all,
+                    # # 2. label相关
+                    "word_understand": word_understand_all,
+                    "sentence_understand": sentence_understand_all,
+                    "mind_wandering": mind_wandering_all,
+                    # 3. 特征相关
+                    # word level
+                    "reading_times": reading_times_all,
+                    "number_of_fixations": number_of_fixations_all,
+                    "fixation_duration": fixation_duration_all,
+                    # sentence level
+                    "second_pass_dwell_time_of_sentence": second_pass_dwell_time_of_sentence_all,
+                    "total_dwell_time_of_sentence": total_dwell_time_of_sentence_all,
+                    "reading_times_of_sentence": reading_times_of_sentence_all,
+                    "saccade_times_of_sentence": saccade_times_of_sentence_all,
+                    "forward_times_of_sentence": forward_times_of_sentence_all,
+                    "backward_times_of_sentence": backward_times_of_sentence_all,
+                }
+            )
+
+            if os.path.exists(path):
+                df.to_csv(path, index=False, mode="a", header=False)
+            else:
+                df.to_csv(path, index=False, mode="a")
+
+            success += 1
+            endtime = datetime.datetime.now()
+            logger.info(
+                "成功生成%d条,失败%d条,耗时为%ss" % (success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
+            )
+
+            # 清空列表
+            experiment_id_all = []
+            user_all = []
+            article_id_all = []
+            time_all = []
+            word_all = []
+            word_watching_all = []
+            word_understand_all = []
+            sentence_understand_all = []
+            mind_wandering_all = []
+            reading_times_all = []
+            number_of_fixations_all = []
+            fixation_duration_all = []
+            second_pass_dwell_time_of_sentence_all = []
+            total_dwell_time_of_sentence_all = []
+            reading_times_of_sentence_all = []
+            saccade_times_of_sentence_all = []
+            forward_times_of_sentence_all = []
+            backward_times_of_sentence_all = []
+        except:
+            fail += 1
+            endtime = datetime.datetime.now()
+            logger.info(
+                "成功生成%d条,失败%d条,耗时为%ss" % (success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
+            )
+            experiment_failed_list.append(experiment.id)
+
+    # 生成cnn的数据集
+    data = pd.DataFrame(
+        {
+            # 1. 实验信息相关
+            "experiment_id": experiment_ids,
+            "time": times,
+            "gaze_x": gaze_x,
+            "gaze_y": gaze_y,
+            "gaze_t": gaze_t,
+            "speed": speed,
+            "direction": direction,
+            "acc": acc,
+        }
+    )
+    path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "cnn-data.csv"
+    if os.path.exists(path):
+        data.to_csv(path, index=False, mode="a", header=False)
+    else:
+        data.to_csv(path, index=False, mode="a")
+    logger.info("成功生成%d条，失败%d条" % (success, fail))
+    logger.info("成功生成%d条，失败%d条" % (success, fail))
+    logger.info(f"失败的experiment有:{experiment_failed_list}")
     return JsonResponse({"status": "ok"})
 
 
@@ -935,3 +1335,83 @@ def get_interval_dataset(request):
         "D:\\qxy\\reading-new\\reading\\jupyter\data\\interval.csv", index=False
     )
     return JsonResponse({"status": "ok"})
+
+
+def get_nlp_sequence(request):
+    experiment_id = request.GET.get("exp_id")
+    article_id = Experiment.objects.get(id=experiment_id).article_id
+
+    texts = ""
+    paras = Paragraph.objects.filter(article_id=article_id).order_by("para_id")
+    for para in paras:
+        texts += para.content
+
+    word_list, sentence_list = get_word_and_sentence_from_text(texts)
+    difficulty_level = [get_word_difficulty(x) for x in word_list]  # text feature
+    difficulty_level = normalize(difficulty_level)
+    word_attention = generate_word_attention(texts)
+    importance = get_importance(texts)
+
+    importance_level = [0 for _ in word_list]
+    attention_level = [0 for _ in word_list]
+    for q, word in enumerate(word_list):
+        for impo in importance:
+            if impo[0] == word:
+                importance_level[q] = impo[1]
+        for att in word_attention:
+            if att[0] == word:
+                attention_level[q] = att[1]
+    importance_level = normalize(importance_level)
+    attention_level = normalize(attention_level)
+
+    nlp_feature = [
+        (1 / 3) * difficulty_level[i] + (1 / 3) * importance_level[i] + (1 / 3) * attention_level[i]
+        for i in range(len(word_list))
+    ]
+    print(nlp_feature)
+
+    import matplotlib.pyplot as plt
+    import pandas as pd
+
+    columns1 = ["index1", "value1"]
+
+    fig = plt.figure(figsize=(50, 4), dpi=100)
+
+    data1 = []
+    i = 0
+    for feature in nlp_feature:
+        data1.append([i, feature])
+        i += 1
+    df1 = pd.DataFrame(data=data1, columns=columns1)
+
+    print(experiment_id)
+    csv = pd.read_csv(r"D:\qxy\reading-new\reading\jupyter\dataset\data_after_norm.csv")
+    print(csv.head())
+    csv = csv[csv["experiment_id"] == 577]
+    print(csv)
+    columns = ["index", "value"]
+
+    data = []
+    data_not_understand = []
+    line = []
+    i = 0
+
+    word_feature = []
+    for index, row in csv.iterrows():
+        word_feature.append(row["word"])
+        value = 0.4 * row["number_of_fixations"] + 0.4 * row["fixation_duration"] + 0.2 * row["reading_times"]
+        if row["word_understand"] == 0:
+            data_not_understand.append([i, value])
+        data.append([i, value])
+        line.append([i, 0.5])
+        i += 1
+    df = pd.DataFrame(data=data, columns=columns)
+    line = pd.DataFrame(data=line, columns=columns)
+    df_1 = pd.DataFrame(data=data_not_understand, columns=columns)
+
+    plt.plot(df1["index1"], df1["value1"], lw=3, ls="-", color="green", zorder=0, alpha=0.3)
+    plt.plot(df["index"], df["value"], lw=3, ls="-", color="black", zorder=0, alpha=0.3)
+    plt.plot(line["index"], line["value"], lw=3, ls="-", color="orange", zorder=0, alpha=0.3)
+    plt.scatter(df_1["index"], df_1["value"], color="red", zorder=1, s=60)
+    plt.show()
+    return JsonResponse({"visual": word_feature, "nlp": word_list})

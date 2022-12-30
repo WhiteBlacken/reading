@@ -100,4 +100,4 @@ def cm_2_pixel(cm):
 
 
 if __name__ == "__main__":
-    print(pixel_2_cm(80))
+    print(pixel_2_cm(52 - 16))
