@@ -41,4 +41,7 @@ urlpatterns = [
     path("fix_map_by_time/", views.get_fixation_by_time),
     path("speed/", views.get_speed),
     path("feature/", include("feature.urls")),
+    path('topic_value/',views.get_topic_relevant),
+    path('diff/',views.get_diff),
+    path('att/',views.get_att),
 ]
