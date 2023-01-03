@@ -31,7 +31,7 @@ from feature.utils import (
 )
 from onlineReading.views import compute_label, coor_to_input
 from pyheatmap import myHeatmap
-from semantic_attention import generate_word_attention, get_word_difficulty
+from semantic_attention import generate_word_attention, get_word_difficulty, generate_word_list
 from utils import (
     format_gaze,
     generate_pic_by_base64,
@@ -87,7 +87,7 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
         word_num_in_row = rows[row_ind]["end_index"] - rows[row_ind]["begin_index"] + 1
         for j in range(i, begin_index, -1):
             if adjust_fixations[j][4] - fix[4] > int(word_num_in_row / 2):
-                tmp = adjust_fixations[begin_index : j + 1]
+                tmp = adjust_fixations[begin_index: j + 1]
                 mean_interval = 0
                 for f in range(1, len(tmp)):
                     mean_interval = mean_interval + abs(tmp[f][0] - tmp[f - 1][0])
@@ -100,8 +100,8 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
                     start = 0
                     for ind in range(start, len(row_indexs)):
                         if (
-                            row_indexs[ind] < row_indexs[ind - 1]
-                            and abs(tmp[ind][0] - tmp[ind - 1][0]) > mean_interval * 2
+                                row_indexs[ind] < row_indexs[ind - 1]
+                                and abs(tmp[ind][0] - tmp[ind - 1][0]) > mean_interval * 2
                         ):
                             if len(tmp[start:ind]) > 0:
                                 sequence_fixations.append(tmp[start:ind])
@@ -121,9 +121,11 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
     if begin_index != len(adjust_fixations) - 1:
         sequence_fixations.append(adjust_fixations[begin_index:-1])
     print(f"sequence len:{len(sequence_fixations)}")
-    # for item in sequence_fixations:
-    #     print(f"从{cnt}开始裁剪")
-    #     cnt += len(item)
+
+    cnt = 0
+    for item in sequence_fixations:
+        print(f"从{cnt}开始裁剪")
+        cnt += len(item)
     # 按行调整fixation
     word_attention = generate_word_attention(texts)
     importance = get_importance(texts)
@@ -152,8 +154,8 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
                 max_corr = -1
                 for j, candidate_row in enumerate(candidate_rows):
                     row = rows[candidate_row]
-                    words = word_list[row["begin_index"] : row["end_index"] + 1]
-                    word_loc_in_row = locations[row["begin_index"] : row["end_index"] + 1]
+                    words = word_list[row["begin_index"]: row["end_index"] + 1]
+                    word_loc_in_row = locations[row["begin_index"]: row["end_index"] + 1]
                     # nlp feature
                     difficulty_level = [get_word_difficulty(x) for x in words]  # text feature
                     difficulty_level = normalize(difficulty_level)
@@ -220,6 +222,8 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
             now_max_row = max(result_rows)
     print(f"row_pass_time:{row_pass_time}")
     assert sum(row_pass_time) == len(result_rows)
+    print(len(result_rows))
+    print(len(sequence_fixations))
     assert len(result_rows) == len(sequence_fixations)
     for i, sequence in enumerate(sequence_fixations):
         if result_rows[i] != -1:
@@ -246,11 +250,15 @@ def add_fixation_to_word(request):
     result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
         gaze_points, pageData.texts, pageData.location
     )
+    # return HttpResponse(1)
     # 重要的就是把有可能的错的行挑出来
     base_path = "pic\\" + str(page_data_id) + "\\"
     background = generate_pic_by_base64(pageData.image, base_path, "background.png")
     fix_img = show_fixations(result_fixations, background)
     cv2.imwrite(base_path + "fix_adjust.png", fix_img)
+
+    gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
+    myHeatmap.draw_heat_map(gaze_4_heat, base_path + "fix_heatmap.png", background)
 
     word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
 
@@ -269,11 +277,11 @@ def add_fixation_to_word(request):
             words.append(word_list[word_index])
         else:
             words.append("-1")
-    print(len(word_index_list))
-    print(len(words))
-    print(len(fix_index_list))
-    print(len(page_id_list))
-    print(len(experiment_id_list))
+    # print(len(word_index_list))
+    # print(len(words))
+    # print(len(fix_index_list))
+    # print(len(page_id_list))
+    # print(len(experiment_id_list))
     df = pd.DataFrame(
         {
             "word_index": word_index_list,
@@ -289,10 +297,51 @@ def add_fixation_to_word(request):
         df.to_csv(path, index=False, mode="a", header=False)
     else:
         df.to_csv(path, index=False, mode="a")
-    return HttpResponse(1)
+    # return HttpResponse(1)
     label = {
         # "1016":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12]],
+        '1211': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
+
+        '1230': [[0], [1], [2], [3], [4], [4], [5], [5], [6], [6], [7], [8], [9], [10], [11], [11], [12], [13], [14],
+                 [15]],
+        '1231': [[0], [0]],
+
         "1232": [[0], [1], [2], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [11], [11], [11], [11], [12], [13]],
+
+        '1236': [[0], [1], [2], [3], [4], [5], [6], [7], [7], [7], [8], [9], [10], [11], [12], [11, 12, 13], [13], [13],
+                 [14]],
+        '1237': [[0], [1], [1], [2], [2], [2]],
+
+        '1238': [[0], [0, 1], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
+
+        '1247': [[0], [1], [2], [3], [3], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
+        '1248': [[0]],
+
+        '1249': [[0], [0, 1], [1], [2], [3], [4], [5], [5, 6], [5], [6], [7], [8], [9], [9], [9], [10], [11], [12],
+                 [13],
+                 [13],
+                 [14]],
+        '1250': [[0], [1], [2], [3], [4], [5], [6], [7]],
+
+        '1257': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [12], [13], [14]],
+        '1258': [[0], [1], [2], [4], [5], [6], [7]],
+
+        '1288': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
+        '1289': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9]],
+
+        '1290': [[0], [1], [2], [3], [5], [6], [7], [8], [9], [9], [10], [11], [12]],
+        '1291': [[0], [1], [2], [3], [5], [6], [7], [8], [9], [10], [11], [12], [13]],
+
+        '1298': [[0], [1], [1], [2], [3], [4], [5], [6], [7], [7], [8], [9], [10], [11], [12], [13], [14], [14]],
+        '1299': [[0], [1], [2], [3], [4], [5], [6], [6, 7], [6], [7], [8], [9], [10], [11], [11]],
+        '1300': [[0], [0], [1], [2], [3], [4]],
+
+        '1316': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8, 9], [9], [10], [11], [12], [13], [14]],
+        '1317': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [10]],
+
+        '1323': [[0], [1], [2], [3], [4], [4], [5], [7], [8], [9], [10], [10], [10], [11], [11], [11]],
+        '1324': [[0], [1], [2], [3], [5], [6], [7], [7], [8], [9], [9], [10], [11], [11], [11], [12], [13], [14], [14]],
+
         "1017": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8], [8], [9], [10], [11], [12], [13], [14]],
         "1015": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
         "1018": [
@@ -318,25 +367,33 @@ def add_fixation_to_word(request):
         ],
     }
 
+    print(len(label[page_data_id]))
+    print(len(row_sequence))
     assert len(label[page_data_id]) == len(row_sequence)
 
     # 找index
     cnt = 0
     sequences = []
+
+    wrong_fix_num = 0
+
     for sequence in sequence_fixations:
         tmp = [cnt, cnt + len(sequence) - 1]
         cnt = cnt + len(sequence)
         sequences.append(tmp)
+
     correct_num = 0
     for i, row in enumerate(row_sequence):
         if row in label[page_data_id][i]:
             correct_num += 1
         else:
             print(f"{sequences[i]}序列出错，label：{label[page_data_id][i]}，预测：{row}")
+            wrong_fix_num += sequences[i][1] - sequences[i][0] + 1
     correct_rate = correct_num / len(row_sequence)
     print(f"预测行：{row_sequence}")
     print(f"标签行：{label[page_data_id]}")
-    print(f"成功率：{correct_rate}")
+    print(f"行成功率：{correct_rate}")
+    print(f'fix成功率:{(len(result_fixations) - wrong_fix_num) / len(result_fixations)}')
 
     row_level_pic = []
     for fix in row_level_fix:
@@ -378,6 +435,7 @@ def classify_gaze_2_label_in_pic(request):
     # print("fixations: " + str(fixations[36][2]) + ", " + str(fixations[37][2]) + ", " + str(fixations[38][2]))
     fixation_map = show_fixations_and_saccades(fixations, saccades, background)
 
+    cv2.imwrite(base_path + 'fix.png', fixation_map)
     # todo 减少IO操作
     heatmap = Image.open(base_path + "heatmap.png")
     # cv2->PIL.Image
@@ -709,13 +767,15 @@ def get_dataset(request):
                 success += 1
                 endtime = datetime.datetime.now()
                 logger.info(
-                    "成功生成%d条,失败%d条,耗时为%ss" % (success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
+                    "成功生成%d条,失败%d条,耗时为%ss" % (
+                        success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
                 )
         except:
             fail += 1
             endtime = datetime.datetime.now()
             logger.info(
-                "成功生成%d条,失败%d条,耗时为%ss" % (success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
+                "成功生成%d条,失败%d条,耗时为%ss" % (
+                    success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
             )
     # 生成cnn的数据集
     data = pd.DataFrame(
@@ -741,35 +801,36 @@ def get_dataset(request):
 
 
 def get_all_time_dataset(request):
-    experiment_list_select = [
-        590,
-        601,
-        586,
-        587,
-        588,
-        597,
-        598,
-        625,
-        630,
-        631,
-        641,
-        639,
-        622,
-        623,
-        624,
-        628,
-        617,
-        609,
-        636,
-        638,
-        640,
-        577,
-        591,
-    ]
+    # experiment_list_select = [
+    #     590,
+    #     601,
+    #     586,
+    #     587,
+    #     588,
+    #     597,
+    #     598,
+    #     625,
+    #     630,
+    #     631,
+    #     641,
+    #     639,
+    #     622,
+    #     623,
+    #     624,
+    #     628,
+    #     617,
+    #     609,
+    #     636,
+    #     638,
+    #     640,
+    #     577,
+    #     591,
+    # ]
+    experiment_list_select = [590,597,598,630]
     experiment_failed_list = [586, 624, 639]
     user_remove_list = ["shiyubin"]
     # experiment_list_select = [630]
-    path = "jupyter\\dataset\\" + "dat-with-label.csv"
+    path = "jupyter\\dataset\\" + "optimal-data.csv"
     experiments = (
         Experiment.objects.filter(is_finish=True)
         .filter(id__in=experiment_list_select)
@@ -807,6 +868,8 @@ def get_all_time_dataset(request):
             number_of_fixations = [0 for _ in range(word_num)]
             reading_times = [0 for _ in range(word_num)]
             fixation_duration = [0 for _ in range(word_num)]
+            first_fixation_duration = [0 for _ in range(word_num)]
+            background_regression = [0 for _ in range(word_num)]
 
             for i, page_data in enumerate(page_data_list):
 
@@ -850,6 +913,10 @@ def get_all_time_dataset(request):
                     if index != -1:
                         number_of_fixations[index + begin] += 1
                         fixation_duration[index + begin] += fixation[2]
+                        if first_fixation_duration[index + begin] == 0:
+                            first_fixation_duration[index + begin] = fixation[2]
+                        if pre_word_index > index:
+                            background_regression[pre_word_index + begin] += 1
                         if index != pre_word_index:
                             reading_times[index + begin] += 1
                             pre_word_index = index
@@ -871,6 +938,9 @@ def get_all_time_dataset(request):
                     "number_of_fixations": number_of_fixations,
                     "fixation_duration": fixation_duration,
                     # "average_fixation_duration": average_fixation_duration_all,
+                    "first_fixation_duration": first_fixation_duration,
+                    "background_regression": background_regression
+
                 }
             )
 
@@ -882,13 +952,15 @@ def get_all_time_dataset(request):
             success += 1
             endtime = datetime.datetime.now()
             logger.info(
-                "成功生成%d条,失败%d条,耗时为%ss" % (success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
+                "成功生成%d条,失败%d条,耗时为%ss" % (
+                    success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
             )
         except:
             fail += 1
             endtime = datetime.datetime.now()
             logger.info(
-                "成功生成%d条,失败%d条,耗时为%ss" % (success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
+                "成功生成%d条,失败%d条,耗时为%ss" % (
+                    success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
             )
             experiment_failed_list.append(experiment.id)
 
@@ -1206,7 +1278,8 @@ def get_timestamp_dataset(request):
             success += 1
             endtime = datetime.datetime.now()
             logger.info(
-                "成功生成%d条,失败%d条,耗时为%ss" % (success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
+                "成功生成%d条,失败%d条,耗时为%ss" % (
+                    success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
             )
 
             # 清空列表
@@ -1232,7 +1305,8 @@ def get_timestamp_dataset(request):
             fail += 1
             endtime = datetime.datetime.now()
             logger.info(
-                "成功生成%d条,失败%d条,耗时为%ss" % (success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
+                "成功生成%d条,失败%d条,耗时为%ss" % (
+                    success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
             )
             experiment_failed_list.append(experiment.id)
 
@@ -1364,11 +1438,13 @@ def get_nlp_sequence(request):
     importance_level = normalize(importance_level)
     attention_level = normalize(attention_level)
 
-    nlp_feature = [
+    nlp_word_list, word4show_list = generate_word_list(texts)
+    nlp_feature = [(
         (1 / 3) * difficulty_level[i] + (1 / 3) * importance_level[i] + (1 / 3) * attention_level[i]
-        for i in range(len(word_list))
+        , nlp_word_list[i]) for i in range(len(word_list))
     ]
     print(nlp_feature)
+    print(len(nlp_feature))
 
     import matplotlib.pyplot as plt
     import pandas as pd
@@ -1378,18 +1454,10 @@ def get_nlp_sequence(request):
     fig = plt.figure(figsize=(50, 4), dpi=100)
 
     data1 = []
-    i = 0
-    for feature in nlp_feature:
-        data1.append([i, feature])
-        i += 1
-    df1 = pd.DataFrame(data=data1, columns=columns1)
-
-    print(experiment_id)
     csv = pd.read_csv(r"D:\qxy\reading-new\reading\jupyter\dataset\data_after_norm.csv")
-    print(csv.head())
     csv = csv[csv["experiment_id"] == 577]
-    print(csv)
     columns = ["index", "value"]
+    print(len(csv))
 
     data = []
     data_not_understand = []
@@ -1399,12 +1467,18 @@ def get_nlp_sequence(request):
     word_feature = []
     for index, row in csv.iterrows():
         word_feature.append(row["word"])
-        value = 0.4 * row["number_of_fixations"] + 0.4 * row["fixation_duration"] + 0.2 * row["reading_times"]
-        if row["word_understand"] == 0:
-            data_not_understand.append([i, value])
-        data.append([i, value])
-        line.append([i, 0.5])
-        i += 1
+        for feature in nlp_feature:
+            if feature[1].lower().strip() == str(row["word"]).lower().strip():
+                data1.append([i, feature[0]])
+
+                value = 0.4 * row["number_of_fixations"] + 0.4 * row["fixation_duration"] + 0.2 * row["reading_times"]
+                if row["word_understand"] == 0:
+                    data_not_understand.append([i, value])
+                data.append([i, value])
+                line.append([i, 0.5])
+                i += 1
+                break
+    df1 = pd.DataFrame(data=data1, columns=columns1)
     df = pd.DataFrame(data=data, columns=columns)
     line = pd.DataFrame(data=line, columns=columns)
     df_1 = pd.DataFrame(data=data_not_understand, columns=columns)
@@ -1414,4 +1488,4 @@ def get_nlp_sequence(request):
     plt.plot(line["index"], line["value"], lw=3, ls="-", color="orange", zorder=0, alpha=0.3)
     plt.scatter(df_1["index"], df_1["value"], color="red", zorder=1, s=60)
     plt.show()
-    return JsonResponse({"visual": word_feature, "nlp": word_list})
+    return JsonResponse({"visual": word_feature, "nlp": nlp_word_list})

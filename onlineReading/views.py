@@ -22,7 +22,7 @@ from semantic_attention import (  # generate_sentence_difficulty,
     generate_sentence_difficulty,
     generate_word_attention,
     generate_word_difficulty,
-    nlp,
+    nlp, generate_word_list,
 )
 from utils import (
     Timer,
@@ -304,7 +304,7 @@ def takeSecond(elem):
 
 def paint_on_word(image, target_words_index, word_locations, title, pic_path, alpha=0.1, color=255):
     blk = np.zeros(image.shape, np.uint8)
-    blk[0:image.shape[0]-1,0:image.shape[1]-1] = 255
+    blk[0:image.shape[0] - 1, 0:image.shape[1] - 1] = 255
     set_title(blk, title)
     for word_index in target_words_index:
         loc = word_locations[word_index]
@@ -422,7 +422,7 @@ def get_row_level_fixations_map(request):
             pre_fixation = fixation
         if len(tmp) != 0:
             row_fixations.append(tmp)
-                # row_fixations[len(row_fixations) - 1] = row_fixations[len(row_fixations) - 1] + tmp
+            # row_fixations[len(row_fixations) - 1] = row_fixations[len(row_fixations) - 1] + tmp
         base_path = "static\\data\\heatmap\\" + str(exp.first().user) + "\\" + str(page_data_id) + "\\"
 
         page_data = PageData.objects.get(id=page_data_id)
@@ -560,7 +560,7 @@ def get_row_level_heatmap(request):
             # row_fixations.append(tmp)
             # tmp = [fixation]
             if row_cnt == 2 or row_cnt == 4 or row_cnt == 6:
-                row_fixations[len(row_fixations)-1] = row_fixations[len(row_fixations)-1] + tmp
+                row_fixations[len(row_fixations) - 1] = row_fixations[len(row_fixations) - 1] + tmp
             else:
                 row_fixations.append(tmp)
             tmp = [fixation]
@@ -907,14 +907,14 @@ def set_title(blk, title):
 
 
 def get_word_level_nlp_attention(
-    texts,
-    page_data_id,
-    top_dict,
-    background,
-    word_list,
-    word_locations,
-    username,
-    base_path,
+        texts,
+        page_data_id,
+        top_dict,
+        background,
+        word_list,
+        word_locations,
+        username,
+        base_path,
 ):
     logger.info("word level attention正在分析....")
     nlp_attentions = ["topic_relevant", "word_attention", "word_difficulty"]
@@ -939,7 +939,7 @@ def get_word_level_nlp_attention(
         alpha = 0.3  # 设置覆盖图片的透明度
         blk = np.zeros(image.shape, np.uint8)
         # (1080, 1920, 3)
-        blk[0 : image.shape[0] - 1, 0 : image.shape[1] - 1] = 255
+        blk[0: image.shape[0] - 1, 0: image.shape[1] - 1] = 255
         print(image.shape)
         title = str(page_data_id) + "-" + str(username) + "-" + str(attention)
         # 设置标题
@@ -973,15 +973,94 @@ def get_word_level_nlp_attention(
         logger.info("heatmap已经生成:%s" % heatmap_name)
 
 
+def get_topic_relevant(request):
+    article_id = request.GET.get('article_id')
+    paras = Paragraph.objects.filter(article_id=article_id).order_by("para_id")
+    text = ""
+    for para in paras:
+        text += para.content
+
+    topic_value = get_importance(text)
+    word_list, word4show_list = generate_word_list(text)
+    topic_value_of_words = []
+
+    print(len(word_list))
+    print(len(topic_value))
+
+    for item in topic_value:
+        if item[0].lower() == 'a':
+            print('yes')
+
+    for word in word_list:
+        for item in topic_value:
+            if item[0].lower() == word.lower():
+                tmp = (word, item[1])
+                topic_value_of_words.append(tmp)
+                break
+    return JsonResponse({'topic value': topic_value_of_words})
+
+def get_diff(request):
+    article_id = request.GET.get('article_id')
+    paras = Paragraph.objects.filter(article_id=article_id).order_by("para_id")
+    text = ""
+    for para in paras:
+        text += para.content
+
+    topic_value = generate_word_difficulty(text)
+    word_list, word4show_list = generate_word_list(text)
+    topic_value_of_words = []
+
+    print(len(word_list))
+    print(len(topic_value))
+
+    for item in topic_value:
+        if item[0].lower() == 'a':
+            print('yes')
+
+    for word in word_list:
+        for item in topic_value:
+            if item[0].lower() == word.lower():
+                tmp = (word, item[1])
+                topic_value_of_words.append(tmp)
+                break
+    return JsonResponse({'topic value': topic_value_of_words})
+
+def get_att(request):
+    article_id = request.GET.get('article_id')
+    paras = Paragraph.objects.filter(article_id=article_id).order_by("para_id")
+    text = ""
+    for para in paras:
+        text += para.content
+
+    topic_value = generate_word_attention(text)
+    word_list, word4show_list = generate_word_list(text)
+    topic_value_of_words = []
+
+    print(len(word_list))
+    print(len(topic_value))
+
+    for item in topic_value:
+        if item[0].lower() == 'a':
+            print('yes')
+
+    for word in word_list:
+        for item in topic_value:
+            if item[0].lower() == word.lower():
+                tmp = (word, item[1])
+                topic_value_of_words.append(tmp)
+                break
+    print(topic_value_of_words)
+    return HttpResponse(topic_value_of_words)
+
 def get_sentence_level_nlp_attention(
-    texts,
-    sentence_list,
-    background,
-    word_locations,
-    page_data_id,
-    top_sentence_dict,
-    username,
-    base_path,
+        texts,
+        sentence_list,
+        background,
+        word_locations,
+        page_data_id,
+        top_sentence_dict,
+        username,
+        base_path,
 ):
     logger.info("sentence level attention正在分析....")
     sentence_attentions = ["sentence_attention", "sentence_difficulty"]
@@ -1017,7 +1096,7 @@ def get_sentence_level_nlp_attention(
         color = 255
         alpha = 0.3  # 设置覆盖图片的透明度
         blk = np.zeros(image.shape, np.uint8)
-        blk[0 : image.shape[0] - 1, 0 : image.shape[1] - 1] = 255
+        blk[0: image.shape[0] - 1, 0: image.shape[1] - 1] = 255
 
         title = str(page_data_id) + "-" + str(username) + "-" + attention
         set_title(blk, title)
@@ -1064,16 +1143,16 @@ def get_sentence_level_nlp_attention(
 
 
 def get_visual_attention(
-    page_data_id,
-    username,
-    gaze_x,
-    gaze_y,
-    gaze_t,
-    background,
-    base_path,
-    word_list,
-    word_locations,
-    top_dict,
+        page_data_id,
+        username,
+        gaze_x,
+        gaze_y,
+        gaze_t,
+        background,
+        base_path,
+        word_list,
+        word_locations,
+        top_dict,
 ):
     logger.info("visual attention正在分析....")
 
@@ -1428,8 +1507,9 @@ def gaze_to_input(coordinates, window):
         # 计算速度、方向，作为模型输入
         time = (coordinates[end][2] - coordinates[begin][2]) / 100
         speed = (
-            get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1], coordinates[end][1])
-            / time
+                get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1],
+                                    coordinates[end][1])
+                / time
         )
         direction = math.atan2(coordinates[end][1] - coordinates[begin][1], coordinates[end][0] - coordinates[begin][0])
         coordinate.append(speed)
@@ -1487,8 +1567,9 @@ def coor_to_input(coordinates, window):
         # 计算速度、方向，作为模型输入
         time = (coordinates[end][2] - coordinates[begin][2]) / 100
         speed = (
-            get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1], coordinates[end][1])
-            / time
+                get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1],
+                                    coordinates[end][1])
+                / time
         )
         direction = math.atan2(coordinates[end][1] - coordinates[begin][1], coordinates[end][0] - coordinates[begin][0])
         coordinate.append(speed)
@@ -1590,7 +1671,8 @@ def get_fixation_by_time(request):
             row = i
             break
     if row == -1:
-        return JsonResponse({"code": 404, "status": "未检索相关信息"}, json_dumps_params={"ensure_ascii": False}, safe=False)
+        return JsonResponse({"code": 404, "status": "未检索相关信息"}, json_dumps_params={"ensure_ascii": False},
+                            safe=False)
 
     print(file["gaze_x"][row])
     print(type(file["gaze_x"][row]))
@@ -1700,7 +1782,7 @@ def get_speed(request):
                     else:
                         time2 += 30
 
-            para_1_speed = (first_para_index+1) / time1 * 60000
+            para_1_speed = (first_para_index + 1) / time1 * 60000
 
             para_above_1_speed = (aticle_para_1[article_id]["word_num"] - first_para_index) / time2 * 60000
 

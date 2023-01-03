@@ -551,13 +551,13 @@ def get_saccade_info(fixations):
     sum_angle = 0
     for i in range(len(fixations) - 1):
         if (
-            get_euclid_distance(
-                fixations[i][0],
-                fixations[i + 1][0],
-                fixations[i][1],
-                fixations[i + 1][1],
-            )
-            > 500
+                get_euclid_distance(
+                    fixations[i][0],
+                    fixations[i + 1][0],
+                    fixations[i][1],
+                    fixations[i + 1][1],
+                )
+                > 500
         ):
             saccade_times = saccade_times + 1
             sum_angle = sum_angle + get_saccade_angle(fixations[i], fixations[i + 1])
@@ -767,7 +767,7 @@ def get_importance(text):
 
     kw_model = KeyBERT()
 
-    importance = kw_model.extract_keywords(text, keyphrase_ngram_range=(1, 1), stop_words=None, top_n=1000)
+    importance = kw_model.extract_keywords(text, keyphrase_ngram_range=(1, 1), stop_words=None, top_n=2000)
     return importance
 
 
@@ -1083,7 +1083,7 @@ def preprocess_data(data, filters):
 
 
 def format_gaze(
-    gaze_x: str, gaze_y: str, gaze_t: str, use_filter=True, begin_time: int = 500, end_time: int = 500
+        gaze_x: str, gaze_y: str, gaze_t: str, use_filter=True, begin_time: int = 500, end_time: int = 500
 ) -> list:
     list_x = list(map(float, gaze_x.split(",")))
     list_y = list(map(float, gaze_y.split(",")))
@@ -1121,13 +1121,13 @@ def format_gaze(
 
 
 def compute_corr(
-    filename: str,
-    feature_of_word: list,
-    feature_of_sentence: list,
-    show_word: bool = True,
-    show_sentence: bool = True,
-    show_wander: bool = True,
-    user: str = None,
+        filename: str,
+        feature_of_word: list,
+        feature_of_sentence: list,
+        show_word: bool = True,
+        show_sentence: bool = True,
+        show_wander: bool = True,
+        user: str = None,
 ):
     data = pd.read_csv(filename)
     pc_list = []
