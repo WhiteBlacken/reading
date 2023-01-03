@@ -213,12 +213,27 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
                         result_rows.append(row_index)
                     else:
                         # 把下一行拉上去，这一行定位错了
+                        # 如果上一行是短行，则不进行调整
+                        row_left = rows[now_max_row+1]['left']
+                        row_right = rows[now_max_row+1]['right']
+
+                        if row_right-row_left <= len_per_word * 5:
+                            row_pass_time[row_index] += 1
+                            result_rows.append(row_index)
+                        else:
+                            row_pass_time[now_max_row + 1] += 1
+                            result_rows.append(now_max_row + 1)
+                else:
+                    # 如果上一行是短行，则不进行调整
+                    row_left = rows[now_max_row + 1]['left']
+                    row_right = rows[now_max_row + 1]['right']
+
+                    if row_right - row_left <= len_per_word * 5:
+                        row_pass_time[row_index] += 1
+                        result_rows.append(row_index)
+                    else:
                         row_pass_time[now_max_row + 1] += 1
                         result_rows.append(now_max_row + 1)
-                else:
-                    # 如果上一行没有回看，则直接把拉上来
-                    row_pass_time[now_max_row + 1] += 1
-                    result_rows.append(now_max_row + 1)
             else:
                 row_pass_time[row_index] += 1
                 result_rows.append(row_index)
