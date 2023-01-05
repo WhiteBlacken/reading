@@ -211,10 +211,10 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
                     else:
                         # 把下一行拉上去，这一行定位错了
                         # 如果上一行是短行，则不进行调整
-                        row_left = rows[now_max_row+1]['left']
-                        row_right = rows[now_max_row+1]['right']
+                        row_left = rows[now_max_row + 1]['left']
+                        row_right = rows[now_max_row + 1]['right']
 
-                        if row_right-row_left <= len_per_word * 5:
+                        if row_right - row_left <= len_per_word * 5:
                             row_pass_time[row_index] += 1
                             result_rows.append(row_index)
                         else:
@@ -380,6 +380,12 @@ def add_fixation_to_word(request):
             [14],
             [14],
         ],
+
+        '1226': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [14]],
+        '1227': [[0], [1], [2]],
+
+        '1267': [[0], [0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
+        '1268': [[0], [1]]
     }
 
     print(len(label[page_data_id]))
@@ -841,7 +847,7 @@ def get_all_time_dataset(request):
     #     577,
     #     591,
     # ]
-    experiment_list_select = [590,597,598,630]
+    experiment_list_select = [590, 597, 598, 630]
     experiment_failed_list = [586, 624, 639]
     user_remove_list = ["shiyubin"]
     # experiment_list_select = [630]
@@ -1000,37 +1006,25 @@ def get_gazes(fixation, page_data):
 def get_timestamp_dataset(request):
     experiment_list_select = [
         590,
-        601,
-        586,
-        587,
-        588,
         597,
         598,
-        625,
-        630,
-        631,
-        641,
-        639,
         622,
-        623,
-        624,
-        628,
-        617,
-        609,
-        636,
+        630,
         638,
-        640,
-        577,
-        591,
+        641,
+        631,
+        579,
+        596,
+        609,
+        585,
     ]
     experiment_failed_list = [586, 624, 639]
-    user_remove_list = ["shiyubin"]
-    path = "jupyter\\dataset\\" + "handcraft-data.csv"
+    # user_remove_list = ["shiyubin"]
+    path = "jupyter\\dataset\\" + "handcraft-data-1.csv"
     experiments = (
         Experiment.objects.filter(is_finish=True)
         .filter(id__in=experiment_list_select)
         .exclude(id__in=experiment_failed_list)
-        .exclude(user__in=user_remove_list)
     )
     print(f"一共会生成{len(experiments)}条数据")
 
@@ -1339,7 +1333,7 @@ def get_timestamp_dataset(request):
             "acc": acc,
         }
     )
-    path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "cnn-data.csv"
+    path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "cnn-data-1.csv"
     if os.path.exists(path):
         data.to_csv(path, index=False, mode="a", header=False)
     else:
