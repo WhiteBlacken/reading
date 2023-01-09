@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import requests
 from loguru import logger
+from nltk.corpus import stopwords
 from paddleocr import PaddleOCR
 from paddleocr.tools.infer.utility import draw_ocr
 from PIL import Image
@@ -23,6 +24,7 @@ from sklearn.metrics import cohen_kappa_score, roc_auc_score
 from sklearn.mixture import GaussianMixture
 
 from onlineReading import settings
+from semantic_attention import get_word_difficulty, get_word_familiar_rate
 
 
 def in_danger_zone(x: int, y: int, danger_zone: list):
@@ -142,29 +144,89 @@ def get_index_in_row_only_use_x(row: list, x: int):
     return -1
 
 
-def get_item_index_x_y(location, x, y):
+def get_row(index, rows):
+    for i, row in enumerate(rows):
+        if row['begin_index'] <= index <= row['end_index']:
+            return i
+    return -1
+
+
+def get_item_index_x_y(location, x, y, word_list=[], rows=[], remove_horizontal_drift=False):
     """根据所有item的位置，当前给出的x,y,判断其在哪个item里 分为word level和row level"""
-    # 解析location
-    # print(type(location))
     location = json.loads(location)
 
+    flag = False
+    index = -1
     # 先找是否正好在范围内
     for i, word in enumerate(location):
         if word["left"] <= x <= word["right"] and word["top"] <= y <= word["bottom"]:
-            return i, False
+            index = i
+            break
+
     # 如果不在范围内,找最近的单词
     min_dist = 100
-    index = -1
-    for i, word in enumerate(location):
-        center_x = (word["left"] + word["right"]) / 2
-        center_y = (word["top"] + word["bottom"]) / 2
-        dist = get_euclid_distance(x, center_x, y, center_y)
-        weight_dist = dist - math.log(word["right"] - word["left"])
-        if weight_dist < min_dist:
-            min_dist = weight_dist
-            index = i
+    if index == -1:
+        for i, word in enumerate(location):
+            center_x = (word["left"] + word["right"]) / 2
+            center_y = (word["top"] + word["bottom"]) / 2
+            dist = get_euclid_distance(x, center_x, y, center_y)
+            weight_dist = dist - math.log(word["right"] - word["left"])
+            if weight_dist < min_dist:
+                min_dist = weight_dist
+                index = i
+                flag = True
 
-    return index, True
+    if remove_horizontal_drift and index != -1:
+        word = word_list[index]
+        stop_words = set(stopwords.words('english'))
+
+        if word.lower() in stop_words:
+            print(f"stop words:{word}")
+            # 如果该词是停用词，则进行调整
+            now_row = get_row(index, rows)
+            if now_row != -1:
+                left_row = get_row(index - 1, rows)
+                right_row = get_row(index + 2, rows)
+
+                left_index = rows[now_row]['begin_index'] if left_row != now_row else index - 1
+                right_index = rows[now_row]['end_index'] if right_row != now_row else index + 2
+
+                candidates_with_stop = [i for i in range(left_index, right_index + 1) if i != index]
+
+                candidates = []
+                # 将stop words删掉
+                for can in candidates_with_stop:
+                    if word_list[can].lower() not in stop_words:
+                        candidates.append(can)
+                if len(candidates) != 0:
+                    difficulty_list = [1000 - get_word_familiar_rate(word_list[index]) for index in candidates]
+                    if sum(difficulty_list) == 0:
+                        diff_pro = [1 / (len(difficulty_list)) for _ in difficulty_list]
+                    else:
+                        diff_pro = [diff / sum(difficulty_list) for diff in difficulty_list]  # 分配到该单词上的概率
+                    rand_num = random.randint(0, 1)
+
+                    cnt = 0
+                    diff_sum = 0
+                    for i, diff in enumerate(diff_pro):
+                        diff_sum += diff
+                        if i == 0:
+                            continue
+                        if rand_num <= diff_sum:
+                            cnt = i - 1
+                            break
+                    print("----------------")
+                    print(f"index有{index}转到{candidates[cnt]}上")
+                    print([word_list[i] for i in candidates])
+                    print(diff_pro)
+                    print(index)
+                    # print(word_list[index])
+                    # print(word_list[candidates[cnt]])
+                    # print(f'由单词{word_list[index]}转到{word_list[candidates[cnt]]}上')
+                    index = candidates[cnt]
+                    flag = True
+
+    return index, flag
 
 
 def get_word_and_location(location):
@@ -1378,6 +1440,5 @@ def get_complete_gaze_data_index(dat):
 
 if __name__ == "__main__":
     # list = [1,0.85,1,0.89,0.83,1,1,1,1,1,1,0.93,0.42,0.88,0.9,1,0.92,0.89,1,1,1,1,0.81,0.95]
-    list = [1,0.89,1,0.89,0.99,1,1,1,1,1,0.96,0.55,0.89,0.97,1,0.96,0.94,1,1,1,1,0.88,0.96]
-    print(np.sum(list)/len(list))
-
+    list = [1, 0.89, 1, 0.89, 0.99, 1, 1, 1, 1, 1, 0.96, 0.55, 0.89, 0.97, 1, 0.96, 0.94, 1, 1, 1, 1, 0.88, 0.96]
+    print(np.sum(list) / len(list))

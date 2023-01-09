@@ -63,7 +63,9 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
     adjust_fixations = []
     # 确定初始的位置
     for i, fix in enumerate(fixations):
-        index, find_near = get_item_index_x_y(location, fix[0], fix[1])
+        index, find_near = get_item_index_x_y(location=location, x=fix[0], y=fix[1], word_list=word_list,
+                                              rows=rows,
+                                              remove_horizontal_drift=True)
         if index != -1:
             if find_near:
                 # 此处是为了可视化看起来清楚
@@ -258,7 +260,10 @@ def add_fixation_to_word(request):
     page_data_id = request.GET.get("id")
     begin = request.GET.get("begin", 0)
     end = request.GET.get("end", -1)
+    check = request.GET.get("check",False)
     pageData = PageData.objects.get(id=page_data_id)
+
+    border, rows, danger_zone, len_per_word = textarea(pageData.location)
 
     gaze_points = format_gaze(pageData.gaze_x, pageData.gaze_y, pageData.gaze_t)[begin:end]
 
@@ -270,10 +275,10 @@ def add_fixation_to_word(request):
     base_path = "pic\\" + str(page_data_id) + "\\"
     background = generate_pic_by_base64(pageData.image, base_path, "background.png")
     fix_img = show_fixations(result_fixations, background)
-    cv2.imwrite(base_path + "fix_adjust.png", fix_img)
+    cv2.imwrite(base_path + "fix_adjust-test.png", fix_img)
 
     gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
-    myHeatmap.draw_heat_map(gaze_4_heat, base_path + "fix_heatmap.png", background)
+    myHeatmap.draw_heat_map(gaze_4_heat, base_path + "fix_heatmap-test.png", background)
 
     word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
 
@@ -282,8 +287,11 @@ def add_fixation_to_word(request):
     page_id_list = []
     experiment_id_list = []
     words = []
+
     for i, x in enumerate(result_fixations):
-        word_index, is_adjust = get_item_index_x_y(pageData.location, x[0], x[1])
+        word_index, is_adjust = get_item_index_x_y(location=pageData.location, x=x[0], y=x[1], word_list=word_list,
+                                                   rows=rows,
+                                                   remove_horizontal_drift=False)
         word_index_list.append(word_index)
         fix_index_list.append(i)
         page_id_list.append(pageData.id)
@@ -292,11 +300,7 @@ def add_fixation_to_word(request):
             words.append(word_list[word_index])
         else:
             words.append("-1")
-    # print(len(word_index_list))
-    # print(len(words))
-    # print(len(fix_index_list))
-    # print(len(page_id_list))
-    # print(len(experiment_id_list))
+
     df = pd.DataFrame(
         {
             "word_index": word_index_list,
@@ -308,113 +312,115 @@ def add_fixation_to_word(request):
     )
     path = "jupyter\\dataset\\" + "fix-word-map-no-drift.csv"
 
+
     if os.path.exists(path):
         df.to_csv(path, index=False, mode="a", header=False)
     else:
         df.to_csv(path, index=False, mode="a")
-    # return HttpResponse(1)
-    label = {
-        # "1016":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12]],
-        '1211': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
 
-        '1230': [[0], [1], [2], [3], [4], [4], [5], [5], [6], [6], [7], [8], [9], [10], [11], [11], [12], [13], [14],
-                 [15]],
-        '1231': [[0], [0]],
+    if check:
+        label = {
+            # "1016":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12]],
+            '1211': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
 
-        "1232": [[0], [1], [2], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [11], [11], [11], [11], [12], [13]],
+            '1230': [[0], [1], [2], [3], [4], [4], [5], [5], [6], [6], [7], [8], [9], [10], [11], [11], [12], [13], [14],
+                     [15]],
+            '1231': [[0], [0]],
 
-        '1236': [[0], [1], [2], [3], [4], [5], [6], [7], [7], [7], [8], [9], [10], [11], [12], [11, 12, 13], [13], [13],
-                 [14]],
-        '1237': [[0], [1], [1], [2], [2], [2]],
+            "1232": [[0], [1], [2], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [11], [11], [11], [11], [12], [13]],
 
-        '1238': [[0], [0, 1], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
+            '1236': [[0], [1], [2], [3], [4], [5], [6], [7], [7], [7], [8], [9], [10], [11], [12], [11, 12, 13], [13], [13],
+                     [14]],
+            '1237': [[0], [1], [1], [2], [2], [2]],
 
-        '1247': [[0], [1], [2], [3], [3], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
-        '1248': [[0]],
+            '1238': [[0], [0, 1], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
 
-        '1249': [[0], [0, 1], [1], [2], [3], [4], [5], [5, 6], [5], [6], [7], [8], [9], [9], [9], [10], [11], [12],
-                 [13],
-                 [13],
-                 [14]],
-        '1250': [[0], [1], [2], [3], [4], [5], [6], [7]],
+            '1247': [[0], [1], [2], [3], [3], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
+            '1248': [[0]],
 
-        '1257': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [12], [13], [14]],
-        '1258': [[0], [1], [2], [4], [5], [6], [7]],
+            '1249': [[0], [0, 1], [1], [2], [3], [4], [5], [5, 6], [5], [6], [7], [8], [9], [9], [9], [10], [11], [12],
+                     [13],
+                     [13],
+                     [14]],
+            '1250': [[0], [1], [2], [3], [4], [5], [6], [7]],
 
-        '1288': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
-        '1289': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9]],
+            '1257': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [12], [13], [14]],
+            '1258': [[0], [1], [2], [4], [5], [6], [7]],
 
-        '1290': [[0], [1], [2], [3], [5], [6], [7], [8], [9], [9], [10], [11], [12]],
-        '1291': [[0], [1], [2], [3], [5], [6], [7], [8], [9], [10], [11], [12], [13]],
+            '1288': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
+            '1289': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9]],
 
-        '1298': [[0], [1], [1], [2], [3], [4], [5], [6], [7], [7], [8], [9], [10], [11], [12], [13], [14], [14]],
-        '1299': [[0], [1], [2], [3], [4], [5], [6], [6, 7], [6], [7], [8], [9], [10], [11], [11]],
-        '1300': [[0], [0], [1], [2], [3], [4]],
+            '1290': [[0], [1], [2], [3], [5], [6], [7], [8], [9], [9], [10], [11], [12]],
+            '1291': [[0], [1], [2], [3], [5], [6], [7], [8], [9], [10], [11], [12], [13]],
 
-        '1316': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8, 9], [9], [10], [11], [12], [13], [14]],
-        '1317': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [10]],
+            '1298': [[0], [1], [1], [2], [3], [4], [5], [6], [7], [7], [8], [9], [10], [11], [12], [13], [14], [14]],
+            '1299': [[0], [1], [2], [3], [4], [5], [6], [6, 7], [6], [7], [8], [9], [10], [11], [11]],
+            '1300': [[0], [0], [1], [2], [3], [4]],
 
-        '1323': [[0], [1], [2], [3], [4], [4], [5], [7], [8], [9], [10], [10], [10], [11], [11], [11]],
-        '1324': [[0], [1], [2], [3], [5], [6], [7], [7], [8], [9], [9], [10], [11], [11], [11], [12], [13], [14], [14]],
+            '1316': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8, 9], [9], [10], [11], [12], [13], [14]],
+            '1317': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [10]],
 
-        "1017": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8], [8], [9], [10], [11], [12], [13], [14]],
-        "1015": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
-        "1018": [
-            [0],
-            [1],
-            [2],
-            [3],
-            [4],
-            [4],
-            [4, 5],
-            [5],
-            [5],
-            [6],
-            [7],
-            [8],
-            [9],
-            [10],
-            [11],
-            [12],
-            [13],
-            [14],
-            [14],
-        ],
+            '1323': [[0], [1], [2], [3], [4], [4], [5], [7], [8], [9], [10], [10], [10], [11], [11], [11]],
+            '1324': [[0], [1], [2], [3], [5], [6], [7], [7], [8], [9], [9], [10], [11], [11], [11], [12], [13], [14], [14]],
 
-        '1226': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [14]],
-        '1227': [[0], [1], [2]],
+            "1017": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8], [8], [9], [10], [11], [12], [13], [14]],
+            "1015": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
+            "1018": [
+                [0],
+                [1],
+                [2],
+                [3],
+                [4],
+                [4],
+                [4, 5],
+                [5],
+                [5],
+                [6],
+                [7],
+                [8],
+                [9],
+                [10],
+                [11],
+                [12],
+                [13],
+                [14],
+                [14],
+            ],
 
-        '1267': [[0], [0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
-        '1268': [[0], [1]]
-    }
+            '1226': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [14]],
+            '1227': [[0], [1], [2]],
 
-    print(len(label[page_data_id]))
-    print(len(row_sequence))
-    assert len(label[page_data_id]) == len(row_sequence)
+            '1267': [[0], [0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
+            '1268': [[0], [1]]
+        }
 
-    # 找index
-    cnt = 0
-    sequences = []
+        print(len(label[page_data_id]))
+        print(len(row_sequence))
+        assert len(label[page_data_id]) == len(row_sequence)
 
-    wrong_fix_num = 0
+        # 找index
+        cnt = 0
+        sequences = []
 
-    for sequence in sequence_fixations:
-        tmp = [cnt, cnt + len(sequence) - 1]
-        cnt = cnt + len(sequence)
-        sequences.append(tmp)
+        wrong_fix_num = 0
 
-    correct_num = 0
-    for i, row in enumerate(row_sequence):
-        if row in label[page_data_id][i]:
-            correct_num += 1
-        else:
-            print(f"{sequences[i]}序列出错，label：{label[page_data_id][i]}，预测：{row}")
-            wrong_fix_num += sequences[i][1] - sequences[i][0] + 1
-    correct_rate = correct_num / len(row_sequence)
-    print(f"预测行：{row_sequence}")
-    print(f"标签行：{label[page_data_id]}")
-    print(f"行成功率：{correct_rate}")
-    print(f'fix成功率:{(len(result_fixations) - wrong_fix_num) / len(result_fixations)}')
+        for sequence in sequence_fixations:
+            tmp = [cnt, cnt + len(sequence) - 1]
+            cnt = cnt + len(sequence)
+            sequences.append(tmp)
+
+        correct_num = 0
+        for i, row in enumerate(row_sequence):
+            if row in label[page_data_id][i]:
+                correct_num += 1
+            else:
+                print(f"{sequences[i]}序列出错，label：{label[page_data_id][i]}，预测：{row}")
+                wrong_fix_num += sequences[i][1] - sequences[i][0] + 1
+        correct_rate = correct_num / len(row_sequence)
+        print(f"预测行：{row_sequence}")
+        print(f"标签行：{label[page_data_id]}")
+        print(f"行成功率：{correct_rate}")
+        print(f'fix成功率:{(len(result_fixations) - wrong_fix_num) / len(result_fixations)}')
 
     row_level_pic = []
     for fix in row_level_fix:
@@ -1004,20 +1010,21 @@ def get_gazes(fixation, page_data):
 
 
 def get_timestamp_dataset(request):
-    experiment_list_select = [
-        590,
-        597,
-        598,
-        622,
-        630,
-        638,
-        641,
-        631,
-        579,
-        596,
-        609,
-        585,
-    ]
+    # experiment_list_select = [
+    #     590,
+    #     597,
+    #     598,
+    #     622,
+    #     630,
+    #     638,
+    #     641,
+    #     631,
+    #     579,
+    #     596,
+    #     609,
+    #     585,
+    # ]
+    experiment_list_select = [506,688,683]
     experiment_failed_list = [586, 624, 639]
     # user_remove_list = ["shiyubin"]
     path = "jupyter\\dataset\\" + "handcraft-data-1.csv"
