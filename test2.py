@@ -6,9 +6,9 @@ from semantic_attention import generate_word_attention, get_word_difficulty
 from utils import get_importance, get_word_and_sentence_from_text, normalize
 import numpy as np
 
-text1 = "feature of 'folk psychology' anyway. If a first-class scientific account of intentional facts and phenomena can't be"
+text1 = "Common, hen indeed it will follow that there is a single phenomenon and, if it is not reducible, it must be"
 
-text2 = "given, that is not because scientific reductionism is not the right line to take in metaphysics,but rather it is"
+text2 = "primitive corresponding to intentionality"
 
 
 def get_nlp_feature(text):
@@ -41,14 +41,16 @@ nlp_feature2, word_list2 = get_nlp_feature(text2)
 print(nlp_feature2)
 print(word_list2)
 
-# ['feature', 'of', "'folk", "psychology'", 'anyway', 'If', 'a', 'first-class', 'scientific', 'account', 'of', 'intentional', 'facts', 'and', 'phenomena', "can't", 'be']
-visual_feature1 = [1, 0, 0, 2, 1, 0, 1, 2, 0, 2, 0, 1, 2, 1, 2, 1, 0]
-# ['given', 'that', 'is', 'not',  'because', 'scientific', 'reductionism', 'is', 'not', 'the', 'right', 'line', 'to', 'take', 'in', 'metaphysicsbut', 'rather', 'it', 'is']
-visual_feature2 = [1, 0, 0, 0, 2, 1, 3, 0, 0, 0, 2, 0, 0, 1, 0, 4, 1, 0, 1]
 
+# text1 = "Common, hen indeed it will follow that there is a single phenomenon and, if it is not reducible, it must be"
+visual_feature1 = [1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+# text2 = "primitive corresponding to intentionality"
+visual_feature2 = [2,2,0,1]
+
+print(len(visual_feature1))
+print(len(nlp_feature1))
 assert len(visual_feature1) == len(nlp_feature1)
-print(len(visual_feature2))
-print(len(nlp_feature2))
+
 assert len(visual_feature2) == len(nlp_feature2)
 
 sum1 = np.sum(np.multiply(np.array(visual_feature1),np.array(nlp_feature1)))

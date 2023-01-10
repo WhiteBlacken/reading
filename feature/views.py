@@ -29,7 +29,7 @@ from feature.utils import (
     textarea,
     word_index_in_row,
 )
-from onlineReading.views import compute_label, coor_to_input
+from onlineReading.views import compute_label, coor_to_input, paint_on_word
 from pyheatmap import myHeatmap
 from semantic_attention import generate_word_attention, get_word_difficulty, generate_word_list
 from utils import (
@@ -39,7 +39,7 @@ from utils import (
     get_index_in_row_only_use_x,
     get_item_index_x_y,
     get_word_and_sentence_from_text,
-    normalize,
+    normalize, get_word_location,
 )
 
 """
@@ -65,7 +65,7 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
     for i, fix in enumerate(fixations):
         index, find_near = get_item_index_x_y(location=location, x=fix[0], y=fix[1], word_list=word_list,
                                               rows=rows,
-                                              remove_horizontal_drift=True)
+                                              remove_horizontal_drift=False)
         if index != -1:
             if find_near:
                 # 此处是为了可视化看起来清楚
@@ -260,7 +260,6 @@ def add_fixation_to_word(request):
     page_data_id = request.GET.get("id")
     begin = request.GET.get("begin", 0)
     end = request.GET.get("end", -1)
-    check = request.GET.get("check",False)
     pageData = PageData.objects.get(id=page_data_id)
 
     border, rows, danger_zone, len_per_word = textarea(pageData.location)
@@ -275,61 +274,115 @@ def add_fixation_to_word(request):
     base_path = "pic\\" + str(page_data_id) + "\\"
     background = generate_pic_by_base64(pageData.image, base_path, "background.png")
     fix_img = show_fixations(result_fixations, background)
-    cv2.imwrite(base_path + "fix_adjust-test.png", fix_img)
+    cv2.imwrite(base_path + "fix_adjust.png", fix_img)
 
     gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
-    myHeatmap.draw_heat_map(gaze_4_heat, base_path + "fix_heatmap-test.png", background)
+    myHeatmap.draw_heat_map(gaze_4_heat, base_path + "fix_heatmap.png", background)
 
     word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
 
-    word_index_list = []
-    fix_index_list = []
-    page_id_list = []
-    experiment_id_list = []
-    words = []
+    csv = request.GET.get('csv', False)
+    if csv:
+        word_index_list = []
+        fix_index_list = []
+        page_id_list = []
+        experiment_id_list = []
+        words = []
 
-    for i, x in enumerate(result_fixations):
-        word_index, is_adjust = get_item_index_x_y(location=pageData.location, x=x[0], y=x[1], word_list=word_list,
-                                                   rows=rows,
-                                                   remove_horizontal_drift=False)
-        word_index_list.append(word_index)
-        fix_index_list.append(i)
-        page_id_list.append(pageData.id)
-        experiment_id_list.append(pageData.experiment_id)
-        if word_index != -1:
-            words.append(word_list[word_index])
+        for i, x in enumerate(result_fixations):
+            word_index, is_adjust = get_item_index_x_y(location=pageData.location, x=x[0], y=x[1], word_list=word_list,
+                                                       rows=rows,
+                                                       remove_horizontal_drift=False)
+            word_index_list.append(word_index)
+            fix_index_list.append(i)
+            page_id_list.append(pageData.id)
+            experiment_id_list.append(pageData.experiment_id)
+            if word_index != -1:
+                words.append(word_list[word_index])
+            else:
+                words.append("-1")
+
+        df = pd.DataFrame(
+            {
+                "word_index": word_index_list,
+                "word": words,
+                "fix_index": fix_index_list,
+                "page_id": page_id_list,
+                "exp_id": experiment_id_list,
+            }
+        )
+        path = "jupyter\\dataset\\" + "fix-word-map-no-drift.csv"
+
+        if os.path.exists(path):
+            df.to_csv(path, index=False, mode="a", header=False)
         else:
-            words.append("-1")
+            df.to_csv(path, index=False, mode="a")
 
-    df = pd.DataFrame(
-        {
-            "word_index": word_index_list,
-            "word": words,
-            "fix_index": fix_index_list,
-            "page_id": page_id_list,
-            "exp_id": experiment_id_list,
-        }
-    )
-    path = "jupyter\\dataset\\" + "fix-word-map-no-drift.csv"
+    heatmap = request.GET.get('heatmap', True)
+    if heatmap:
+        exp = Experiment.objects.get(id=pageData.experiment_id)
+        word_locations = get_word_location(pageData.location)
+        image = cv2.imread(background)
+        # 走神与否
+        words_to_be_painted = []
+        if pageData.wanderLabels:
+            paras_wander = json.loads(pageData.wanderLabels)
+        else:
+            paras_wander = []
 
+        for para in paras_wander:
+            for i in range(para[0], para[1] + 1):  # wander label是到一段结尾，不是到下一段
+                words_to_be_painted.append(i)
 
-    if os.path.exists(path):
-        df.to_csv(path, index=False, mode="a", header=False)
-    else:
-        df.to_csv(path, index=False, mode="a")
+        title = str(page_data_id) + "-" + exp.user + "-" + "para_wander"
+        pic_path = base_path + "para_wander" + ".png"
+        # 画图
+        paint_on_word(image, words_to_be_painted, word_locations, title, pic_path)
 
+        # 单词 TODO 将这些整理为函数，复用
+        # 找需要画的单词
+        if pageData.wordLabels:
+            words_not_understand = json.loads(pageData.wordLabels)
+        else:
+            words_not_understand = []
+        title = str(page_data_id) + "-" + exp.user + "-" + "words_not_understand"
+        pic_path = base_path + "words_not_understand" + ".png"
+        # 画图
+        paint_on_word(image, words_not_understand, word_locations, title, pic_path)
+
+        # 句子
+        if pageData.sentenceLabels:
+            sentences_not_understand = json.loads(pageData.sentenceLabels)
+        else:
+            sentences_not_understand = []
+
+        words_to_painted = []
+        for sentence in sentences_not_understand:
+            for i in range(sentence[0], sentence[1]):
+                # 此处i代表的是单词
+                words_to_painted.append(i)
+
+        title = str(page_data_id) + "-" + exp.user + "-" + "sentences_not_understand"
+        pic_path = base_path + "sentences_not_understand" + ".png"
+        # 画图
+        paint_on_word(image, words_to_painted, word_locations, title, pic_path)
+
+    check = request.GET.get("check", False)
     if check:
         label = {
             # "1016":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12]],
             '1211': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
 
-            '1230': [[0], [1], [2], [3], [4], [4], [5], [5], [6], [6], [7], [8], [9], [10], [11], [11], [12], [13], [14],
+            '1230': [[0], [1], [2], [3], [4], [4], [5], [5], [6], [6], [7], [8], [9], [10], [11], [11], [12], [13],
+                     [14],
                      [15]],
             '1231': [[0], [0]],
 
-            "1232": [[0], [1], [2], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [11], [11], [11], [11], [12], [13]],
+            "1232": [[0], [1], [2], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [11], [11], [11], [11], [12],
+                     [13]],
 
-            '1236': [[0], [1], [2], [3], [4], [5], [6], [7], [7], [7], [8], [9], [10], [11], [12], [11, 12, 13], [13], [13],
+            '1236': [[0], [1], [2], [3], [4], [5], [6], [7], [7], [7], [8], [9], [10], [11], [12], [11, 12, 13], [13],
+                     [13],
                      [14]],
             '1237': [[0], [1], [1], [2], [2], [2]],
 
@@ -361,7 +414,8 @@ def add_fixation_to_word(request):
             '1317': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [10]],
 
             '1323': [[0], [1], [2], [3], [4], [4], [5], [7], [8], [9], [10], [10], [10], [11], [11], [11]],
-            '1324': [[0], [1], [2], [3], [5], [6], [7], [7], [8], [9], [9], [10], [11], [11], [11], [12], [13], [14], [14]],
+            '1324': [[0], [1], [2], [3], [5], [6], [7], [7], [8], [9], [9], [10], [11], [11], [11], [12], [13], [14],
+                     [14]],
 
             "1017": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8], [8], [9], [10], [11], [12], [13], [14]],
             "1015": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
@@ -1024,7 +1078,7 @@ def get_timestamp_dataset(request):
     #     609,
     #     585,
     # ]
-    experiment_list_select = [506,688,683]
+    experiment_list_select = [506, 688, 683]
     experiment_failed_list = [586, 624, 639]
     # user_remove_list = ["shiyubin"]
     path = "jupyter\\dataset\\" + "handcraft-data-1.csv"
