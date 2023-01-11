@@ -1434,7 +1434,7 @@ def article_2_csv(request):
             "content": contents,
         }
     )
-    path = "static\\data\\dataset\\" + "article.csv"
+    path = "jupyter\\dataset\\" + "article-230111.csv"
     df.to_csv(path, index=False, header=False)
     return JsonResponse({"status_code": 200, "status": "ok"})
 

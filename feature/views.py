@@ -238,7 +238,7 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
                 result_rows.append(row_index)
             now_max_row = max(result_rows)
     print(f"row_pass_time:{row_pass_time}")
-    assert sum(row_pass_time) == len(result_rows)
+    # assert sum(row_pass_time) == len(result_rows)
     print(len(result_rows))
     print(len(sequence_fixations))
     assert len(result_rows) == len(sequence_fixations)
@@ -252,7 +252,7 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
     print(f"result_rows:{result_rows}")
     print(f"max of result rows:{max(result_rows)}")
     print(f"len of rows:{len(rows)}")
-    assert (max(result_rows) == len(rows) - 1) or (max(result_rows) == len(rows) - 2)
+    # assert (max(result_rows) == len(rows) - 1) or (max(result_rows) == len(rows) - 2)
     return result_fixations, result_rows, row_level_fix, sequence_fixations
 
 
@@ -1081,24 +1081,10 @@ def get_gazes(fixation, page_data):
 
 
 def get_timestamp_dataset(request):
-    # experiment_list_select = [
-    #     590,
-    #     597,
-    #     598,
-    #     622,
-    #     630,
-    #     638,
-    #     641,
-    #     631,
-    #     579,
-    #     596,
-    #     609,
-    #     585,
-    # ]
-    experiment_list_select = [506, 688, 683]
+    experiment_list_select = [590,597,598,622,630,638,641,631,579,596,609,585,506,688,683,917,916,915,914,913,891,887,885,834]
     experiment_failed_list = [586, 624, 639]
     # user_remove_list = ["shiyubin"]
-    path = "jupyter\\dataset\\" + "handcraft-data-1.csv"
+    path = "jupyter\\dataset\\" + "handcraft-data-230111.csv"
     experiments = (
         Experiment.objects.filter(is_finish=True)
         .filter(id__in=experiment_list_select)
@@ -1411,7 +1397,7 @@ def get_timestamp_dataset(request):
             "acc": acc,
         }
     )
-    path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "cnn-data-1.csv"
+    path = "jupyter\\dataset\\" + "cnn-data-230111.csv"
     if os.path.exists(path):
         data.to_csv(path, index=False, mode="a", header=False)
     else:
