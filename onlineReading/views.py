@@ -1566,11 +1566,16 @@ def coor_to_input(coordinates, window):
 
         # 计算速度、方向，作为模型输入
         time = (coordinates[end][2] - coordinates[begin][2]) / 100
-        speed = (
-                get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1],
-                                    coordinates[end][1])
-                / time
-        )
+        speed = 0
+        if time != 0:
+            speed = (
+                    get_euclid_distance(coordinates[begin][0], coordinates[end][0], coordinates[begin][1],
+                                        coordinates[end][1])
+                    / time
+            )
+        else:
+            speed = 0
+
         direction = math.atan2(coordinates[end][1] - coordinates[begin][1], coordinates[end][0] - coordinates[begin][0])
         coordinate.append(speed)
         coordinate.append(direction)
@@ -1591,7 +1596,10 @@ def coor_to_input(coordinates, window):
         assert begin >= 0
         assert end <= len(coordinates) - 1
         time = (coordinates[end][2] - coordinates[begin][2]) / 100
-        acc = (coordinates[end][3] - coordinates[begin][3]) / time
+        if time != 0:
+            acc = (coordinates[end][3] - coordinates[begin][3]) / time
+        else:
+            acc = 0
         coordinate.append(acc * acc)
 
     speed = [x[3] for x in coordinates]
@@ -1622,47 +1630,10 @@ def get_fixation_by_time(request):
     exp_id = request.GET.get("exp_id")
     time = request.GET.get("time")
 
-    # 1. 准备底图
-    # 先要把time按照page分页
-    page_data_ls = PageData.objects.filter(experiment_id=exp_id)
+    # 1. 准备gaze点
 
-    interval = 2 * 1000
-
-    timestamp = 0
-    timestamps = []  # 每页的time范围
-    for page_data in page_data_ls:
-        gaze_t = get_t(page_data.gaze_t)
-        begin = 0
-        for i, t in enumerate(gaze_t):
-            if i == 0:
-                continue
-            if gaze_t[i] - gaze_t[begin] > interval:
-                timestamp += 1
-                begin = i
-        timestamps.append(timestamp)
-    print("timestamps")
-    print(timestamps)
-    page_index = -1
-    for i, item in enumerate(timestamps):
-        print(item)
-        if item >= int(time):
-            page_index = i
-            break
-    assert page_index >= 0
-    assert len(page_data_ls) >= page_index
-
-    page_data = page_data_ls[page_index]
-
-    image = page_data.image.split(",")[1]
-    image_data = base64.b64decode(image)
-
-    filename = "static\\data\\timestamp\\origin.png"
-    with open(filename, "wb") as f:
-        f.write(image_data)
-
-    # 2. 准备gaze点
+    csv = "jupyter\\paint-230112.csv"
     row = -1
-    csv = "jupyter\\dataset\\all-gaze-time.csv"
     file = pd.read_csv(csv)
     for i, r in file.iterrows():
         if str(r["experiment_id"]) == exp_id and str(r["time"]) == time:
@@ -1674,15 +1645,12 @@ def get_fixation_by_time(request):
         return JsonResponse({"code": 404, "status": "未检索相关信息"}, json_dumps_params={"ensure_ascii": False},
                             safe=False)
 
-    print(file["gaze_x"][row])
-    print(type(file["gaze_x"][row]))
 
+    # 准备gaze
     list_x = json.loads(file["gaze_x"][row])
     list_y = json.loads(file["gaze_y"][row])
     list_t = json.loads(file["gaze_t"][row])
 
-    print(list_x)
-    print(type(list_x))
     # 时序滤波
     if filter:
         filters = [
@@ -1700,9 +1668,24 @@ def get_fixation_by_time(request):
     assert len(list_x) == len(list_y) == len(list_t)
     gaze_points = [[list_x[i], list_y[i], list_t[i]] for i in range(len(list_x))]
 
-    print(detect_fixations(gaze_points))
-    fixations = keep_row(detect_fixations(gaze_points), kernel_size=3)
-    print(fixations)
+    # 准备fix
+    fix_x = json.loads(file["fix_x"][row])
+    fix_y = json.loads(file["fix_y"][row])
+
+    assert len(fix_x) == len(fix_y)
+    fixations = [[fix_x[i],fix_y[i]] for i in range(len(fix_x))]
+
+
+    # 2. 准备底图
+    page = file["page"][row]
+    page_data = PageData.objects.filter(experiment_id=exp_id).filter(page=page+1).first()
+    image = page_data.image.split(",")[1]
+    image_data = base64.b64decode(image)
+
+    filename = "static\\visual\\origin.png"
+
+    with open(filename, "wb") as f:
+        f.write(image_data)
     # 3. 画图
     img = cv2.imread(filename)
     cnt = 0
@@ -1732,13 +1715,13 @@ def get_fixation_by_time(request):
             str(cnt),
             (fix[0], fix[1]),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
+            0.6,
             (255, 0, 0),
             1,
         )
         cnt = cnt + 1
         pre_fix = fix
-    result_filename = "static\\data\\timestamp\\" + str(exp_id) + "-" + str(time) + "-fix.png"
+    result_filename = "static\\visual\\" + str(exp_id) + "-" + str(time) + "-fix.png"
     cv2.imwrite(result_filename, img)
     logger.info("fixation 图片生成路径:%s" % result_filename)
 
@@ -1751,7 +1734,7 @@ def get_fixation_by_time(request):
             (0, 0, 255),
             -1,
         )
-    result_filename = "static\\data\\timestamp\\" + str(exp_id) + "-" + str(time) + "-gaze.png"
+    result_filename = "static\\visual\\" + str(exp_id) + "-" + str(time) + "-gaze.png"
     cv2.imwrite(result_filename, img)
     logger.info("gaze 图片生成路径:%s" % result_filename)
     return JsonResponse({"code": 200, "status": "生成完毕"}, json_dumps_params={"ensure_ascii": False}, safe=False)
