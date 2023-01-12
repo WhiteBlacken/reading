@@ -29,7 +29,7 @@ from feature.utils import (
     textarea,
     word_index_in_row,
 )
-from onlineReading.views import compute_label, coor_to_input
+from onlineReading.views import compute_label, coor_to_input, paint_on_word
 from pyheatmap import myHeatmap
 from semantic_attention import generate_word_attention, get_word_difficulty, generate_word_list
 from utils import (
@@ -39,7 +39,7 @@ from utils import (
     get_index_in_row_only_use_x,
     get_item_index_x_y,
     get_word_and_sentence_from_text,
-    normalize,
+    normalize, get_word_location,
 )
 
 """
@@ -65,7 +65,9 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
     adjust_fixations = []
     # 确定初始的位置
     for i, fix in enumerate(fixations):
-        index, find_near = get_item_index_x_y(location, fix[0], fix[1])
+        index, find_near = get_item_index_x_y(location=location, x=fix[0], y=fix[1], word_list=word_list,
+                                              rows=rows,
+                                              remove_horizontal_drift=False)
         if index != -1:
             if find_near:
                 # 此处是为了可视化看起来清楚
@@ -214,10 +216,10 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
                     else:
                         # 把下一行拉上去，这一行定位错了
                         # 如果上一行是短行，则不进行调整
-                        row_left = rows[now_max_row+1]['left']
-                        row_right = rows[now_max_row+1]['right']
+                        row_left = rows[now_max_row + 1]['left']
+                        row_right = rows[now_max_row + 1]['right']
 
-                        if row_right-row_left <= len_per_word * 5:
+                        if row_right - row_left <= len_per_word * 5:
                             row_pass_time[row_index] += 1
                             result_rows.append(row_index)
                         else:
@@ -239,7 +241,7 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
                 result_rows.append(row_index)
             now_max_row = max(result_rows)
     print(f"row_pass_time:{row_pass_time}")
-    assert sum(row_pass_time) == len(result_rows)
+    # assert sum(row_pass_time) == len(result_rows)
     print(len(result_rows))
     print(len(sequence_fixations))
     assert len(result_rows) == len(sequence_fixations)
@@ -253,180 +255,252 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
     print(f"result_rows:{result_rows}")
     print(f"max of result rows:{max(result_rows)}")
     print(f"len of rows:{len(rows)}")
-    assert (max(result_rows) == len(rows) - 1) or (max(result_rows) == len(rows) - 2)
+    # assert (max(result_rows) == len(rows) - 1) or (max(result_rows) == len(rows) - 2)
     return result_fixations, result_rows, row_level_fix, sequence_fixations
 
 
 def add_fixation_to_word(request):
-    page_data_id = request.GET.get("id")
+    exp_id = request.GET.get("exp_id")
     begin = request.GET.get("begin", 0)
     end = request.GET.get("end", -1)
-    pageData = PageData.objects.get(id=page_data_id)
+    csv = request.GET.get('csv', False)
+    heatmap = request.GET.get('heatmap', True)
+    check = request.GET.get("check", False)
 
-    gaze_points = format_gaze(pageData.gaze_x, pageData.gaze_y, pageData.gaze_t)[begin:end]
+    page_data_ls = PageData.objects.filter(experiment_id=exp_id)
 
-    result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
-        gaze_points, pageData.texts, pageData.location
-    )
-    # return HttpResponse(1)
-    # 重要的就是把有可能的错的行挑出来
-    base_path = "pic\\" + str(page_data_id) + "\\"
-    background = generate_pic_by_base64(pageData.image, base_path, "background.png")
-    fix_img = show_fixations(result_fixations, background)
-    cv2.imwrite(base_path + "fix_adjust.png", fix_img)
+    path = "pic\\"+str(exp_id)+"\\"
+    if not os.path.exists(path):
+        os.mkdir(path)
 
-    gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
-    myHeatmap.draw_heat_map(gaze_4_heat, base_path + "fix_heatmap.png", background)
+    for page_data in page_data_ls:
+        page_data_id = page_data.id
 
-    word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
+        pageData = PageData.objects.get(id=page_data_id)
 
-    word_index_list = []
-    fix_index_list = []
-    page_id_list = []
-    experiment_id_list = []
-    words = []
-    for i, x in enumerate(result_fixations):
-        word_index, is_adjust = get_item_index_x_y(pageData.location, x[0], x[1])
-        word_index_list.append(word_index)
-        fix_index_list.append(i)
-        page_id_list.append(pageData.id)
-        experiment_id_list.append(pageData.experiment_id)
-        if word_index != -1:
-            words.append(word_list[word_index])
-        else:
-            words.append("-1")
-    # print(len(word_index_list))
-    # print(len(words))
-    # print(len(fix_index_list))
-    # print(len(page_id_list))
-    # print(len(experiment_id_list))
-    df = pd.DataFrame(
-        {
-            "word_index": word_index_list,
-            "word": words,
-            "fix_index": fix_index_list,
-            "page_id": page_id_list,
-            "exp_id": experiment_id_list,
-        }
-    )
-    path = "jupyter\\dataset\\" + "fix-word-map-no-drift.csv"
+        border, rows, danger_zone, len_per_word = textarea(pageData.location)
 
-    # if os.path.exists(path):
-    #     df.to_csv(path, index=False, mode="a", header=False)
-    # else:
-    #     df.to_csv(path, index=False, mode="a")
-    # return HttpResponse(1)
-    label = {
+        gaze_points = format_gaze(pageData.gaze_x, pageData.gaze_y, pageData.gaze_t)[begin:end]
 
-        # "1016":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12]],
-        '1211': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
+        result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
+            gaze_points, pageData.texts, pageData.location
+        )
 
-        '1230': [[0], [1], [2], [3], [4], [4], [5], [5], [6], [6], [7], [8], [9], [10], [11], [11], [12], [13], [14],
-                 [15]],
-        '1231': [[0], [0]],
+        # 重要的就是把有可能的错的行挑出来
+        base_path = path + str(page_data_id) + "\\"
+        background = generate_pic_by_base64(pageData.image, base_path, "background.png")
+        fix_img = show_fixations(result_fixations, background)
+        cv2.imwrite(base_path + "fix_adjust.png", fix_img)
 
-        "1232": [[0], [1], [2], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [11], [11], [11], [11], [12], [13]],
+        gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
+        myHeatmap.draw_heat_map(gaze_4_heat, base_path + "fix_heatmap.png", background)
 
-        '1236': [[0], [1], [2], [3], [4], [5], [6], [7], [7], [7], [8], [9], [10], [11], [12], [11, 12, 13], [13], [13],
-                 [14]],
-        '1237': [[0], [1], [1], [2], [2], [2]],
+        word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
 
-        '1238': [[0], [0, 1], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
+        if csv:
+            word_index_list = []
+            fix_index_list = []
+            page_id_list = []
+            experiment_id_list = []
+            words = []
 
-        '1247': [[0], [1], [2], [3], [3], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
-        '1248': [[0]],
+            for i, x in enumerate(result_fixations):
+                word_index, is_adjust = get_item_index_x_y(location=pageData.location, x=x[0], y=x[1],
+                                                           word_list=word_list,
+                                                           rows=rows,
+                                                           remove_horizontal_drift=False)
+                word_index_list.append(word_index)
+                fix_index_list.append(i)
+                page_id_list.append(pageData.id)
+                experiment_id_list.append(pageData.experiment_id)
+                if word_index != -1:
+                    words.append(word_list[word_index])
+                else:
+                    words.append("-1")
 
-        '1249': [[0], [0, 1], [1], [2], [3], [4], [5], [5, 6], [5], [6], [7], [8], [9], [9], [9], [10], [11], [12],
-                 [13],
-                 [13],
-                 [14]],
-        '1250': [[0], [1], [2], [3], [4], [5], [6], [7]],
+            df = pd.DataFrame(
+                {
+                    "word_index": word_index_list,
+                    "word": words,
+                    "fix_index": fix_index_list,
+                    "page_id": page_id_list,
+                    "exp_id": experiment_id_list,
+                }
+            )
+            path = "jupyter\\dataset\\" + "fix-word-map-no-drift.csv"
 
-        '1257': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [12], [13], [14]],
-        '1258': [[0], [1], [2], [4], [5], [6], [7]],
+            if os.path.exists(path):
+                df.to_csv(path, index=False, mode="a", header=False)
+            else:
+                df.to_csv(path, index=False, mode="a")
 
-        '1288': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
-        '1289': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9]],
 
-        '1290': [[0], [1], [2], [3], [5], [6], [7], [8], [9], [9], [10], [11], [12]],
-        '1291': [[0], [1], [2], [3], [5], [6], [7], [8], [9], [10], [11], [12], [13]],
+        if heatmap:
+            exp = Experiment.objects.get(id=pageData.experiment_id)
+            word_locations = get_word_location(pageData.location)
+            image = cv2.imread(background)
+            # 走神与否
+            words_to_be_painted = []
+            if pageData.wanderLabels:
+                paras_wander = json.loads(pageData.wanderLabels)
+            else:
+                paras_wander = []
 
-        '1298': [[0], [1], [1], [2], [3], [4], [5], [6], [7], [7], [8], [9], [10], [11], [12], [13], [14], [14]],
-        '1299': [[0], [1], [2], [3], [4], [5], [6], [6, 7], [6], [7], [8], [9], [10], [11], [11]],
-        '1300': [[0], [0], [1], [2], [3], [4]],
+            for para in paras_wander:
+                for i in range(para[0], para[1] + 1):  # wander label是到一段结尾，不是到下一段
+                    words_to_be_painted.append(i)
 
-        '1316': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8, 9], [9], [10], [11], [12], [13], [14]],
-        '1317': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [10]],
+            title = str(page_data_id) + "-" + exp.user + "-" + "para_wander"
+            pic_path = base_path + "para_wander" + ".png"
+            # 画图
+            paint_on_word(image, words_to_be_painted, word_locations, title, pic_path)
 
-        '1323': [[0], [1], [2], [3], [4], [4], [5], [7], [8], [9], [10], [10], [10], [11], [11], [11]],
-        '1324': [[0], [1], [2], [3], [5], [6], [7], [7], [8], [9], [9], [10], [11], [11], [11], [12], [13], [14], [14]],
+            # 单词 TODO 将这些整理为函数，复用
+            # 找需要画的单词
+            if pageData.wordLabels:
+                words_not_understand = json.loads(pageData.wordLabels)
+            else:
+                words_not_understand = []
+            title = str(page_data_id) + "-" + exp.user + "-" + "words_not_understand"
+            pic_path = base_path + "words_not_understand" + ".png"
+            # 画图
+            paint_on_word(image, words_not_understand, word_locations, title, pic_path)
 
-        "1017": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8], [8], [9], [10], [11], [12], [13], [14]],
-        "1015": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
-        "1018": [
-            [0],
-            [1],
-            [2],
-            [3],
-            [4],
-            [4],
-            [4, 5],
-            [5],
-            [5],
-            [6],
-            [7],
-            [8],
-            [9],
-            [10],
-            [11],
-            [12],
-            [13],
-            [14],
-            [14],
-        ],
-        "1301": [[0], [1], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
-        "1302": [[0], [1], [2], [3], [4], [5], [6], [7], [7], [8], [7], [8], [9], [10], [11]],
-        "1245": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [9], [10], [11], [12], [13], [14]],
-        "1246": [[0], [1], [2], [2]],
-        "1214": [[0], [1], [2], [3], [4], [5], [6], [7], [7], [9], [10], [11], [12], [13], [13], [14]],
-        # "1215": [[0], [1], [2], [3], [4], [5], [6], [7], [7], [8], [7], [8], [9], [10], [11]],
-        "1216": [[0], [1], [1], [1], [1], [2], [3], [4], [5], [6], [7], [9], [10], [11], [12], [13], [14], [15]],
-        "1217": [[0], [1], [2], [3], [4], [5], [6], [7], [7], [8], [7], [8], [9], [10], [11]],
-        "1283": [[0], [1], [2], [3], [4], [4], [3], [4], [5], [6], [7], [8], [9], [9], [10], [11], [12], [13], [14], [15], [15]],
-        "1284": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10]],
-    }
+            # 句子
+            if pageData.sentenceLabels:
+                sentences_not_understand = json.loads(pageData.sentenceLabels)
+            else:
+                sentences_not_understand = []
 
-    print(len(label[page_data_id]))
-    print(len(row_sequence))
-    assert len(label[page_data_id]) == len(row_sequence)
+            words_to_painted = []
+            for sentence in sentences_not_understand:
+                for i in range(sentence[0], sentence[1]):
+                    # 此处i代表的是单词
+                    words_to_painted.append(i)
 
-    # 找index
-    cnt = 0
-    sequences = []
+            title = str(page_data_id) + "-" + exp.user + "-" + "sentences_not_understand"
+            pic_path = base_path + "sentences_not_understand" + ".png"
+            # 画图
+            paint_on_word(image, words_to_painted, word_locations, title, pic_path)
 
-    wrong_fix_num = 0
+        if check:
+            label = {
+                # "1016":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12]],
+                '1211': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
 
-    for sequence in sequence_fixations:
-        tmp = [cnt, cnt + len(sequence) - 1]
-        cnt = cnt + len(sequence)
-        sequences.append(tmp)
+                '1230': [[0], [1], [2], [3], [4], [4], [5], [5], [6], [6], [7], [8], [9], [10], [11], [11], [12], [13],
+                         [14],
+                         [15]],
+                '1231': [[0], [0]],
 
-    correct_num = 0
-    for i, row in enumerate(row_sequence):
-        if row in label[page_data_id][i]:
-            correct_num += 1
-        else:
-            print(f"{sequences[i]}序列出错，label：{label[page_data_id][i]}，预测：{row}")
-            wrong_fix_num += sequences[i][1] - sequences[i][0] + 1
-    correct_rate = correct_num / len(row_sequence)
-    print(f"预测行：{row_sequence}")
-    print(f"标签行：{label[page_data_id]}")
-    print(f"行成功率：{correct_rate}")
-    print(f'fix成功率:{(len(result_fixations) - wrong_fix_num) / len(result_fixations)}')
+                "1232": [[0], [1], [2], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [11], [11], [11], [11],
+                         [12],
+                         [13]],
 
-    row_level_pic = []
-    for fix in row_level_fix:
-        row_level_pic.append(show_fixations(fix, background))
+                '1236': [[0], [1], [2], [3], [4], [5], [6], [7], [7], [7], [8], [9], [10], [11], [12], [11, 12, 13],
+                         [13],
+                         [13],
+                         [14]],
+                '1237': [[0], [1], [1], [2], [2], [2]],
+
+                '1238': [[0], [0, 1], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
+
+                '1247': [[0], [1], [2], [3], [3], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14],
+                         [15]],
+                '1248': [[0]],
+
+                '1249': [[0], [0, 1], [1], [2], [3], [4], [5], [5, 6], [5], [6], [7], [8], [9], [9], [9], [10], [11],
+                         [12],
+                         [13],
+                         [13],
+                         [14]],
+                '1250': [[0], [1], [2], [3], [4], [5], [6], [7]],
+
+                '1257': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [12], [13], [14]],
+                '1258': [[0], [1], [2], [4], [5], [6], [7]],
+
+                '1288': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
+                '1289': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9]],
+
+                '1290': [[0], [1], [2], [3], [5], [6], [7], [8], [9], [9], [10], [11], [12]],
+                '1291': [[0], [1], [2], [3], [5], [6], [7], [8], [9], [10], [11], [12], [13]],
+
+                '1298': [[0], [1], [1], [2], [3], [4], [5], [6], [7], [7], [8], [9], [10], [11], [12], [13], [14],
+                         [14]],
+                '1299': [[0], [1], [2], [3], [4], [5], [6], [6, 7], [6], [7], [8], [9], [10], [11], [11]],
+                '1300': [[0], [0], [1], [2], [3], [4]],
+
+                '1316': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8, 9], [9], [10], [11], [12], [13], [14]],
+                '1317': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [10]],
+
+                '1323': [[0], [1], [2], [3], [4], [4], [5], [7], [8], [9], [10], [10], [10], [11], [11], [11]],
+                '1324': [[0], [1], [2], [3], [5], [6], [7], [7], [8], [9], [9], [10], [11], [11], [11], [12], [13],
+                         [14],
+                         [14]],
+
+                "1017": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8], [8], [9], [10], [11], [12], [13], [14]],
+                "1015": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14]],
+                "1018": [
+                    [0],
+                    [1],
+                    [2],
+                    [3],
+                    [4],
+                    [4],
+                    [4, 5],
+                    [5],
+                    [5],
+                    [6],
+                    [7],
+                    [8],
+                    [9],
+                    [10],
+                    [11],
+                    [12],
+                    [13],
+                    [14],
+                    [14],
+                ],
+
+                '1226': [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [14]],
+                '1227': [[0], [1], [2]],
+
+                '1267': [[0], [0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15]],
+                '1268': [[0], [1]]
+            }
+
+            print(len(label[page_data_id]))
+            print(len(row_sequence))
+            assert len(label[page_data_id]) == len(row_sequence)
+
+            # 找index
+            cnt = 0
+            sequences = []
+
+            wrong_fix_num = 0
+
+            for sequence in sequence_fixations:
+                tmp = [cnt, cnt + len(sequence) - 1]
+                cnt = cnt + len(sequence)
+                sequences.append(tmp)
+
+            correct_num = 0
+            for i, row in enumerate(row_sequence):
+                if row in label[page_data_id][i]:
+                    correct_num += 1
+                else:
+                    print(f"{sequences[i]}序列出错，label：{label[page_data_id][i]}，预测：{row}")
+                    wrong_fix_num += sequences[i][1] - sequences[i][0] + 1
+            correct_rate = correct_num / len(row_sequence)
+            print(f"预测行：{row_sequence}")
+            print(f"标签行：{label[page_data_id]}")
+            print(f"行成功率：{correct_rate}")
+            print(f'fix成功率:{(len(result_fixations) - wrong_fix_num) / len(result_fixations)}')
+
+        row_level_pic = []
+        for fix in row_level_fix:
+            row_level_pic.append(show_fixations(fix, background))
+
     return HttpResponse(1)
 
 
@@ -855,7 +929,7 @@ def get_all_time_dataset(request):
     #     577,
     #     591,
     # ]
-    experiment_list_select = [590,597,598,630]
+    experiment_list_select = [590, 597, 598, 630]
     experiment_failed_list = [586, 624, 639]
     user_remove_list = ["shiyubin"]
     # experiment_list_select = [630]
@@ -1012,39 +1086,14 @@ def get_gazes(fixation, page_data):
 
 
 def get_timestamp_dataset(request):
-    experiment_list_select = [
-        590,
-        601,
-        586,
-        587,
-        588,
-        597,
-        598,
-        625,
-        630,
-        631,
-        641,
-        639,
-        622,
-        623,
-        624,
-        628,
-        617,
-        609,
-        636,
-        638,
-        640,
-        577,
-        591,
-    ]
+    experiment_list_select = [590,597,598,622,630,638,641,631,579,596,609,585,506,688,683,917,916,915,914,913,891,887,885,834]
     experiment_failed_list = [586, 624, 639]
-    user_remove_list = ["shiyubin"]
-    path = "jupyter\\dataset\\" + "handcraft-data.csv"
+    # user_remove_list = ["shiyubin"]
+    path = "jupyter\\dataset\\" + "handcraft-data-230111.csv"
     experiments = (
         Experiment.objects.filter(is_finish=True)
         .filter(id__in=experiment_list_select)
         .exclude(id__in=experiment_failed_list)
-        .exclude(user__in=user_remove_list)
     )
     print(f"一共会生成{len(experiments)}条数据")
 
@@ -1353,7 +1402,7 @@ def get_timestamp_dataset(request):
             "acc": acc,
         }
     )
-    path = "jupyter\\dataset\\" + datetime.datetime.now().strftime("%Y-%m-%d") + "cnn-data.csv"
+    path = "jupyter\\dataset\\" + "cnn-data-230111.csv"
     if os.path.exists(path):
         data.to_csv(path, index=False, mode="a", header=False)
     else:

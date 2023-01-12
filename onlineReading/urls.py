@@ -44,4 +44,5 @@ urlpatterns = [
     path('topic_value/',views.get_topic_relevant),
     path('diff/',views.get_diff),
     path('att/',views.get_att),
+    path('article/check/',views.check_article)
 ]

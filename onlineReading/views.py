@@ -1435,7 +1435,7 @@ def article_2_csv(request):
             "content": contents,
         }
     )
-    path = "static\\data\\dataset\\" + "article.csv"
+    path = "jupyter\\dataset\\" + "article-230111.csv"
     df.to_csv(path, index=False, header=False)
     return JsonResponse({"status_code": 200, "status": "ok"})
 
@@ -1813,3 +1813,21 @@ def get_speed(request):
                 "para_1_mw_label": wanderLabel_num / sen_cnt,
             }
     return JsonResponse(dict, json_dumps_params={"ensure_ascii": False}, safe=False)
+
+
+def check_article(request):
+    exp_id = request.GET.get('exp_id')
+    pageDatas = PageData.objects.filter(experiment_id=exp_id)
+    print(len(pageDatas))
+    for pageData in pageDatas:
+        word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
+        print(pageData.location)
+        if len(pageData.location) >0 and pageData.location != 'undefined':
+            # 获取单词的位置
+            word_locations = get_word_location(pageData.location)  # [(left,top,right,bottom),(left,top,right,bottom)]
+
+            # 确保单词长度是正确的
+            print(len(word_locations))
+            print(len(word_list))
+            assert len(word_locations) == len(word_list)
+    return HttpResponse('测试成功')
