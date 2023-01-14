@@ -52,9 +52,12 @@ def login_page(request):
 
 def login(request):
     username = request.POST.get("username", None)
+    device = request.POST.get("device",None)
+    print("device:"+device)
     print("username:%s" % username)
     if username:
         request.session["username"] = username
+    request.session["device"] = device
     return render(request, "calibration.html")
 
 
@@ -161,7 +164,7 @@ def get_paragraph_and_translation(request):
             para_dict[para] = words_dict
             para = para + 1
     # 创建一次实验
-    experiment = Experiment.objects.create(article_id=article_id, user=request.session.get("username"))
+    experiment = Experiment.objects.create(article_id=article_id, user=request.session.get("username"),device=request.session.get("device"))
     request.session["experiment_id"] = experiment.id
     logger.info("--本次实验开始,实验者：%s，实验id：%d--" % (request.session.get("username"), experiment.id))
     return JsonResponse(para_dict, json_dumps_params={"ensure_ascii": False})

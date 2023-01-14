@@ -51,6 +51,7 @@ class Experiment(models.Model):
     article_id = models.BigIntegerField()
     user = models.CharField(max_length=200)
     is_finish = models.BooleanField()
+    device = models.CharField(max_length=96,default="not detect")
 
     class Meta:
         db_table = "data_experiment"
