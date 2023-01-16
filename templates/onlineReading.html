@@ -29,7 +29,8 @@
                     阅读期间，请留意自己在阅读某一句或多句时是否存在“<strong>走神</strong>”的情况，即<strong>在阅读过程中的某些时候，你完全不知道自己刚才读了什么。或者说，你心里想的和你读内容的没任何关系</strong>。
                 </p>
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-                    <button type="button" class="btn btn-primary btn-lg px-4 gap-3" onclick="get_start()">开始使用</button>
+                    <button type="button" class="btn btn-primary btn-lg px-4 gap-3" onclick="get_start()">开始使用
+                    </button>
                 </div>
             </div>
         </div>
@@ -147,14 +148,14 @@
             isSentenceTranslated: function (num) {
                 let start = 0;
                 let end = 0;
-                for(let i = 0; i < this.sentences.length; i++){
+                for (let i = 0; i < this.sentences.length; i++) {
                     let w = this.sentences[i].split(' ');
-                    for(let j = 0; j < w.length; j++)
-                        if(w[j] == '')
-                            w.splice(j,1);
-                    if(start + w.length <= num){
+                    for (let j = 0; j < w.length; j++)
+                        if (w[j] == '')
+                            w.splice(j, 1);
+                    if (start + w.length <= num) {
                         start += w.length;
-                    }else{
+                    } else {
                         end = start + w.length;
                         break;
                     }
@@ -196,16 +197,16 @@
                         .fadeIn('fast', function () {
                             setTimeout(function () {
                                 $('#transWord' + num).fadeOut('fast', function () {
-                                    app.changeTextStyle(num, num+1, 0);
+                                    app.changeTextStyle(num, num + 1, 0);
                                     let ind = app._data.currentTransBox.indexOf(num);
                                     app._data.currentTransBox.splice(ind, 1);
                                     $('#transWord' + num).remove();
                                 })
                             }, 1500);
                         });
-                }else {
+                } else {
                     this.currentTransBox.splice(this.currentTransBox.indexOf(num), 1);
-                    $('#transWord'+num).remove();
+                    $('#transWord' + num).remove();
                 }
                 {#else {#}
                 {#    this.changeTextStyle(num, num+1, 0);#}
@@ -219,19 +220,19 @@
             getSentenceTranslation: function (num) {
                 let start = 0;
                 let end = 0;
-                for(let i = 0; i < this.sentences.length; i++){
+                for (let i = 0; i < this.sentences.length; i++) {
                     let w = this.sentences[i].split(' ');
-                    for(let j = 0; j < w.length; j++)
-                        if(w[j] == '')
-                            w.splice(j,1);
-                    if(start + w.length <= num){
+                    for (let j = 0; j < w.length; j++)
+                        if (w[j] == '')
+                            w.splice(j, 1);
+                    if (start + w.length <= num) {
                         start += w.length;
-                    }else{
+                    } else {
                         end = start + w.length;
                         break;
                     }
                 }
-                if(!this.isSentenceTranslated(num)) {
+                if (!this.isSentenceTranslated(num)) {
                     this.changeTextStyle(start, end, 1);
                     this.wordLocation = this.getWordLocation(num);
                     {#let el = document.createElement('div');#}
@@ -250,10 +251,10 @@
                         .appendTo('#readArea')
                         .addClass('transSentence')
                         .attr('id', 'transSentence' + start);
-                    if(this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 < 840)
+                    if (this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 < 840)
                         $('#transSentence' + start).css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px");
                     else
-                        $('#transSentence' + start).css('right',  "130px");
+                        $('#transSentence' + start).css('right', "130px");
                     $('#transSentence' + start)
                         .css('top', this.wordLocation.top - 20 + "px")
                         .html(this.transPerPage[this.page - 1][num].sentence_zh)
@@ -262,8 +263,8 @@
                                 $('#transSentence' + start).fadeOut('fast', function () {
                                     app.changeTextStyle(start, end, 0);
                                     let ind = 0;
-                                    for(let i = 0; i < app._data.currentTransSentenceBox.length; i++) {
-                                        if(app._data.currentTransSentenceBox[i][0] == start && app._data.currentTransSentenceBox[i][1] == end){
+                                    for (let i = 0; i < app._data.currentTransSentenceBox.length; i++) {
+                                        if (app._data.currentTransSentenceBox[i][0] == start && app._data.currentTransSentenceBox[i][1] == end) {
                                             ind = i;
                                             break;
                                         }
@@ -275,23 +276,23 @@
                         });
                 }
                 {#else {#}
-                    {#this.changeTextStyle(start, end, 0);#}
-                    {#let ind = 0;#}
-                    {#for(let i = 0; i < this.currentTransSentenceBox.length; i++) {#}
-                    {#    if(this.currentTransSentenceBox[i][0] == start && this.currentTransSentenceBox[i][1] == end){#}
-                    {#        ind = i;#}
-                    {#        break;#}
-                    {#    }#}
-                    {# }#}
-                    {#this.currentTransSentenceBox.splice(ind, 1);#}
-                    {#document.getElementsByClassName('transSentence')[ind].remove();#}
+                {#this.changeTextStyle(start, end, 0);#}
+                {#let ind = 0;#}
+                {#for(let i = 0; i < this.currentTransSentenceBox.length; i++) {#}
+                {#    if(this.currentTransSentenceBox[i][0] == start && this.currentTransSentenceBox[i][1] == end){#}
+                {#        ind = i;#}
+                {#        break;#}
+                {#    }#}
+                {# }#}
+                {#this.currentTransSentenceBox.splice(ind, 1);#}
+                {#document.getElementsByClassName('transSentence')[ind].remove();#}
                 {# }#}
 
             },
 
             getWanderRemind: function () {
                 let style = 'alert-warning';
-                let time =  1200;
+                let time = 1200;
                 $('<div>')
                     .appendTo('body')
                     .addClass('alert ' + style)
@@ -307,14 +308,14 @@
             },
 
             changeTextStyle: function (start, end, isHighlight) {
-                if(isHighlight == 1) {
+                if (isHighlight == 1) {
                     for (let i = start; i < end; i++) {
                         if ($('.word:eq(' + i + ')').css('text-decoration') == 'none solid rgb(51, 51, 51)') {
                             $('.word:eq(' + i + ')').css('text-decoration', "underline");
                             $('.word:eq(' + i + ')').css('color', "blue");
                         }
                     }
-                }else {
+                } else {
                     for (let i = start; i < end; i++) {
                         if ($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)') {
                             $('.word:eq(' + i + ')').css('text-decoration', "none solid rgb(51, 51, 51)");
@@ -366,7 +367,7 @@
 
             isInArr: function (num, arr) {
                 for (let i = 0; i < arr.length; i++) {
-                    if(arr[i] == num)
+                    if (arr[i] == num)
                         return true;
                 }
                 return false;
@@ -376,7 +377,7 @@
                 let maxLine = 16;
                 let article_id = getCookie('article_id');
                 let request = "/para";
-                if(article_id.length > 0)
+                if (article_id.length > 0)
                     request += "?article_id=" + article_id;
                 await axios.get(request).then((response) => {
                     this.content = response.data;
@@ -402,10 +403,10 @@
                 let num = 0;
                 //分割出该段落的所有句子
                 var sentences = p.split('.');
-                if(sentences[sentences.length-1] != '" 、 ')
+                if (sentences[sentences.length - 1] != '" 、 ')
                     sentences.splice(sentences.length - 1, 1);
-                console.log(sentences[sentences.length-1])
-                for(let i = 0; i < sentences.length; i++)
+                console.log(sentences[sentences.length - 1])
+                for (let i = 0; i < sentences.length; i++)
                     sentences[i].replace('  ', ' ');
                 let sentenceNum = 0;
                 let conPerPage = [];
@@ -427,22 +428,21 @@
                                 words.splice(p, 1);
                         }
                         let k = 0;
-                        while(k < words.length) {
+                        while (k < words.length) {
                             var el = document.createElement("button");
-                            if(words[k] == '、' && document.getElementById(num + k - 1 + '')){
+                            if (words[k] == '、' && document.getElementById(num + k - 1 + '')) {
                                 el.className = "fillLine";
                                 let width = e.getBoundingClientRect().right - document.getElementById(num + k - 1 + '').getBoundingClientRect().right - 17;
                                 let height = document.getElementById(num + k - 1 + '').getBoundingClientRect().bottom -
-                                            document.getElementById(num + k - 1 + '').getBoundingClientRect().top - 3;
+                                    document.getElementById(num + k - 1 + '').getBoundingClientRect().top - 3;
                                 el.style.width = width + "px";
                                 el.style.height = height + "px";
                                 e.appendChild(el);
-                                words.splice(k,1);
+                                words.splice(k, 1);
                                 this.paraLoc[this.contentPerPage.length].push(num + k - 1);
-                            }else if (words[k] == '、' && !document.getElementById(num + k - 1 + '')){
-                                words.splice(k,1);
-                            }
-                            else {
+                            } else if (words[k] == '、' && !document.getElementById(num + k - 1 + '')) {
+                                words.splice(k, 1);
+                            } else {
                                 el.className = "word";
                                 el.id = (num + k).toString();
                                 el.innerHTML = words[k];
@@ -457,7 +457,7 @@
                         let buttonTop = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;
                         let buttonHeight = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().bottom - document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;
                         if (Math.trunc((buttonTop - paraTop) / buttonHeight) >= maxLine) {
-                            for(let re = 0 ;re < words.length; re++)
+                            for (let re = 0; re < words.length; re++)
                                 e.removeChild(e.lastChild);
                             if (this.paraLoc[this.contentPerPage.length] && parseInt(e.children[e.children.length - 1].id) < this.paraLoc[this.contentPerPage.length][this.paraLoc[this.contentPerPage.length].length - 1])
                                 this.paraLoc[this.contentPerPage.length].splice(this.paraLoc[this.contentPerPage.length].length - 1, 1);
@@ -494,26 +494,26 @@
                         this.contentPerPage.splice(i, 1);
                     if (this.transPerPage[i].length == 0)
                         this.transPerPage.splice(i, 1);
-                 }
+                }
                 this.totalPage = this.contentPerPage.length;
                 let tmp = this.contentPerPage;
                 let tmp_ = tmp.join('-.');
                 setCookie('contentPerPage', tmp_);
-                let k  = "";
-                for(let i = 0 ; i < this.paraLoc.length; i++) {
+                let k = "";
+                for (let i = 0; i < this.paraLoc.length; i++) {
                     k += this.paraLoc[i].join(',');
-                    if(i != this.paraLoc.length - 1)
+                    if (i != this.paraLoc.length - 1)
                         k += "|";
                 }
                 setCookie('paraLoc', k);
-             },
+            },
 
             {# getContent: async function () {#}
-                {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
-                {#).then((response) => {#}
-                {#    this.$nextTick(() => {#}
-                {#        this.setSheet();#}
-                {#    });});#}
+            {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
+            {#).then((response) => {#}
+            {#    this.$nextTick(() => {#}
+            {#        this.setSheet();#}
+            {#    });});#}
             {#    let paraNum = 0;#}
             {##}
             {#    let maxLine = 12;#}
@@ -650,13 +650,13 @@
                                 el.innerHTML = words[j] + '.';
                             num += 1;
                             e.appendChild(el);
-                            if(this.isInArr(num-1,this.paraLoc[this.page-1])) {
-                                console.log(num-1)
+                            if (this.isInArr(num - 1, this.paraLoc[this.page - 1])) {
+
                                 el = document.createElement("button");
                                 el.className = "fillLine";
                                 let width = e.getBoundingClientRect().right - document.getElementById(num - 1 + '').getBoundingClientRect().right - 1;
                                 let height = document.getElementById(num - 1 + '').getBoundingClientRect().bottom -
-                                            document.getElementById(num - 1 + '').getBoundingClientRect().top - 17;
+                                    document.getElementById(num - 1 + '').getBoundingClientRect().top - 17;
                                 el.style.width = width + "px";
                                 el.style.height = height + "px";
                                 e.appendChild(el);
@@ -667,16 +667,16 @@
                 let i = 0;
                 let buttonLocCurPage = [];
                 let wordTextLocCurPage = [];
-                while(document.getElementsByClassName('word')[i]) {
-                    if(document.getElementsByClassName('word')[i].innerHTML != '"' && document.getElementsByClassName('word')[i].innerHTML != '“')
+                while (document.getElementsByClassName('word')[i]) {
+                    if (document.getElementsByClassName('word')[i].innerHTML != '"' && document.getElementsByClassName('word')[i].innerHTML != '“')
                         buttonLocCurPage.push(this.getWordLocation(i));
-                        wordTextLocCurPage.push(this.getWordTextLocation(i));
+                    wordTextLocCurPage.push(this.getWordTextLocation(i));
                     i++;
                 }
                 this.buttonCurLoc = buttonLocCurPage;
-                if(!this.buttonLocPerPage[this.page-1])
+                if (!this.buttonLocPerPage[this.page - 1])
                     this.buttonLocPerPage.push(buttonLocCurPage);
-                if(!this.wordTextLocPerPage[this.page-1])
+                if (!this.wordTextLocPerPage[this.page - 1])
                     this.wordTextLocPerPage.push(wordTextLocCurPage);
                 {#height += e.getBoundingClientRect().bottom - e.getBoundingClientRect().top;#}
                 {#this.getWanderRemind();#}
@@ -822,7 +822,7 @@
 
 
     function setCookie(cname, cvalue) {
-        cvalue = cvalue.replace(new RegExp(";",'g'), ':}');
+        cvalue = cvalue.replace(new RegExp(";", 'g'), ':}');
         document.cookie = cname + "=" + cvalue + "; path=/";
     }
 
@@ -871,20 +871,12 @@
         };
         html2canvas($('body')[0], opts).then(canvas => {
             //document.body.appendChild(canvas);
-            // canvas宽度
-            let canvasWidth = canvas.width;
-            // canvas高度
-            let canvasHeight = canvas.height;
-            console.log(canvasHeight, canvasWidth);
-            //sleep(2);
+
             // 调用Canvas2Image插件
             // let img = Canvas2Image.convertToImage(canvas, canvasWidth, canvasHeight);
             // let image_data = $(img).attr('src');
 
             let url = canvas.toDataURL();
-
-            // // 调用Canvas2Image插件
-            // Canvas2Image.saveAsImage(canvas, canvasWidth, canvasHeight, 'png', filename);
 
             let formdata = new FormData();
             formdata.append("image", url.toString());
@@ -895,7 +887,8 @@
             formdata.append("page", app._data.page);
             formdata.append("text", app._data.contentCurPage);
             formdata.append("location", JSON.stringify(app._data.buttonCurLoc));
-            formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page-1]));
+            formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page - 1]));
+
             $.ajax({
                 type: 'POST',
                 url: '/data/',

@@ -298,7 +298,7 @@ def x_y_t_2_coordinate(gaze_x, gaze_y, gaze_t):
     return coordinates
 
 
-def generate_pic_by_base64(image_base64: str, save_path: str, filename: str):
+def generate_pic_by_base64(image_base64: str, save_path: str, filename: str,isMac=False):
     """
     使用base64生成图片，并保存至指定路径
     """
@@ -311,6 +311,13 @@ def generate_pic_by_base64(image_base64: str, save_path: str, filename: str):
     with open(save_path + filename, "wb") as f:
         f.write(img_data)
     logger.info("background已在该路径下生成:%s" % (save_path + filename))
+
+    if isMac:
+        img = Image.open(save_path + filename)
+        width = img.size[0]
+        times = width / 2880
+        new_img = img.resize((int(1440*times), int(900*times)))
+        new_img.save(save_path + filename)
     return save_path + filename
 
 
