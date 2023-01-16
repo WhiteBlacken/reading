@@ -191,7 +191,7 @@
                         .addClass('trans')
                         .attr('id', 'transWord' + num)
                         .css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px")
-                        .css('top', this.wordLocation.top - 20 + "px")
+                        .css('top', this.wordLocation.top - 40 + "px")
                         .html(this.transPerPage[this.page - 1][num].zh)
                         .fadeIn('fast', function () {
                             setTimeout(function () {
@@ -613,6 +613,7 @@
             {# },#}
 
             getPage: function () {
+                {#this.getWanderRemind();#}
                 let num = 0;
                 let e = document.getElementById('para');
 
@@ -643,8 +644,8 @@
                             el.className = "word";
                             el.id = num.toString();
                             el.innerHTML = words[j];
-                            el.setAttribute("onclick", "getWordTranslation(" + num + ")");
-                            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
+                            {#el.setAttribute("onclick", "getWordTranslation(" + num + ")");#}
+                            {#el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");#}
                             if (j == words.length - 1 && words[j].length > 1)
                                 el.innerHTML = words[j] + '.';
                             num += 1;

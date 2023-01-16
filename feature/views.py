@@ -289,6 +289,7 @@ def add_fixation_to_word(request):
         # 重要的就是把有可能的错的行挑出来
         base_path = path + str(page_data_id) + "\\"
         background = generate_pic_by_base64(pageData.image, base_path, "background.png")
+        # background = base_path + "background.png"
         fix_img = show_fixations(result_fixations, background)
         cv2.imwrite(base_path + "fix_adjust.png", fix_img)
 

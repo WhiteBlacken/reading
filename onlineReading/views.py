@@ -318,7 +318,7 @@ def paint_on_word(image, target_words_index, word_locations, title, pic_path, al
     image = cv2.addWeighted(blk, alpha, image, 1 - alpha, 0)
     plt.imshow(image)
     plt.title(title)
-    plt.show()
+    # plt.show()
     cv2.imwrite(pic_path, image)
     logger.info("heatmap已经生成:%s" % pic_path)
 
