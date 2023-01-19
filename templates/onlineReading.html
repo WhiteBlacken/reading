@@ -192,7 +192,7 @@
                         .addClass('trans')
                         .attr('id', 'transWord' + num)
                         .css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px")
-                        .css('top', this.wordLocation.top - 20 + "px")
+                        .css('top', this.wordLocation.top - 40 + "px")
                         .html(this.transPerPage[this.page - 1][num].zh)
                         .fadeIn('fast', function () {
                             setTimeout(function () {
@@ -383,6 +383,7 @@
                     this.content = response.data;
                 });
                 this.content = Object.values(this.content);
+                console.log(this.content)
                 for (let i = 0; i < this.content.length; i++)
                     this.paras.push(this.content[i][0]);
                 let p = "";
@@ -458,7 +459,7 @@
                         if (Math.trunc((buttonTop - paraTop) / buttonHeight) >= maxLine) {
                             for (let re = 0; re < words.length; re++)
                                 e.removeChild(e.lastChild);
-                            if (this.paraLoc[this.contentPerPage.length] && e.children[e.children.length - 1].id.match(/d+/g) < this.paraLoc[this.contentPerPage.length][this.paraLoc[this.contentPerPage.length].length - 1])
+                            if (this.paraLoc[this.contentPerPage.length] && parseInt(e.children[e.children.length - 1].id) < this.paraLoc[this.contentPerPage.length][this.paraLoc[this.contentPerPage.length].length - 1])
                                 this.paraLoc[this.contentPerPage.length].splice(this.paraLoc[this.contentPerPage.length].length - 1, 1);
                             while (e.children[0]) {
                                 e.removeChild(e.children[0]);
@@ -612,6 +613,7 @@
             {# },#}
 
             getPage: function () {
+                {#this.getWanderRemind();#}
                 let num = 0;
                 let e = document.getElementById('para');
 
@@ -630,7 +632,7 @@
                 {##}
                 {##}
                 {#this.buttonCurLoc = this.buttonCurLoc.concat(this.buttonLocPerPage[this.page - 1]);#}
-
+                console.log(Content)
                 let sentences = Content.split('.');
                 sentences.splice(sentences.length - 1, 1);
                 this.sentences = sentences;
@@ -642,13 +644,14 @@
                             el.className = "word";
                             el.id = num.toString();
                             el.innerHTML = words[j];
-                            el.setAttribute("onclick", "getWordTranslation(" + num + ")");
-                            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
+                            {#el.setAttribute("onclick", "getWordTranslation(" + num + ")");#}
+                            {#el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");#}
                             if (j == words.length - 1 && words[j].length > 1)
                                 el.innerHTML = words[j] + '.';
                             num += 1;
                             e.appendChild(el);
                             if (this.isInArr(num - 1, this.paraLoc[this.page - 1])) {
+
                                 el = document.createElement("button");
                                 el.className = "fillLine";
                                 let width = e.getBoundingClientRect().right - document.getElementById(num - 1 + '').getBoundingClientRect().right - 1;

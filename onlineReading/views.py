@@ -321,7 +321,7 @@ def paint_on_word(image, target_words_index, word_locations, title, pic_path, al
     image = cv2.addWeighted(blk, alpha, image, 1 - alpha, 0)
     plt.imshow(image)
     plt.title(title)
-    plt.show()
+    # plt.show()
     cv2.imwrite(pic_path, image)
     logger.info("heatmap已经生成:%s" % pic_path)
 
@@ -734,18 +734,19 @@ def get_all_heatmap(request):
         # 获取图片生成的路径
         exp = Experiment.objects.filter(id=pageData.experiment_id)
 
-        base_path = "static\\data\\heatmap\\" + str(exp.first().user) + "\\" + str(page_data_id) + "\\"
-
+        base_path = "pic\\" + str(page_data_id) + "\\"
+        if not os.path.exists(base_path):
+            os.makedirs(base_path)
         # 创建图片存储的目录
         # 如果目录不存在，则创建目录
         path_levels = [
             "static\\data\\heatmap\\" + str(exp.first().user) + "\\",
             "static\\data\\heatmap\\" + str(exp.first().user) + "\\" + str(page_data_id) + "\\",
         ]
-        for path in path_levels:
-            print("生成:%s" % path)
-            if not os.path.exists(path):
-                os.makedirs(path)
+        # for path in path_levels:
+        #     print("生成:%s" % path)
+        #     if not os.path.exists(path):
+        #         os.makedirs(path)
 
         # 创建背景图片
         background = base_path + "background.png"
@@ -798,19 +799,19 @@ def get_all_heatmap(request):
         存在问题：生成top和展示图片实际上做了两个heatmap
         """
         # 滤波处理
-        kernel_size = int(request.GET.get("window", 0))
-        get_visual_attention(
-            page_data_id,
-            exp.first().user,
-            pageData.gaze_x,
-            pageData.gaze_y,
-            pageData.gaze_t,
-            background,
-            base_path,
-            word_list,
-            word_locations,
-            top_dict,
-        )
+        # kernel_size = int(request.GET.get("window", 0))
+        # get_visual_attention(
+        #     page_data_id,
+        #     exp.first().user,
+        #     pageData.gaze_x,
+        #     pageData.gaze_y,
+        #     pageData.gaze_t,
+        #     background,
+        #     base_path,
+        #     word_list,
+        #     word_locations,
+        #     top_dict,
+        # )
 
         """
         将单词不懂和句子不懂输出,走神的图示输出
