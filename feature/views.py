@@ -283,6 +283,10 @@ def add_fixation_to_word(request):
         result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
             gaze_points, pageData.texts, pageData.location
         )
+        # result_fixations = keep_row(detect_fixations(gaze_points))
+        # row_level_fix = []
+        # row_sequence = []
+        # sequence_fixations = []
 
         # 重要的就是把有可能的错的行挑出来
         base_path = path + str(page_data_id) + "\\"
@@ -292,7 +296,7 @@ def add_fixation_to_word(request):
         # background = base_path + "background.png"
 
         fix_img = show_fixations(result_fixations, background)
-        cv2.imwrite(base_path + "fix_adjust.png", fix_img)
+        cv2.imwrite(base_path + "fix-adjust.png", fix_img)
 
         gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
         myHeatmap.draw_heat_map(gaze_4_heat, base_path + "fix_heatmap.png", background)
@@ -1106,19 +1110,19 @@ def get_fix_this_time(result_fixations, pre_gaze_t, now_gaze_t):
 
 
 def get_timestamp_dataset(request):
-    experiment_list_select = []
-    dat0111 = [590, 597, 598, 622, 630, 638, 641, 631, 579, 596, 609, 585, 506, 688, 683, 917, 916, 915, 914, 913, 891,
-               887, 885, 834]
-    dat0122 = [906, 905, 904, 903, 902, 932, 933, 934, 935]
-    dat0113 = [941, 940, 938, 937]
-
-    experiment_list_select.extend(dat0111)
-    experiment_list_select.extend(dat0122)
-    experiment_list_select.extend(dat0113)
+    experiment_list_select = [683]
+    # dat0111 = [590, 597, 598, 622, 630, 638, 641, 631, 579, 596, 609, 585, 506, 688, 683, 917, 916, 915, 914, 913, 891,
+    #            887, 885, 834]
+    # dat0122 = [906, 905, 904, 903, 902, 932, 933, 934, 935]
+    # dat0113 = [941, 940, 938, 937]
+    #
+    # experiment_list_select.extend(dat0111)
+    # experiment_list_select.extend(dat0122)
+    # experiment_list_select.extend(dat0113)
 
     experiment_failed_list = []
 
-    path = "jupyter\\dataset\\" + "handcraft-data-230112.csv"
+    path = "jupyter\\dataset\\" + "handcraft-data-230118.csv"
     experiments = (
         Experiment.objects.filter(is_finish=True)
         .filter(id__in=experiment_list_select)
@@ -1779,3 +1783,34 @@ def get_nlp_sequence(request):
     plt.scatter(df_1["index"], df_1["value"], color="red", zorder=1, s=60)
     plt.show()
     return JsonResponse({"visual": word_feature, "nlp": nlp_word_list})
+
+
+def get_label_num(request):
+    filename = "exp.txt"
+    file = open(filename,'r')
+    lines = file.readlines()
+
+    exp_list = []
+    for line in lines:
+        exp_list.append(line)
+
+    print(f"exp_list:{exp_list}")
+
+    exps = Experiment.objects.filter(id__in=exp_list)
+
+    word_label_num = 0
+    sen_label_num = 0
+    wander_label_num = 0
+
+    for exp in exps:
+        page_data_ls = PageData.objects.filter(experiment_id=exp.id)
+        for page in page_data_ls:
+            word_label_num += len(json.loads(page.wordLabels))
+            sen_label_num += len(json.loads(page.sentenceLabels))
+            wander_label_num += len(json.loads(page.wanderLabels))
+
+    print(f"单词标签的数量：{word_label_num}")
+    print(f"句子标签的数量：{sen_label_num}")
+    print(f"走神标签的数量：{wander_label_num}")
+
+    return HttpResponse(1)

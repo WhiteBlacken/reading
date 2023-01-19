@@ -312,6 +312,10 @@ def generate_pic_by_base64(image_base64: str, save_path: str, filename: str,isMa
         f.write(img_data)
     logger.info("background已在该路径下生成:%s" % (save_path + filename))
 
+    # img = Image.open(save_path + filename)
+    # new_img = img.resize((1920, 1080))
+    # new_img.save(save_path + filename)
+
     if isMac:
         img = Image.open(save_path + filename)
         width = img.size[0]

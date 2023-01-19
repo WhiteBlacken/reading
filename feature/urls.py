@@ -26,5 +26,6 @@ urlpatterns = [
     path("dataset/all/", views.get_all_time_dataset),
     path("nlp/", views.get_nlp_sequence),
     path("dataset/time/", views.get_timestamp_dataset),
+    path("label_num/", views.get_label_num)
 
 ]
