@@ -15,6 +15,12 @@
 </head>
 <body>
 <div id="app">
+
+{#    <div id="markers">#}
+{#        #}
+{#        <img class="marker" id="leftBottom" src="">#}
+{#        <img class="marker" id="leftBottom" src="">#}
+{#    </div>#}
     <div id="tips_begin">
         <div class="px-4 py-5 my-5 text-center">
             <h1 class="display-5 fw-bold">MemX4Edu</h1>
@@ -46,6 +52,14 @@
         </div>
     </div>
     <div id="mainContent">
+{#        <div id="markers-top">#}
+{#            <img class="marker" id="left" src="/static/images/left-top.png">#}
+{#            <img class="marker" id="right" src="/static/images/right-top.png">#}
+{#        </div>#}
+{#        <div id="markers-bottom">#}
+{#            <img class="marker" id="left" src="/static/images/left-bottom.png">#}
+{#            <img class="marker" id="right" src="/static/images/right-bottom.png">#}
+{#        </div>#}
         <div id="reading">
             <div id="readArea">
                 <div id="para">
@@ -256,7 +270,7 @@
                     else
                         $('#transSentence' + start).css('right', "130px");
                     $('#transSentence' + start)
-                        .css('top', this.wordLocation.top - 20 + "px")
+                        .css('top', this.wordLocation.top - 40 + "px")
                         .html(this.transPerPage[this.page - 1][num].sentence_zh)
                         .fadeIn('fast', function () {
                             setTimeout(function () {
@@ -272,7 +286,7 @@
                                     app._data.currentTransSentenceBox.splice(ind, 1);
                                     $('#transSentence' + start).remove();
                                 })
-                            }, 2500);
+                            }, 2000);
                         });
                 }
                 {#else {#}
@@ -508,110 +522,6 @@
                 setCookie('paraLoc', k);
             },
 
-            {# getContent: async function () {#}
-            {#axios.post("/xxxx", $.param(this.formData)  //引入jQuery的作用#}
-            {#).then((response) => {#}
-            {#    this.$nextTick(() => {#}
-            {#        this.setSheet();#}
-            {#    });});#}
-            {#    let paraNum = 0;#}
-            {##}
-            {#    let maxLine = 12;#}
-            {##}
-            {##}
-            {#    await axios.get("/para").then((response) => {#}
-            {#        this.content = response.data;#}
-            {#    });#}
-            {##}
-            {#    this.content = Object.values(this.content);#}
-            {#    paraNum = this.content.length;#}
-            {#    for (let i = 0; i < paraNum; i++)#}
-            {#        this.paras.push(this.content[i][0]);#}
-            {#    var e = document.getElementById('para');#}
-            {##}
-            {#    // 遍历每个段落#}
-            {##}
-            {#    for (let i = 0; i < paraNum; i++) {#}
-            {#        let num = 0;#}
-            {#        //分割出该段落的所有句子#}
-            {#        var sentences = this.paras[i].split('.');#}
-            {#        sentences.splice(sentences.length - 1, 1);#}
-            {##}
-            {#        let sentenceNum = 0;#}
-            {#        let conPerPage = [];#}
-            {#        let transPerPage = [];#}
-            {#        let locPerPage = [];#}
-            {#        let wordLength = 0;#}
-            {##}
-            {#        while (sentenceNum < sentences.length) {#}
-            {#            num = 0;#}
-            {#            conPerPage = [];#}
-            {#            transPerPage = [];#}
-            {#            locPerPage = [];#}
-            {#            for (; sentenceNum < sentences.length; sentenceNum++) {#}
-            {#                var words = sentences[sentenceNum].split(' ');#}
-            {#                for (let p = 0; p < words.length; p++) {#}
-            {#                    if (words[p] == '')#}
-            {#                        words.splice(p, 1);#}
-            {#                }#}
-            {#                for (let k = 0; k < words.length; k++) {#}
-            {#                    var el = document.createElement("button");#}
-            {#                    el.className = "word";#}
-            {#                    el.id = (num + k).toString();#}
-            {#                    el.innerHTML = words[k];#}
-            {#                    if (k == words.length - 1)#}
-            {#                        el.innerHTML = words[k] + '.';#}
-            {#                    e.appendChild(el);#}
-            {#                }#}
-            {#                let paraTop = document.getElementById('para').getBoundingClientRect().top;#}
-            {#                let buttonTop = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;#}
-            {#                let buttonHeight = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().bottom - document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;#}
-            {#                if (Math.trunc((buttonTop - paraTop) / buttonHeight) >= maxLine) {#}
-            {#                    while (e.children[0]) {#}
-            {#                        e.removeChild(e.children[0]);#}
-            {#                    }#}
-            {#                    break;#}
-            {#                } else {#}
-            {#                    conPerPage.push(sentences[sentenceNum]);#}
-            {#                    for (let k = wordLength + 1; k <= wordLength + words.length; k++) {#}
-            {#                        if (this.content[i][k]) {#}
-            {#                            transPerPage.push(this.content[i][k]);#}
-            {#                        }#}
-            {#                    }#}
-            {#                    for (let k = num; k < num + words.length; k++) {#}
-            {#                        if(document.getElementById(k+'').innerHTML != '"' && document.getElementById(k+'').innerHTML != '“')#}
-            {#                            locPerPage.push(this.getWordLocation(k));#}
-            {#                    }#}
-            {##}
-            {#                    num += words.length;#}
-            {##}
-            {#                    wordLength += words.length;#}
-            {##}
-            {#                }#}
-            {##}
-            {#            }#}
-            {#            this.buttonLocPerPage.push(locPerPage);#}
-            {#            this.transPerPage.push(transPerPage);#}
-            {#            this.contentPerPage.push(conPerPage.join('.') + ".");#}
-            {#        }#}
-            {##}
-            {#    }#}
-            {##}
-            {#    while (e.children[0])#}
-            {#        e.removeChild(e.children[0])#}
-            {#    for (let i = 0; i < this.contentPerPage.length; i++) {#}
-            {#        if (this.contentPerPage[i] == ".")#}
-            {#            this.contentPerPage.splice(i, 1);#}
-            {#        if (this.transPerPage[i].length == 0)#}
-            {#            this.transPerPage.splice(i, 1);#}
-            {#    }#}
-            {#    this.totalPage = this.contentPerPage.length;#}
-            {#    let tmp = this.contentPerPage;#}
-            {#    let tmp_ = tmp.join('-.');#}
-            {#    setCookie('contentPerPage', tmp_);#}
-            {##}
-            {# },#}
-
             getPage: function () {
                 {#this.getWanderRemind();#}
                 let num = 0;
@@ -644,8 +554,8 @@
                             el.className = "word";
                             el.id = num.toString();
                             el.innerHTML = words[j];
-                            {#el.setAttribute("onclick", "getWordTranslation(" + num + ")");#}
-                            {#el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");#}
+                            el.setAttribute("onclick", "getWordTranslation(" + num + ")");
+                            el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
                             if (j == words.length - 1 && words[j].length > 1)
                                 el.innerHTML = words[j] + '.';
                             num += 1;
@@ -680,6 +590,27 @@
                     this.wordTextLocPerPage.push(wordTextLocCurPage);
                 {#height += e.getBoundingClientRect().bottom - e.getBoundingClientRect().top;#}
                 {#this.getWanderRemind();#}
+                let formdata = new FormData();
+                {#formdata.append("interventions", interventions.toString());#}
+                formdata.append("page", this.page);
+                formdata.append("page_text", this.contentCurPage);
+                formdata.append("location", JSON.stringify(this.buttonCurLoc));
+                {#formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page - 1]));#}
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/page_info/',
+                    data: formdata,
+                    async: false,
+                    success: function () {
+                        console.log("success");
+                    },
+                    error: function () {
+                        console.log("error");
+                    },
+                    processData: false,
+                    contentType: false
+                })
             },
 
             listen: function () {
@@ -765,19 +696,7 @@
             y.push(data.y);
             t.push(elapsedTime);
 
-            let num = app.catchCurrentWord();
-            if (num < app._data.words.length) {
-                if (app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num) {
-                    app._data.readSequel[app._data.readSequel.length - 1][2].push(new Array(data.x, data.y, elapsedTime));
-                } else {
-                    app._data.readSequel.push(new Array(num, app._data.words[num], new Array(new Array(data.x, data.y, elapsedTime))));
-                }
-            } else {
-                {#num = app.catchCurrentTrans();#}
-                {#if(num < this.currentTransBox);#}
-            }
-
-        }).begin();
+         }).begin();
 
         app.getPage();
     }
@@ -788,13 +707,15 @@
         switch (event.keyCode) {
             case 37: {
                 if (app._data.page > 1) {
-                    get_base64_gaze_and_intervention(-1);
+                    app._data.page = app._data.page - 1;
+                    app.getPage();
                 }
                 break;
             }
             case 39: {
-                if (app._data.page <= app._data.totalPage) {
-                    get_base64_gaze_and_intervention(1);
+                if (app._data.page < app._data.totalPage) {
+                    app._data.page = app._data.page + 1;
+                    app.getPage();
                     break;
                 }
             }
@@ -837,81 +758,7 @@
         return "";
     }
 
-    function get_word_level_gaze_data() {
 
-        $.ajax({
-            type: 'POST',
-            url: '/word_level_data/',
-            data: JSON.stringify(app._data.readSequel),
-            dataType: "JSON",
-            async: false,
-            success: function () {
-                console.log("success");
-                if (app._data.page == app._data.totalPage)
-                    window.location.href = 'http://127.0.0.1:8000/label';
-            },
-            error: function () {
-                console.log("error");
-            },
-            processData: false,
-            contentType: false
-
-        })
-    }
-
-    //截图
-    function get_base64_gaze_and_intervention(page) {
-        let opts = {
-            //scale: scale, // 添加的scale 参数
-            //canvas: canvas, //自定义 canvas
-            //logging: false, //日志开关，便于查看html2canvas的内部执行流程
-            //width: width, //dom 原始宽度
-            //height: height,
-            useCORS: true // 【重要】开启跨域配置
-        };
-        html2canvas($('body')[0], opts).then(canvas => {
-            //document.body.appendChild(canvas);
-
-            // 调用Canvas2Image插件
-            // let img = Canvas2Image.convertToImage(canvas, canvasWidth, canvasHeight);
-            // let image_data = $(img).attr('src');
-
-            let url = canvas.toDataURL();
-
-            let formdata = new FormData();
-            formdata.append("image", url.toString());
-            formdata.append("x", x.toString());
-            formdata.append("y", y.toString());
-            formdata.append("t", t.toString());
-            formdata.append("interventions", interventions.toString());
-            formdata.append("page", app._data.page);
-            formdata.append("text", app._data.contentCurPage);
-            formdata.append("location", JSON.stringify(app._data.buttonCurLoc));
-            formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page - 1]));
-
-            $.ajax({
-                type: 'POST',
-                url: '/data/',
-                data: formdata,
-                async: false,
-                success: function () {
-                    //执行完毕后再换页
-                    app.clearPageWords();
-
-                    x = [];
-                    y = [];
-                    t = [];
-                    app._data.page = app._data.page + page;
-                    app.getPage();
-                },
-                error: function () {
-                    console.log("error");
-                },
-                processData: false,
-                contentType: false
-            })
-        });
-    }
 
 </script>
 </html>
