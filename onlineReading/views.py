@@ -1817,3 +1817,11 @@ def check_article(request):
             print(len(word_list))
             assert len(word_locations) == len(word_list)
     return HttpResponse('测试成功')
+
+def function(request):
+    """
+    输入应该是
+        * 当前2s内的gaze点（前端传输）
+        * 历史的所有gaze点（后端存储--存储在哪？）
+        * 该页的位置信息（后端存储--存储在哪？）
+    """

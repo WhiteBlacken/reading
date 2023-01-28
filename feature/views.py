@@ -1122,25 +1122,22 @@ def get_timestamp_dataset(request):
     experiment_list_select = []
     for line in lines:
         experiment_list_select.append(line)
-    # experiment_list_select = [683]
-    # dat0111 = [590, 597, 598, 622, 630, 638, 641, 631, 579, 596, 609, 585, 506, 688, 683, 917, 916, 915, 914, 913, 891,
-    #            887, 885, 834]
-    # dat0122 = [906, 905, 904, 903, 902, 932, 933, 934, 935]
-    # dat0113 = [941, 940, 938, 937]
-    #
-    # experiment_list_select.extend(dat0111)
-    # experiment_list_select.extend(dat0122)
-    # experiment_list_select.extend(dat0113)
 
     experiment_failed_list = []
 
-    path = "jupyter\\dataset\\" + "handcraft-data-230120.csv"
+
     experiments = (
         Experiment.objects.filter(is_finish=True)
         .filter(id__in=experiment_list_select)
         .exclude(id__in=experiment_failed_list)
     )
     print(f"一共会生成{len(experiments)}条数据")
+
+    # 文件路径及超参
+    interval_time = 3000
+    hand_path = "jupyter\\dataset\\" + "handcraft-data-230127-3s.csv"
+    cnn_path = "jupyter\\dataset\\" + "cnn-data-230127-3s.csv"
+    pic_path = "jupyter\\dataset\\" + "paint-230127-3s.csv"
 
     # cnn相关的特征
     experiment_ids = []
@@ -1309,7 +1306,7 @@ def get_timestamp_dataset(request):
 
                     if m == 0:
                         continue
-                    if gaze[-1] - gaze_points[pre_gaze][-1] > 2000:
+                    if gaze[-1] - gaze_points[pre_gaze][-1] > interval_time:
 
                         number_of_fixations = [0 for _ in range(word_num)]
                         reading_times = [0 for _ in range(word_num)]
@@ -1552,10 +1549,10 @@ def get_timestamp_dataset(request):
                 }
             )
 
-            if os.path.exists(path):
-                df.to_csv(path, index=False, mode="a", header=False)
+            if os.path.exists(hand_path):
+                df.to_csv(hand_path, index=False, mode="a", header=False)
             else:
-                df.to_csv(path, index=False, mode="a")
+                df.to_csv(hand_path, index=False, mode="a")
 
             success += 1
             endtime = datetime.datetime.now()
@@ -1609,11 +1606,11 @@ def get_timestamp_dataset(request):
             "acc": acc,
         }
     )
-    path = "jupyter\\dataset\\" + "cnn-data-230120.csv"
-    if os.path.exists(path):
-        data.to_csv(path, index=False, mode="a", header=False)
+
+    if os.path.exists(cnn_path):
+        data.to_csv(cnn_path, index=False, mode="a", header=False)
     else:
-        data.to_csv(path, index=False, mode="a")
+        data.to_csv(cnn_path, index=False, mode="a")
 
     data1 = pd.DataFrame(
         {
@@ -1630,11 +1627,11 @@ def get_timestamp_dataset(request):
 
         }
     )
-    path = "jupyter\\dataset\\" + "paint-230120.csv"
-    if os.path.exists(path):
-        data1.to_csv(path, index=False, mode="a", header=False)
+
+    if os.path.exists(pic_path):
+        data1.to_csv(pic_path, index=False, mode="a", header=False)
     else:
-        data1.to_csv(path, index=False, mode="a")
+        data1.to_csv(pic_path, index=False, mode="a")
     logger.info("成功生成%d条，失败%d条" % (success, fail))
     logger.info("成功生成%d条，失败%d条" % (success, fail))
     logger.info(f"失败的experiment有:{experiment_failed_list}")
