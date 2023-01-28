@@ -306,6 +306,8 @@ def takeSecond(elem):
 
 
 def paint_on_word(image, target_words_index, word_locations, title, pic_path, alpha=0.1, color=255):
+    print(target_words_index)
+    print(len(word_locations))
     blk = np.zeros(image.shape, np.uint8)
     blk[0:image.shape[0] - 1, 0:image.shape[1] - 1] = 255
     set_title(blk, title)

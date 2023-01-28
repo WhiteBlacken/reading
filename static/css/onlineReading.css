@@ -124,3 +124,32 @@ html,body{
     background-color: #fcf8e3;
     border-color: #faebcc;
 }
+
+#markers-top {
+    width: 100%;
+    height: auto;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#markers-bottom {
+    width: 100%;
+    height: auto;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
+
+.marker{
+    width: 120px;
+    /*z-index: -1;*/
+}
+
+#left {
+    float: left;
+}
+
+#right {
+    float: right;
+}
