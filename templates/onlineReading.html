@@ -372,11 +372,50 @@
                 return i;
             },
 
-            autoRandomTranslation: function () {
-                let num = this.catchCurrentWord();
-                if (num < this.translation.length)
-                    this.getWordTranslation(num);
-                interventions.push(num);
+            autoIntervention: function () {
+                let formdata = new FormData();
+                formdata.append("x", x.toString());
+                formdata.append("y", y.toString());
+                formdata.append("t", t.toString());
+                x = [];
+                y = [];
+                t = [];
+                $.ajax({
+                    type: 'POST',
+                    url: '/gaze/',
+                    data: formdata,
+                    async: false,
+                    success: function (res) {
+                        console.log(res);
+                        let word_inter = res['word'];
+                        let sentence_inter = res['sentence'];
+                        let wander_inter = res['wander'];
+                        if(wander_inter && wander_inter.length > 0) {
+                            app.getWanderRemind();
+                        }else {
+                            for(let i = 0; i < sentence_inter.length; i++){
+                                let word_sum = 0
+                                for(let j = 0; j < sentence_inter[i]; j++){
+                                    let w = this.sentences[j].split(' ');
+                                    for (let k = 0; k < w.length; j++)
+                                        if (w[k] == '')
+                                            w.splice(k, 1);
+                                    word_sum += w.length;
+                                }
+                                {#if(sentence_inter[i] < this.translation.length)#}
+                                app.getSentenceTranslation(sentence_inter[i]);
+                            }
+                            for(let i = 0; i < word_inter.length; i++)
+                                app.getWordTranslation(word_inter[i]);
+                        }
+
+                    },
+                    error: function () {
+                        console.log("error");
+                    },
+                    processData: false,
+                    contentType: false
+                })
             },
 
             isInArr: function (num, arr) {
@@ -397,7 +436,7 @@
                     this.content = response.data;
                 });
                 this.content = Object.values(this.content);
-                console.log(this.content)
+                {#console.log(this.content)#}
                 for (let i = 0; i < this.content.length; i++)
                     this.paras.push(this.content[i][0]);
                 let p = "";
@@ -521,6 +560,7 @@
                 }
                 setCookie('paraLoc', k);
             },
+
 
             getPage: function () {
                 {#this.getWanderRemind();#}
@@ -653,14 +693,14 @@
                 this.buttonCurLoc = [];
             },
 
-            autoIntervention: function () {
-                if (stop === false) {
-                    setInterval(function () {
-                        get_base64_gaze_and_intervention(0);
-                    }, 5000);
-                }
-
-            },
+            {#autoIntervention: function () {#}
+            {#    if (stop === false) {#}
+            {#        setInterval(function () {#}
+            {#            get_base64_gaze_and_intervention(0);#}
+            {#        }, 5000);#}
+            {#    }#}
+            {##}
+            {# },#}
         },
         created() {
 
@@ -699,6 +739,9 @@
          }).begin();
 
         app.getPage();
+        setInterval(function () {
+            app.autoIntervention();
+        }, 8000);
     }
 
     //监听空格事件
