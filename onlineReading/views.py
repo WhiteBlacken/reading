@@ -42,7 +42,7 @@ from utils import (
     paint_bar_graph,
     paint_gaze_on_pic,
     preprocess_data,
-    x_y_t_2_coordinate,
+    x_y_t_2_coordinate, process_fixations,
 )
 
 
@@ -1819,3 +1819,65 @@ def check_article(request):
             print(len(word_list))
             assert len(word_locations) == len(word_list)
     return HttpResponse('测试成功')
+
+def get_pred(request):
+    """
+    输入应该是
+        * 当前2s内的gaze点（前端传输）
+        * 历史的所有gaze点（后端存储--存储在哪？）
+        * 该页的位置信息（后端存储--存储在哪？）
+    """
+    x = request.POST.get("x")
+    y = request.POST.get("y")
+    t = request.POST.get("t")
+
+    history_x = request.session.get('history_x', None)
+    history_y = request.session.get('history_y', None)
+    history_t = request.session.get('history_t', None)
+
+    context = {
+        "word": [],
+        "sentence": [],
+        "wander": []
+    }
+
+    if history_x is None:
+        request.session['history_x'] = x
+        request.session['history_y'] = y
+        request.session['history_t'] = t
+    else:
+        request.session['history_x'] += "," + x
+        request.session['history_y'] += "," + y
+        request.session['history_t'] += "," + t
+
+    if history_x and history_y and history_t:
+        gaze_points = format_gaze(request.session['history_x'], request.session['history_y'],
+                                  request.session['history_t'])
+
+        result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
+            gaze_points, request.session['page_text'], request.session['location']
+        )
+        index, flag = get_item_index_x_y(request.session['location'], result_fixations[-1][0], result_fixations[-1][1])
+
+        # 模型的输入：文章，visual特征的计算，cnn特征的计算
+        # 模型输出预测结果
+
+        context = {
+            "word": [index],
+            "sentence": [],
+            "wander": []
+        }
+
+    return JsonResponse(context)
+
+
+def get_page_info(request):
+    page_text = request.POST.get("page_text")
+    location = request.POST.get("location")
+    print(f'page_text:{page_text}')
+    print(f'location:{location}')
+
+    request.session['page_text'] = page_text
+    request.session['location'] = location
+
+    return HttpResponse(1)
