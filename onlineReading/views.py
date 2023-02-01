@@ -1840,15 +1840,40 @@ def get_pred(request):
         "sentence": [],
         "wander": []
     }
+    if len(x) > 0:
+        if history_x is None:
+            request.session['history_x'] = x
+            request.session['history_y'] = y
+            request.session['history_t'] = t
+        else:
+            request.session['history_x'] += "," + x
+            request.session['history_y'] += "," + y
+            request.session['history_t'] += "," + t
+    tmp_x = request.session['history_x'].split(",")
+    tmp_y = request.session['history_y'].split(",")
+    tmp_t = request.session['history_t'].split(",")
+    cnt = 0
+    for tmp in tmp_x:
+        if tmp == '':
+            cnt += 1
+    for i in range(cnt):
+        tmp_x.remove('')
+    request.session['history_x'] = ",".join(tmp_x)
+    cnt = 0
+    for tmp in tmp_y:
+        if tmp == '':
+            cnt += 1
+    for i in range(cnt):
+        tmp_y.remove('')
+    request.session['history_y'] = ",".join(tmp_y)
+    cnt = 0
+    for tmp in tmp_t:
+        if tmp == '':
+            cnt += 1
+    for i in range(cnt):
+        tmp_t.remove('')
+    request.session['history_t'] = ",".join(tmp_t)
 
-    if history_x is None:
-        request.session['history_x'] = x
-        request.session['history_y'] = y
-        request.session['history_t'] = t
-    else:
-        request.session['history_x'] += "," + x
-        request.session['history_y'] += "," + y
-        request.session['history_t'] += "," + t
 
     if history_x and history_y and history_t:
         gaze_points = format_gaze(request.session['history_x'], request.session['history_y'],

@@ -387,23 +387,28 @@
                     async: false,
                     success: function (res) {
                         console.log(res);
-                        console.log("success");
                         let word_inter = res['word'];
                         let sentence_inter = res['sentence'];
                         let wander_inter = res['wander'];
                         if(wander_inter && wander_inter.length > 0) {
-                            this.getWanderRemind();
+                            app.getWanderRemind();
                         }else {
-                            if(sentence_inter && sentence_inter.length > 0) {
-                                for(let i = 0; i < sentence_inter.length; i++)
-                                    if(sentence_inter[i] < this.translation.length)
-                                    this.getSentenceTranslation(sentence_inter[i]);
-                            }else {
-                                for(let i = 0; i < word_inter.length; i++)
-                                    if(word_inter[i] < this.translation.length)
-                                    this.getWordTranslation(word_inter[i]);
+                            for(let i = 0; i < sentence_inter.length; i++){
+                                let word_sum = 0
+                                for(let j = 0; j < sentence_inter[i]; j++){
+                                    let w = this.sentences[j].split(' ');
+                                    for (let k = 0; k < w.length; j++)
+                                        if (w[k] == '')
+                                            w.splice(k, 1);
+                                    word_sum += w.length;
+                                }
+                                {#if(sentence_inter[i] < this.translation.length)#}
+                                app.getSentenceTranslation(sentence_inter[i]);
                             }
+                            for(let i = 0; i < word_inter.length; i++)
+                                app.getWordTranslation(word_inter[i]);
                         }
+
                     },
                     error: function () {
                         console.log("error");
@@ -431,7 +436,7 @@
                     this.content = response.data;
                 });
                 this.content = Object.values(this.content);
-                console.log(this.content)
+                {#console.log(this.content)#}
                 for (let i = 0; i < this.content.length; i++)
                     this.paras.push(this.content[i][0]);
                 let p = "";
@@ -736,7 +741,7 @@
         app.getPage();
         setInterval(function () {
             app.autoIntervention();
-        }, 4000);
+        }, 8000);
     }
 
     //监听空格事件
