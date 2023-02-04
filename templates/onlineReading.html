@@ -402,8 +402,14 @@
                                             w.splice(k, 1);
                                     word_sum += w.length;
                                 }
+                                let end = word_sum + this.sentences[sentence_inter[i]].length;
+                                for(let i = 0; i < word_inter.length; i++) {
+                                    if(word_inter[i] < end && word_inter[i] >= word_sum) {
+                                        word_inter.splice(i,1);
+                                    }
+                                }
                                 {#if(sentence_inter[i] < this.translation.length)#}
-                                app.getSentenceTranslation(sentence_inter[i]);
+                                app.getSentenceTranslation(word_sum);
                             }
                             for(let i = 0; i < word_inter.length; i++)
                                 app.getWordTranslation(word_inter[i]);
