@@ -39,7 +39,7 @@ from utils import (
     get_index_in_row_only_use_x,
     get_item_index_x_y,
     get_word_and_sentence_from_text,
-    normalize, get_word_location, process_fixations,
+    normalize, get_word_location, process_fixations, get_word_count, get_row, get_euclid_distance,
 )
 
 """
@@ -49,6 +49,7 @@ TODO list
     1.1 配合图的生成看一下
     1.2 与单词的位置无关
 """
+
 
 def add_fixation_to_word(request):
     exp_id = request.GET.get("exp_id")
@@ -86,8 +87,8 @@ def add_fixation_to_word(request):
         base_path = path + str(page_data_id) + "\\"
 
         isMac = True if exp.device == "mac" else False
-        background = generate_pic_by_base64(pageData.image, base_path, "background.png")
-        # background = base_path + "background.png"
+        # background = generate_pic_by_base64(pageData.image, base_path, "background.png")
+        background = base_path + "background.png"
 
         fix_img = show_fixations(result_fixations, background)
         cv2.imwrite(base_path + "fix-adjust.png", fix_img)
@@ -133,7 +134,6 @@ def add_fixation_to_word(request):
                 df.to_csv(path, index=False, mode="a", header=False)
             else:
                 df.to_csv(path, index=False, mode="a")
-
 
         if heatmap:
             exp = Experiment.objects.get(id=pageData.experiment_id)
@@ -905,7 +905,7 @@ def get_fix_this_time(result_fixations, pre_gaze_t, now_gaze_t):
     return fixs
 
 
-def get_timestamp_dataset(request):
+def get_sentence_interval(request):
     filename = "exp.txt"
     file = open(filename, 'r')
     lines = file.readlines()
@@ -916,6 +916,90 @@ def get_timestamp_dataset(request):
 
     experiment_failed_list = []
 
+    experiments = (
+        Experiment.objects.filter(is_finish=True)
+        .filter(id__in=experiment_list_select)
+        .exclude(id__in=experiment_failed_list)
+    )
+    print(f"一共会生成{len(experiments)}条数据")
+    # 超参
+
+    exp_list = []
+    page_list = []
+    word_dis = []
+    sen_index_dis = []
+    word_dis_positive = []
+    sen_index_dis_positive = []
+
+    success = 0
+    fail = 0
+    for experiment in experiments:
+
+        page_data_list = PageData.objects.filter(experiment_id=experiment.id)
+
+        for page_data in page_data_list:
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)  # 获取单词和句子对应的index
+
+            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+            result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
+                gaze_points, page_data.texts, page_data.location, use_not_blank_assumption=True
+            )
+            pre_word = 0
+            pre_sentence = 0
+            for j, fixation in enumerate(result_fixations):
+                index, isAdjust = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
+                sentence_index = get_sentence_by_word(index, sentence_list)
+                if j == 0:
+                    continue
+                if sentence_index != -1:
+                    if sentence_index != pre_sentence:
+                        exp_list.append(experiment.id)
+                        page_list.append(page_data.id)
+                        word_dis.append(index - pre_word)
+                        sen_index_dis.append(sentence_index - pre_sentence)
+                        word_dis_positive.append((index - pre_word) if index - pre_word > 0 else pre_word - index)
+                        sen_index_dis_positive.append((
+                                                              sentence_index - pre_sentence) if sentence_index - pre_sentence > 0 else pre_sentence - sentence_index)
+
+                    pre_word = index
+                    pre_sentence = sentence_index
+        success += 1
+        logger.info(
+            "成功生成%d条,失败%d条" % (
+                success, fail)
+        )
+    path = "jupyter\\sentence_interval.csv"
+
+    df = pd.DataFrame(
+        {
+            # 1. 实验信息相关
+            "exp": exp_list,
+            "page": page_list,
+            "word_dis": word_dis,
+            "sen_index_dis": sen_index_dis,
+            "word_dis_positive": word_dis_positive,
+            "sen_index_dis_positive": sen_index_dis_positive
+
+        }
+    )
+
+    df.to_csv(path, index=False)
+
+    return JsonResponse({"status": "ok"})
+
+
+def get_timestamp_dataset(request):
+    # filename = "exp.txt"
+    # file = open(filename, 'r')
+    # lines = file.readlines()
+    #
+    # experiment_list_select = []
+    # for line in lines:
+    #     experiment_list_select.append(line)
+
+    experiment_list_select = [597, 598]
+
+    experiment_failed_list = []
 
     experiments = (
         Experiment.objects.filter(is_finish=True)
@@ -925,8 +1009,8 @@ def get_timestamp_dataset(request):
     print(f"一共会生成{len(experiments)}条数据")
 
     # 文件路径及超参
-    interval_time = 3000
-    hand_path = "jupyter\\dataset\\" + "handcraft-data-230127-3s.csv"
+    interval_time = 8000
+    hand_path = "jupyter\\dataset\\" + "handcraft-data-luqi.csv"
     cnn_path = "jupyter\\dataset\\" + "cnn-data-230127-3s.csv"
     pic_path = "jupyter\\dataset\\" + "paint-230127-3s.csv"
 
@@ -943,47 +1027,52 @@ def get_timestamp_dataset(request):
 
     fix_x = []
     fix_y = []
-    # 手工特征
-    experiment_id_all = []
-    user_all = []
-    article_id_all = []
-    time_all = []
-    word_all = []
-    word_watching_all = []
-    word_understand_all = []
-    sentence_understand_all = []
-    mind_wandering_all = []
-    reading_times_all = []
-    number_of_fixations_all = []
-    fixation_duration_all = []
-    second_pass_dwell_time_of_sentence_all = []
-    total_dwell_time_of_sentence_all = []
-    reading_times_of_sentence_all = []
-    saccade_times_of_sentence_all = []
-    forward_times_of_sentence_all = []
-    backward_times_of_sentence_all = []
-
-    loc_row_all = []
-    loc_x_all = []
 
     # 超参
     success = 0
     fail = 0
     starttime = datetime.datetime.now()
     for experiment in experiments:
+        # handcrafted-feature
+        experiment_id_all = []
+        user_all = []
+        article_id_all = []
+
+        time_all = []
+        word_all = []
+        word_watching_all = []
+        sentence_index = []
+
+        word_understand_all = []
+        sentence_understand_all = []
+        mind_wandering_all = []
+
+        reading_times_all = []
+        number_of_fixations_all = []
+        fixation_duration_all = []
+
+        total_dwell_time_of_sentence_all = []
+        saccade_times_of_sentence_all = []
+        forward_times_of_sentence_all = []
+        backward_times_of_sentence_all = []
+
+        saccade_times_of_sentence_vel_all = []
+        forward_times_of_sentence_vel_all = []
+        backward_times_of_sentence_vel_all = []
+
+        # 全文信息
+        words_per_page = []  # 每页的单词
+        words_of_article = []  # 整篇文本的单词
+        words_num_until_page = []  # 到该页为止的单词数量，便于计算
+        locations_per_page = []  # 每页的位置信息
+        # 标签信息
+        word_understand = []
+        sentence_understand = []
+        mind_wandering = []
+
         try:
             page_data_list = PageData.objects.filter(experiment_id=experiment.id)
 
-            # 全文信息
-            words_per_page = []  # 每页的单词
-            words_of_article = []  # 整篇文本的单词
-            words_num_until_page = []  # 到该页为止的单词数量，便于计算
-            locations_per_page = []  # 每页的位置信息
-            # 标签信息
-            word_understand = []
-            sentence_understand = []
-            mind_wandering = []
-            # tmp
             texts = ""
             for page_data in page_data_list:
                 texts += page_data.texts
@@ -995,14 +1084,14 @@ def get_timestamp_dataset(request):
             reading_times = [0 for _ in range(word_num)]
             fixation_duration = [0 for _ in range(word_num)]
 
-            reading_times_of_sentence_tmp = [0 for _ in range(word_num)]
-            second_pass_dwell_time_of_sentence_tmp = [0 for _ in range(word_num)]
             total_dwell_time_of_sentence_tmp = [0 for _ in range(word_num)]
             saccade_times_of_sentence_tmp = [0 for _ in range(word_num)]
             forward_times_of_sentence_tmp = [0 for _ in range(word_num)]
             backward_times_of_sentence_tmp = [0 for _ in range(word_num)]
 
-            fixations_sequence = []
+            saccade_times_of_sentence_vel_tmp = [0 for _ in range(word_num)]
+            forward_times_of_sentence_vel_tmp = [0 for _ in range(word_num)]
+            backward_times_of_sentence_vel_tmp = [0 for _ in range(word_num)]
 
             number_of_fixations_pre_page = [0 for _ in range(word_num)]
             reading_times_pre_page = [0 for _ in range(word_num)]
@@ -1015,75 +1104,53 @@ def get_timestamp_dataset(request):
             forward_times_of_sentence_tmp_pre_page = [0 for _ in range(word_num)]
             backward_times_of_sentence_tmp_pre_page = [0 for _ in range(word_num)]
 
-            loc_row = [0 for _ in range(word_num)]
-            loc_x = [0 for _ in range(word_num)]
-
             time = 0
 
             for i, page_data in enumerate(page_data_list):
 
                 word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)  # 获取单词和句子对应的index
-                # 生成标签
-                word_understand_this_page, sentence_understand_in_page, mind_wander_in_page = compute_label(
-                    page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
-                )
-                word_understand.extend(word_understand_this_page)
-                sentence_understand.extend(sentence_understand_in_page)
-                mind_wandering.extend(mind_wander_in_page)
 
                 if len(words_num_until_page) == 0:
                     words_num_until_page.append(len(word_list))
                 else:
                     words_num_until_page.append(words_num_until_page[-1] + len(word_list))
 
-            before_rows = 0
-            max_row = 0
-            for i, page_data in enumerate(page_data_list):
-
-                if i == 0:
-                    before_rows += max_row
-                else:
-                    before_rows = before_rows + max_row + 2
-
-                max_row = 0
-                begin = 0 if i == 0 else words_num_until_page[i - 1]
-                print(f"words_num_until_page:{words_num_until_page}")
-                locations = json.loads(page_data.location)
-
-                word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)  # 获取单词和句子对应的index
-                border, rows, danger_zone, len_per_word = textarea(page_data.location)
-                for i in range(len(word_list)):
-                    row_index, index_in_row = word_index_in_row(rows, i)
-                    loc_row[i + begin] = row_index + before_rows
-                    if row_index > max_row:
-                        max_row = row_index
-                    loc_x[i + begin] = (locations[i]['left'] + locations[i]['right']) / 2
-
             for i, page_data in enumerate(page_data_list):
 
                 word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)  # 获取单词和句子对应的index
 
-                reading_times_of_sentence = [0 for _ in sentence_list]
-                second_pass_dwell_time_of_sentence = [0 for _ in sentence_list]
-                total_dwell_time_of_sentence = [0 for _ in sentence_list]
-                saccade_times_of_sentence = [0 for _ in sentence_list]
-                forward_times_of_sentence = [0 for _ in sentence_list]
-                backward_times_of_sentence = [0 for _ in sentence_list]
+                # 生成标签
+                word_label_page, sent_label_page, wander_label_page = compute_label(
+                    page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
+                )
+                word_understand.extend(word_label_page)
+                sentence_understand.extend(sent_label_page)
+                mind_wandering.extend(wander_label_page)
+
+                # 位置信息
                 words_location = json.loads(
                     page_data.location
-                )  # [{'left': 330, 'top': 95, 'right': 435.109375, 'bottom': 147},...]
+                )
+                locations_per_page.append(page_data.location)
+
+                total_dwell_time_sent = [0 for _ in sentence_list]
+                saccade_times_sent = [0 for _ in sentence_list]
+                forward_times_sent = [0 for _ in sentence_list]
+                backward_times_sent = [0 for _ in sentence_list]
+
+                saccade_times_sent_vel = [0 for _ in sentence_list]
+                forward_times_sent_vel = [0 for _ in sentence_list]
+                backward_times_sent_vel = [0 for _ in sentence_list]
+
                 assert len(word_list) == len(words_location)  # 确保单词分割的是正确的
 
                 words_per_page.append(word_list)
                 words_of_article.extend(word_list)
 
-                locations_per_page.append(page_data.location)
-
                 gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
                 result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
                     gaze_points, page_data.texts, page_data.location, use_not_blank_assumption=True
                 )
-                fixations_sequence.append(result_fixations)
 
                 pre_word_index = -1
                 pre_sentence_index = -1
@@ -1103,12 +1170,14 @@ def get_timestamp_dataset(request):
                         reading_times = [0 for _ in range(word_num)]
                         fixation_duration = [0 for _ in range(word_num)]
 
-                        reading_times_of_sentence_tmp = [0 for _ in range(word_num)]
-                        second_pass_dwell_time_of_sentence_tmp = [0 for _ in range(word_num)]
-                        total_dwell_time_of_sentence_tmp = [0 for _ in range(word_num)]
-                        saccade_times_of_sentence_tmp = [0 for _ in range(word_num)]
-                        forward_times_of_sentence_tmp = [0 for _ in range(word_num)]
-                        backward_times_of_sentence_tmp = [0 for _ in range(word_num)]
+                        total_dwell_time_sent_tmp = [0 for _ in range(word_num)]
+                        saccade_times_sent_tmp = [0 for _ in range(word_num)]
+                        forward_times_sent_tmp = [0 for _ in range(word_num)]
+                        backward_times_sent_tmp = [0 for _ in range(word_num)]
+
+                        saccade_times_sent_vel_tmp = [0 for _ in range(word_num)]
+                        forward_times_sent_vel_tmp = [0 for _ in range(word_num)]
+                        backward_times_sent_vel_tmp = [0 for _ in range(word_num)]
 
                         fixations_before = get_fix_by_time(result_fixations, gaze[-1])
                         fixations_now = get_fix_this_time(result_fixations, gaze_points[pre_gaze][-1], gaze[-1])
@@ -1120,6 +1189,15 @@ def get_timestamp_dataset(request):
                                 fixation_duration[index + begin] += fixation[2]
                                 if index != pre_word_index:
                                     reading_times[index + begin] += 1
+
+                                    # 计算sentence相关
+                                    sentence_index = get_sentence_by_word(pre_word_index, sentence_list)
+                                    saccade_times_sent[sentence_index] += 1
+                                    if index > pre_word_index:
+                                        forward_times_sent[sentence_index] += 1
+                                    else:
+                                        backward_times_sent[sentence_index] += 1
+
                                     pre_word_index = index
 
                         """sentence level"""
@@ -1128,54 +1206,51 @@ def get_timestamp_dataset(request):
                             sentence_index = get_sentence_by_word(index, sentence_list)
                             if sentence_index != -1:
                                 # 累积fixation duration
-                                total_dwell_time_of_sentence[sentence_index] += fixation[2]
-                                # 计算reading times
-                                if sentence_index != pre_sentence_index:
-                                    reading_times_of_sentence[sentence_index] += 1
-                                # 只有在reading times是2时，才累积fixation duration
-                                if reading_times_of_sentence[sentence_index] == 2:
-                                    second_pass_dwell_time_of_sentence[sentence_index] += fixation[2]
-                                pre_sentence_index = sentence_index
+                                total_dwell_time_sent[sentence_index] += fixation[2]
 
-                        saccades, velocity = detect_saccades(fixations_before)
-                        for saccade in saccades:
+                        saccades_vel, velocity = detect_saccades(fixations_before)
+                        for saccade in saccades_vel:
                             sac_begin = saccade["begin"]
                             sac_end = saccade["end"]
                             begin_word, isAdjust = get_item_index_x_y(page_data.location, sac_begin[0], sac_begin[1])
                             end_word, isAdjust = get_item_index_x_y(page_data.location, sac_end[0], sac_end[1])
                             sentence_index = get_sentence_by_word(begin_word, sentence_list)
-                            saccade_times_of_sentence[sentence_index] += 1
+                            saccade_times_sent_vel[sentence_index] += 1
                             if end_word > begin_word:
-                                forward_times_of_sentence[sentence_index] += 1
+                                forward_times_sent_vel[sentence_index] += 1
                             else:
-                                backward_times_of_sentence[sentence_index] += 1
+                                backward_times_sent_vel[sentence_index] += 1
 
                         for q, sentence in enumerate(sentence_list):
-                            scale = math.log((sentence[3] + 1))
+                            # scale = math.log((sentence[3] + 1))
+                            # scale = sentence[3] + 1
+                            scale = 1
                             begin_index = sentence[1] + begin
                             end_index = sentence[2] + begin
                             length = end_index - begin_index
 
-                            reading_times_of_sentence_tmp[begin_index:end_index] = [
-                                reading_times_of_sentence[q] / scale for _ in range(length)
-                            ]
-                            second_pass_dwell_time_of_sentence_tmp[begin_index:end_index] = [
-                                second_pass_dwell_time_of_sentence[q] / scale for _ in range(length)
-                            ]
                             total_dwell_time_of_sentence_tmp[begin_index:end_index] = [
-                                total_dwell_time_of_sentence[q] / scale for _ in range(length)
+                                total_dwell_time_sent[q] / scale for _ in range(length)
                             ]
                             saccade_times_of_sentence_tmp[begin_index:end_index] = [
-                                saccade_times_of_sentence[q] / scale for _ in range(length)
+                                saccade_times_sent[q] / scale for _ in range(length)
                             ]
                             forward_times_of_sentence_tmp[begin_index:end_index] = [
-                                forward_times_of_sentence[q] / scale for _ in range(length)
+                                forward_times_sent[q] / scale for _ in range(length)
                             ]
                             backward_times_of_sentence_tmp[begin_index:end_index] = [
-                                backward_times_of_sentence[q] / scale for _ in range(length)
+                                backward_times_sent[q] / scale for _ in range(length)
                             ]
-                        # # 按照时间生成数据
-                        # time = 0
+
+                            saccade_times_of_sentence_vel_tmp[begin_index:end_index] = [
+                                saccade_times_sent_vel[q] / scale for _ in range(length)
+                            ]
+                            forward_times_of_sentence_vel_tmp[begin_index:end_index] = [
+                                forward_times_sent_vel[q] / scale for _ in range(length)
+                            ]
+                            backward_times_of_sentence_vel_tmp[begin_index:end_index] = [
+                                backward_times_sent_vel[q] / scale for _ in range(length)
+                            ]
 
                         experiment_id_all.extend([experiment.id for _ in range(word_num)])
                         user_all.extend([experiment.user for _ in range(word_num)])
@@ -1198,24 +1273,16 @@ def get_timestamp_dataset(request):
                         sentence_understand_all.extend(sentence_understand)
                         mind_wandering_all.extend(mind_wandering)
 
-                        # print(np.sum([reading_times,reading_times_pre_page],axis=0))
-                        # print(type(np.sum([reading_times,reading_times_pre_page],axis=0)))
-
                         reading_times_all.extend(np.sum([reading_times, reading_times_pre_page], axis=0).tolist())
                         number_of_fixations_all.extend(
                             np.sum([number_of_fixations, number_of_fixations_pre_page], axis=0).tolist())
                         fixation_duration_all.extend(
                             np.sum([fixation_duration, fixation_duration_pre_page], axis=0).tolist())
 
-                        second_pass_dwell_time_of_sentence_all.extend(np.sum(
-                            [second_pass_dwell_time_of_sentence_tmp, second_pass_dwell_time_of_sentence_tmp_pre_page],
-                            axis=0).tolist())
                         total_dwell_time_of_sentence_all.extend(
                             np.sum([total_dwell_time_of_sentence_tmp, total_dwell_time_of_sentence_tmp_pre_page],
                                    axis=0).tolist())
-                        reading_times_of_sentence_all.extend(
-                            np.sum([reading_times_of_sentence_tmp, reading_times_of_sentence_tmp_pre_page],
-                                   axis=0).tolist())
+
                         saccade_times_of_sentence_all.extend(
                             np.sum([saccade_times_of_sentence_tmp, saccade_times_of_sentence_tmp_pre_page],
                                    axis=0).tolist())
@@ -1225,9 +1292,6 @@ def get_timestamp_dataset(request):
                         backward_times_of_sentence_all.extend(
                             np.sum([backward_times_of_sentence_tmp, backward_times_of_sentence_tmp_pre_page],
                                    axis=0).tolist())
-
-                        loc_row_all.extend(loc_row)
-                        loc_x_all.extend(loc_x)
 
                         experiment_ids.append(experiment.id)
                         times.append(time)
@@ -1301,9 +1365,7 @@ def get_timestamp_dataset(request):
             print(len(reading_times_all))
             print(len(number_of_fixations_all))
             print(len(fixation_duration_all))
-            print(len(second_pass_dwell_time_of_sentence_all))
             print(len(total_dwell_time_of_sentence_all))
-            print(len(reading_times_of_sentence_all))
             print(len(saccade_times_of_sentence_all))
             print(len(forward_times_of_sentence_all))
             print(len(backward_times_of_sentence_all))
@@ -1328,15 +1390,11 @@ def get_timestamp_dataset(request):
                     "number_of_fixations": number_of_fixations_all,
                     "fixation_duration": fixation_duration_all,
                     # sentence level
-                    "second_pass_dwell_time_of_sentence": second_pass_dwell_time_of_sentence_all,
                     "total_dwell_time_of_sentence": total_dwell_time_of_sentence_all,
-                    "reading_times_of_sentence": reading_times_of_sentence_all,
                     "saccade_times_of_sentence": saccade_times_of_sentence_all,
                     "forward_times_of_sentence": forward_times_of_sentence_all,
                     "backward_times_of_sentence": backward_times_of_sentence_all,
-                    # 位置信息
-                    "loc_row": loc_row_all,
-                    "loc_x": loc_x_all
+
                 }
             )
 
@@ -1352,29 +1410,7 @@ def get_timestamp_dataset(request):
                     success, fail, round((endtime - starttime).microseconds / 1000 / 1000, 3))
             )
 
-            # 清空列表
-            experiment_id_all = []
-            user_all = []
-            article_id_all = []
-            time_all = []
-            word_all = []
-            word_watching_all = []
-            word_understand_all = []
-            sentence_understand_all = []
-            mind_wandering_all = []
-            reading_times_all = []
-            number_of_fixations_all = []
-            fixation_duration_all = []
-            second_pass_dwell_time_of_sentence_all = []
-            total_dwell_time_of_sentence_all = []
-            reading_times_of_sentence_all = []
-            saccade_times_of_sentence_all = []
-            forward_times_of_sentence_all = []
-            backward_times_of_sentence_all = []
-
-            loc_row_all = []
-            loc_x_all = []
-        except:
+        except Exception as e:
             fail += 1
             endtime = datetime.datetime.now()
             logger.info(
@@ -1587,7 +1623,7 @@ def get_nlp_sequence(request):
 
 def get_label_num(request):
     filename = "exp.txt"
-    file = open(filename,'r')
+    file = open(filename, 'r')
     lines = file.readlines()
 
     exp_list = []
@@ -1614,3 +1650,287 @@ def get_label_num(request):
     print(f"走神标签的数量：{wander_label_num}")
 
     return HttpResponse(1)
+
+
+def get_handcraft_feature(request):
+    filename = "exp.txt"
+    file = open(filename, 'r')
+    lines = file.readlines()
+
+    experiment_list_select = []
+    for line in lines:
+        experiment_list_select.append(line)
+
+    experiment_failed_list = []
+
+    experiments = (
+        Experiment.objects.filter(is_finish=True)
+        .filter(id__in=experiment_list_select)
+        .exclude(id__in=experiment_failed_list)
+    )
+    print(f"一共会生成{len(experiments)}条数据")
+
+    success = 0
+    for experiment in experiments:
+        # 一次实验保存一次
+        page_data_list = PageData.objects.filter(experiment_id=experiment.id)
+
+        # 不是第一页，要把上一页的信息加上
+        for page_data in page_data_list:
+            featureSet = FeatureSet(get_word_count(page_data.texts))
+
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+
+            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+            result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
+                gaze_points, page_data.texts, page_data.location, use_not_blank_assumption=True
+            )
+
+            border, rows, danger_zone, len_per_word = textarea(page_data.location)
+
+            pre_word_index = -1
+            for i, fixation in enumerate(result_fixations):
+                word_index, isAdjust = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
+                if word_index != -1:
+                    featureSet.number_of_fixation[word_index] += 1
+                    featureSet.total_fixation_duration[word_index] += fixation[2]
+
+                    pre_row = get_row(pre_word_index, rows)
+                    now_row = get_row(word_index, rows)
+
+                    if word_index != pre_word_index:
+                        featureSet.reading_times[word_index] += 1
+
+                        # 计算sentence的saccade相关
+                        sent_index = get_sentence_by_word(pre_word_index, sentence_list)
+                        sentence = sentence_list[sent_index]
+                        for j in range(sentence[1], sentence[2]):
+                            featureSet.saccade_times[j] += 1
+                            if i != 0:
+                                featureSet.saccade_duration[j] += result_fixations[i][3] - result_fixations[i - 1][4]
+                                featureSet.saccade_distance[j] += get_euclid_distance(result_fixations[i][0],
+                                                                                      result_fixations[i - 1][0],
+                                                                                      result_fixations[i][1],
+                                                                                      result_fixations[i - 1][1])
+                        if word_index > pre_word_index:
+                            for j in range(sentence[1], sentence[2]):
+                                featureSet.forward_saccade_times[j] += 1
+
+
+                        else:
+                            for j in range(sentence[1], sentence[2]):
+                                featureSet.backward_saccade_times[j] += 1
+
+                        if pre_row == now_row:
+                            for j in range(sentence[1], sentence[2]):
+                                featureSet.horizontal_saccade[j] += 1
+
+                        pre_word_index = word_index
+            for i, fixation in enumerate(result_fixations):
+                word_index, isAdjust = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
+                sentence_index = get_sentence_by_word(word_index, sentence_list)
+
+                if sentence_index != -1:
+                    sentence = sentence_list[sentence_index]
+                    # 累积fixation duration
+                    for j in range(sentence[1], sentence[2]):
+                        featureSet.total_dwell_time[j] += fixation[2]
+
+            saccades_vel, velocity = detect_saccades(result_fixations)
+
+            for saccade in saccades_vel:
+                sac_begin = saccade["begin"]
+                sac_end = saccade["end"]
+                begin_word, isAdjust = get_item_index_x_y(page_data.location, sac_begin[0], sac_begin[1])
+                end_word, isAdjust = get_item_index_x_y(page_data.location, sac_end[0], sac_end[1])
+                sent_index = get_sentence_by_word(begin_word, sentence_list)
+                sentence = sentence_list[sent_index]
+
+                for j in range(sentence[1], sentence[2]):
+                    featureSet.saccade_times_vel[j] += 1
+
+                if end_word > begin_word:
+                    for j in range(sentence[1], sentence[2]):
+                        featureSet.forward_saccade_times_vel[j] += 1
+                else:
+                    for j in range(sentence[1], sentence[2]):
+                        featureSet.backward_saccade_times_vel[j] += 1
+
+            word_understand, sentence_understand, mind_wander = compute_label(
+                page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
+            )
+
+            for sentence in sentence_list:
+                for i in range(sentence[1], sentence[2]):
+                    featureSet.sentence_length[i] = sentence[3]
+
+            # 生成单词所在句子
+            for i, word in enumerate(word_list):
+                sent_index = get_sentence_by_word(i, sentence_list)
+                featureSet.sentence_index[i] = sent_index
+
+            featureSet.setLabel(word_understand, sentence_understand, mind_wander)
+            featureSet.setWordList(word_list)
+
+            featureSet.to_csv('jupyter/dataset/handcraft-0208.csv', experiment.id, experiment.user,
+                              experiment.article_id, page_data.id)
+
+        success += 1
+        logger.info("成功生成%d条" % (success))
+    return HttpResponse(1)
+
+
+class FeatureSet(object):
+
+    def __init__(self, num):
+        self.num = num
+        # 特征
+        self.total_fixation_duration = [0 for _ in range(num)]
+        self.number_of_fixation = [0 for _ in range(num)]
+        self.reading_times = [0 for _ in range(num)]
+
+        self.total_dwell_time = [0 for _ in range(num)]
+        self.saccade_times = [0 for _ in range(num)]
+        self.forward_saccade_times = [0 for _ in range(num)]
+        self.backward_saccade_times = [0 for _ in range(num)]
+
+        self.saccade_times_vel = [0 for _ in range(num)]
+        self.forward_saccade_times_vel = [0 for _ in range(num)]
+        self.backward_saccade_times_vel = [0 for _ in range(num)]
+
+        self.saccade_duration = [0 for _ in range(num)]
+        self.saccade_amplitude = [0 for _ in range(num)]
+        self.saccade_velocity = [0 for _ in range(num)]
+        self.number_of_saccade = [0 for _ in range(num)]
+
+        self.horizontal_saccade = [0 for _ in range(num)]
+        self.saccade_distance = [0 for _ in range(num)]
+
+        # 句子长度
+        self.sentence_length = [0 for _ in range(num)]
+
+        # label
+        self.word_understand = []
+        self.sentence_understand = []
+        self.mind_wandering = []
+
+        self.page_data = [0 for _ in range(num)]
+        self.sentence_index = [0 for _ in range(num)]
+
+        # word_list
+        self.word_list = []
+
+    def setLabel(self, label1, label2, label3):
+        self.word_understand = label1
+        self.sentence_understand = label2
+        self.mind_wandering = label3
+
+    def setWordList(self, word_list):
+        self.word_list = word_list
+
+    def get_list_div(self, list_a, list_b):
+        div_list = [0 for _ in range(self.num)]
+        for i in range(len(list_b)):
+            if list_b[i] != 0:
+                div_list[i] = list_a[i] / list_b[i]
+
+        return div_list
+
+    def list_log(self, list_a):
+        log_list = [0 for _ in range(self.num)]
+        for i in range(len(list_a)):
+            log_list[i] = math.log(list_a[i] + 1)
+        return log_list
+
+    def to_csv(self, filename, exp_id, user, article_id, page_id):
+        df = pd.DataFrame(
+            {
+                # 1. 实验信息相关
+                "experiment_id": [exp_id for _ in range(self.num)],
+                "user": [user for _ in range(self.num)],
+                "article_id": [article_id for _ in range(self.num)],
+                "time": [0 for _ in range(self.num)],
+                "word": self.word_list,
+
+                "page_id": [page_id for _ in range(self.num)],
+                "sentence": self.sentence_index,
+                # "word_watching": word_watching_all,
+                # # 2. label相关
+                "word_understand": self.word_understand,
+                "sentence_understand": self.sentence_understand,
+                "mind_wandering": self.mind_wandering,
+                # 3. 特征相关
+                # word level
+                "reading_times": self.reading_times,
+                "number_of_fixations": self.number_of_fixation,
+                "fixation_duration": self.total_fixation_duration,
+                # sentence_level_raw
+                "total_dwell_time_of_sentence": self.total_dwell_time,
+                "saccade_times_of_sentence": self.saccade_times,
+                "forward_times_of_sentence": self.forward_saccade_times,
+                "backward_times_of_sentence": self.backward_saccade_times,
+
+                "saccade_times_of_sentence_vel": self.saccade_times_vel,
+                "forward_times_of_sentence_vel": self.forward_saccade_times_vel,
+                "backward_times_of_sentence_vel": self.backward_saccade_times_vel,
+                "saccade_duartion": self.saccade_duration,
+
+                "horizontal_saccade_proportion": self.get_list_div(self.horizontal_saccade, self.saccade_times),
+                "saccade_velocity": self.get_list_div(self.saccade_distance, self.saccade_duration),
+
+                # sentence_level_div_length
+                "total_dwell_time_of_sentence_div_length": self.get_list_div(self.total_dwell_time,
+                                                                             self.sentence_length),
+                "saccade_times_of_sentence_div_length": self.get_list_div(self.saccade_times, self.sentence_length),
+                "forward_times_of_sentence_div_length": self.get_list_div(self.forward_saccade_times,
+                                                                          self.sentence_length),
+                "backward_times_of_sentence_div_length": self.get_list_div(self.backward_saccade_times,
+                                                                           self.sentence_length),
+
+                "saccade_times_of_sentence_vel_div_length": self.get_list_div(self.saccade_times_vel,
+                                                                              self.sentence_length),
+                "forward_times_of_sentence_vel_div_length": self.get_list_div(self.forward_saccade_times_vel,
+                                                                              self.sentence_length),
+                "backward_times_of_sentence_vel_div_length": self.get_list_div(self.backward_saccade_times_vel,
+                                                                               self.sentence_length),
+
+                "saccade_duartion_div_length": self.get_list_div(self.saccade_duration, self.sentence_length),
+                "horizontal_saccade_proportion_div_length": self.get_list_div(self.get_list_div(self.horizontal_saccade,
+                                                                                                self.saccade_times),
+                                                                              self.sentence_length),
+                "saccade_velocity_div_length": self.get_list_div(
+                    self.get_list_div(self.saccade_distance, self.saccade_duration), self.sentence_length),
+
+                # sentence_level_div_log
+                "total_dwell_time_of_sentence_div_log": self.get_list_div(self.total_dwell_time,
+                                                                          self.list_log(self.sentence_length)),
+                "saccade_times_of_sentence_div_log": self.get_list_div(self.saccade_times,
+                                                                       self.list_log(self.sentence_length)),
+                "forward_times_of_sentence_div_log": self.get_list_div(self.forward_saccade_times,
+                                                                       self.list_log(self.sentence_length)),
+                "backward_times_of_sentence_div_log": self.get_list_div(self.backward_saccade_times,
+                                                                        self.list_log(self.sentence_length)),
+
+                "saccade_times_of_sentence_vel_div_log": self.get_list_div(self.saccade_times_vel,
+                                                                           self.list_log(self.sentence_length)),
+                "forward_times_of_sentence_vel_div_log": self.get_list_div(self.forward_saccade_times_vel,
+                                                                           self.list_log(self.sentence_length)),
+                "backward_times_of_sentence_vel_div_log": self.get_list_div(self.backward_saccade_times_vel,
+                                                                            self.list_log(self.sentence_length)),
+
+                "saccade_duartion_div_log": self.get_list_div(self.saccade_duration,
+                                                              self.list_log(self.sentence_length)),
+                "horizontal_saccade_proportion_div_log": self.get_list_div(self.get_list_div(self.horizontal_saccade,
+                                                                                             self.saccade_times),
+                                                                           self.list_log(self.sentence_length)),
+                "saccade_velocity_div_log": self.get_list_div(
+                    self.get_list_div(self.saccade_distance, self.saccade_duration),
+                    self.list_log(self.sentence_length)),
+
+            }
+        )
+
+        if os.path.exists(filename):
+            df.to_csv(filename, index=False, mode="a", header=False)
+        else:
+            df.to_csv(filename, index=False, mode="a")

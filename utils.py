@@ -299,7 +299,7 @@ def x_y_t_2_coordinate(gaze_x, gaze_y, gaze_t):
     return coordinates
 
 
-def generate_pic_by_base64(image_base64: str, save_path: str, filename: str,isMac=False):
+def generate_pic_by_base64(image_base64: str, save_path: str, filename: str, isMac=False):
     """
     使用base64生成图片，并保存至指定路径
     """
@@ -321,7 +321,7 @@ def generate_pic_by_base64(image_base64: str, save_path: str, filename: str,isMa
         img = Image.open(save_path + filename)
         width = img.size[0]
         times = width / 2880
-        new_img = img.resize((int(1440*times), int(900*times)))
+        new_img = img.resize((int(1440 * times), int(900 * times)))
         new_img.save(save_path + filename)
     return save_path + filename
 
@@ -869,6 +869,9 @@ def get_word_and_sentence_from_text(content):
             begin = cnt
     return word_list, sentence_list
 
+def get_word_count(content):
+    all_word_list,all_sentence_list = get_word_and_sentence_from_text(content)
+    return len(all_word_list)
 
 def topk_tuple(data_list, k=10):
     # 笨拙的top_k的方法 针对tuple [('word',num)]
@@ -1163,6 +1166,7 @@ def format_gaze(
     list_y = list(map(float, gaze_y.split(",")))
     list_t = list(map(float, gaze_t.split(",")))
 
+    print(f'len(x):{len(list_x)}')
     # 时序滤波
     if use_filter:
         filters = [
@@ -1191,6 +1195,7 @@ def format_gaze(
             end = i
             break
     assert begin < end
+    print(f'len(end_x):{end-begin+1}')
     return gaze_points[begin:end]
 
 
@@ -1449,10 +1454,13 @@ def get_complete_gaze_data_index(dat):
             experiment_id = row["experiment_id"]
     return index_list
 
+
 def process_fixations(gaze_points, texts, location, use_not_blank_assumption=True, use_nlp_assumption=False):
     fixations = detect_fixations(gaze_points)
-    fixations = keep_row(fixations)
 
+    print(f'detect_fix:{fixations}')
+    fixations = keep_row(fixations)
+    print(f'fix after keep row:{fixations}')
 
     word_list, sentence_list = get_word_and_sentence_from_text(texts)  # 获取单词和句子对应的index
     border, rows, danger_zone, len_per_word = textarea(location)
@@ -1527,7 +1535,7 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
     cnt = 0
 
     for item in sequence_fixations:
-        print(f"从{cnt}开始裁剪")
+        # print(f"从{cnt}开始裁剪")
         cnt += len(item)
     # 按行调整fixation
     word_attention = generate_word_attention(texts)
@@ -1545,59 +1553,7 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
         for y in y_list:
             row_index_this_fix = row_index_of_sequence(rows, y)
             rows_per_fix.append(row_index_this_fix)
-        # print(f"fix偏移占比{1 - np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix)}")
 
-        # if use_nlp_assumption:
-        #     if np.sum(np.array(rows_per_fix) == row_index) / len(rows_per_fix) < 0.4:
-        #         # 根据语义去调整fix的位置
-        #         candidate_rows = (
-        #             [row_index - 1, row_index, row_index + 1] if row_index > 0 else [row_index, row_index + 1]
-        #         )
-        #         final_row = -1
-        #         max_corr = -1
-        #         for j, candidate_row in enumerate(candidate_rows):
-        #             row = rows[candidate_row]
-        #             words = word_list[row["begin_index"]: row["end_index"] + 1]
-        #             word_loc_in_row = locations[row["begin_index"]: row["end_index"] + 1]
-        #             # nlp feature
-        #             difficulty_level = [get_word_difficulty(x) for x in words]  # text feature
-        #             difficulty_level = normalize(difficulty_level)
-        #
-        #             importance_level = [0 for _ in words]
-        #             attention_level = [0 for _ in words]
-        #             for q, word in enumerate(words):
-        #                 for impo in importance:
-        #                     if impo[0] == word:
-        #                         importance_level[q] = impo[1]
-        #                 for att in word_attention:
-        #                     if att[0] == word:
-        #                         attention_level[q] = att[1]
-        #             importance_level = normalize(importance_level)
-        #             attention_level = normalize(attention_level)
-        #
-        #             number_of_fixations = [0 for _ in words]
-        #             for fix in sequence:
-        #                 index = get_index_in_row_only_use_x(word_loc_in_row, fix[0])
-        #                 if index != -1:
-        #                     number_of_fixations[index] += 1
-        #             nlp_feature = [
-        #                 difficulty_level[i] + importance_level[i] + attention_level[i] for i in range(len(words))
-        #             ]
-        #             corr = sum(np.multiply(nlp_feature, number_of_fixations))
-        #             print(corr)
-        #             if corr > max_corr:
-        #                 final_row = candidate_row
-        #                 max_corr = corr
-        #             tmp_list = []
-        #             for x in range(len(words)):
-        #                 tmp = (words[x], nlp_feature[x], number_of_fixations[x])
-        #                 tmp_list.append(tmp)
-        #             print(tmp_list)
-        #             print("------")
-        #         if final_row != -1:
-        #             print(f"将行号右{row_index}改为{final_row}")
-        #             row_index = final_row
-        #         print("------")
         if use_not_blank_assumption:
             # 假设不会出现空行
             if row_index > now_max_row + 1:
@@ -1639,6 +1595,7 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
                 result_rows.append(row_index)
             now_max_row = max(result_rows)
     print(f"row_pass_time:{row_pass_time}")
+
     # assert sum(row_pass_time) == len(result_rows)
     print(len(result_rows))
     print(len(sequence_fixations))
@@ -1649,7 +1606,7 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
             result_fixation = [[x[0], adjust_y, x[2], x[6], x[7]] for x in sequence]
             result_fixations.extend(result_fixation)
             row_level_fix.append(result_fixation)
-
+    print(f'result_fixations:{result_fixations}')
     print(f"result_rows:{result_rows}")
     print(f"max of result rows:{max(result_rows)}")
     print(f"len of rows:{len(rows)}")

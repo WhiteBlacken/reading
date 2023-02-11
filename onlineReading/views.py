@@ -39,7 +39,6 @@ from utils import (
     get_word_location,
     join_images_vertical,
     join_two_image,
-    paint_bar_graph,
     paint_gaze_on_pic,
     preprocess_data,
     x_y_t_2_coordinate, process_fixations,
@@ -52,8 +51,8 @@ def login_page(request):
 
 def login(request):
     username = request.POST.get("username", None)
-    device = request.POST.get("device",None)
-    print("device:"+device)
+    device = request.POST.get("device", None)
+    print("device:" + device)
     print("username:%s" % username)
     if username:
         request.session["username"] = username
@@ -164,7 +163,8 @@ def get_paragraph_and_translation(request):
             para_dict[para] = words_dict
             para = para + 1
     # 创建一次实验
-    experiment = Experiment.objects.create(article_id=article_id, user=request.session.get("username"),device=request.session.get("device"))
+    experiment = Experiment.objects.create(article_id=article_id, user=request.session.get("username"),
+                                           device=request.session.get("device"))
     request.session["experiment_id"] = experiment.id
     logger.info("--本次实验开始,实验者：%s，实验id：%d--" % (request.session.get("username"), experiment.id))
     return JsonResponse(para_dict, json_dumps_params={"ensure_ascii": False})
@@ -1005,6 +1005,7 @@ def get_topic_relevant(request):
                 break
     return JsonResponse({'topic value': topic_value_of_words})
 
+
 def get_diff(request):
     article_id = request.GET.get('article_id')
     paras = Paragraph.objects.filter(article_id=article_id).order_by("para_id")
@@ -1030,6 +1031,7 @@ def get_diff(request):
                 topic_value_of_words.append(tmp)
                 break
     return JsonResponse({'topic value': topic_value_of_words})
+
 
 def get_att(request):
     article_id = request.GET.get('article_id')
@@ -1057,6 +1059,7 @@ def get_att(request):
                 break
     print(topic_value_of_words)
     return HttpResponse(topic_value_of_words)
+
 
 def get_sentence_level_nlp_attention(
         texts,
@@ -1651,7 +1654,6 @@ def get_fixation_by_time(request):
         return JsonResponse({"code": 404, "status": "未检索相关信息"}, json_dumps_params={"ensure_ascii": False},
                             safe=False)
 
-
     # 准备gaze
     list_x = json.loads(file["gaze_x"][row])
     list_y = json.loads(file["gaze_y"][row])
@@ -1679,12 +1681,11 @@ def get_fixation_by_time(request):
     fix_y = json.loads(file["fix_y"][row])
 
     assert len(fix_x) == len(fix_y)
-    fixations = [[fix_x[i],fix_y[i]] for i in range(len(fix_x))]
-
+    fixations = [[fix_x[i], fix_y[i]] for i in range(len(fix_x))]
 
     # 2. 准备底图
     page = file["page"][row]
-    page_data = PageData.objects.filter(experiment_id=exp_id).filter(page=page+1).first()
+    page_data = PageData.objects.filter(experiment_id=exp_id).filter(page=page + 1).first()
     image = page_data.image.split(",")[1]
     image_data = base64.b64decode(image)
 
@@ -1810,7 +1811,7 @@ def check_article(request):
     for pageData in pageDatas:
         word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
         print(pageData.location)
-        if len(pageData.location) >0 and pageData.location != 'undefined':
+        if len(pageData.location) > 0 and pageData.location != 'undefined':
             # 获取单词的位置
             word_locations = get_word_location(pageData.location)  # [(left,top,right,bottom),(left,top,right,bottom)]
 
@@ -1819,6 +1820,7 @@ def check_article(request):
             print(len(word_list))
             assert len(word_locations) == len(word_list)
     return HttpResponse('测试成功')
+
 
 def get_pred(request):
     """
@@ -1849,49 +1851,74 @@ def get_pred(request):
             request.session['history_x'] += "," + x
             request.session['history_y'] += "," + y
             request.session['history_t'] += "," + t
-    tmp_x = request.session['history_x'].split(",")
-    tmp_y = request.session['history_y'].split(",")
-    tmp_t = request.session['history_t'].split(",")
-    cnt = 0
-    for tmp in tmp_x:
-        if tmp == '':
-            cnt += 1
-    for i in range(cnt):
-        tmp_x.remove('')
-    request.session['history_x'] = ",".join(tmp_x)
-    cnt = 0
-    for tmp in tmp_y:
-        if tmp == '':
-            cnt += 1
-    for i in range(cnt):
-        tmp_y.remove('')
-    request.session['history_y'] = ",".join(tmp_y)
-    cnt = 0
-    for tmp in tmp_t:
-        if tmp == '':
-            cnt += 1
-    for i in range(cnt):
-        tmp_t.remove('')
-    request.session['history_t'] = ",".join(tmp_t)
 
+    print(f"x:{x}")
+    print(f"y:{y}")
+
+    print(f'history_x:{request.session["history_x"]}')
 
     if history_x and history_y and history_t:
         gaze_points = format_gaze(request.session['history_x'], request.session['history_y'],
                                   request.session['history_t'])
 
+        print(f'gaze_points:{gaze_points}')
         result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
             gaze_points, request.session['page_text'], request.session['location']
         )
-        index, flag = get_item_index_x_y(request.session['location'], result_fixations[-1][0], result_fixations[-1][1])
+        print(f'fix:{result_fixations}')
 
-        # 模型的输入：文章，visual特征的计算，cnn特征的计算
+        word_index_list = []
+        # for fixation in result_fixations:
+        #     index, flag = get_item_index_x_y(request.session['location'], result_fixations[-1][0],
+        #                                      result_fixations[-1][1])
+        #     word_index_list.append(index)
+
+        # 模型的输入：
+        """
+        1. 看过的每一个单词都要给出预测 调用多次 WordSVM，参数或者说训练是在系统启动时加载好的
+        2. 看过的句子做预测
+            1. 先判断是否是abnormal，调用SentAbSVM，将结果为True的送入下一个分类器
+            2. 调用SentClassSVM，根据分类结果，给出预测
+        """
+        word_not_understand_list = []
+        sent_not_understand_list = []
+        sent_mind_wandering_list = []
+        time = request.session.get('time', None)
+        if not time:
+            time = 1
+
+        if time == 1:
+            word_not_understand_list = [1]
+            sent_not_understand_list = [0]
+            sent_mind_wandering_list = []
+        if time == 2:
+            word_not_understand_list = [1]
+            sent_not_understand_list = []
+            sent_mind_wandering_list = [0]
+        if time == 3:
+            word_not_understand_list = [1]
+            sent_not_understand_list = [0]
+            sent_mind_wandering_list = [0]
+        if time == 4:
+            word_not_understand_list = [1]
+            sent_not_understand_list = []
+            sent_mind_wandering_list = []
+
         # 模型输出预测结果
 
+        # 系统实际的干预动作
+        print(f"index:{word_index_list}")
         context = {
-            "word": [index],
-            "sentence": [],
-            "wander": []
+            "word": word_not_understand_list,
+            "sentence": sent_not_understand_list,
+            "wander": sent_mind_wandering_list
         }
+
+        time += 1
+        if time > 4:
+            request.session['time'] = None
+
+        # 将系统的干预记下来，用于pilot study的分析
 
     return JsonResponse(context)
 
