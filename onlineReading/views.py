@@ -1944,6 +1944,7 @@ def get_pred(request):
         gaze_points = format_gaze(request.session['history_x'], request.session['history_y'],
                                   request.session['history_t'], begin_time=30, end_time=30)
 
+
         print(f'gaze_points:{gaze_points}')
         result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
             gaze_points, request.session['page_text'], request.session['location']
