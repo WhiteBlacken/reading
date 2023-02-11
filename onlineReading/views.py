@@ -1859,7 +1859,7 @@ def get_pred(request):
 
     if history_x and history_y and history_t:
         gaze_points = format_gaze(request.session['history_x'], request.session['history_y'],
-                                  request.session['history_t'])
+                                  request.session['history_t'],begin_time=30,end_time=30)
 
         print(f'gaze_points:{gaze_points}')
         result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
@@ -1868,10 +1868,11 @@ def get_pred(request):
         print(f'fix:{result_fixations}')
 
         word_index_list = []
-        # for fixation in result_fixations:
-        #     index, flag = get_item_index_x_y(request.session['location'], result_fixations[-1][0],
-        #                                      result_fixations[-1][1])
-        #     word_index_list.append(index)
+        for fixation in result_fixations:
+            index, flag = get_item_index_x_y(request.session['location'], fixation[-1][0],
+                                             fixation[-1][1])
+            word_index_list.append(index)
+        print(f'index:{word_index_list}')
 
         # 模型的输入：
         """
@@ -1883,30 +1884,6 @@ def get_pred(request):
         word_not_understand_list = []
         sent_not_understand_list = []
         sent_mind_wandering_list = []
-        time = request.session.get('time', None)
-        if not time:
-            time = 1
-
-        if time == 1:
-            word_not_understand_list = [1]
-            sent_not_understand_list = [[0, 26]]
-            sent_mind_wandering_list = []
-        if time == 2:
-            word_not_understand_list = [1]
-            sent_not_understand_list = []
-            sent_mind_wandering_list = [[0, 26]]
-        if time == 3:
-            word_not_understand_list = [1]
-            sent_not_understand_list = [[0, 26]]
-            sent_mind_wandering_list = [[0, 26]]
-        if time == 4:
-            word_not_understand_list = [35]
-            sent_not_understand_list = []
-            sent_mind_wandering_list = []
-        if time == 5:
-            word_not_understand_list = [76, 75]
-            sent_not_understand_list = [[27, 56], [78,100]]
-            sent_mind_wandering_list = []
 
         # 模型输出预测结果
 
@@ -1917,13 +1894,6 @@ def get_pred(request):
             "sentence": sent_not_understand_list,
             "wander": sent_mind_wandering_list
         }
-
-        time += 1
-
-        request.session['time'] = time
-
-        if time > 5:
-            request.session['time'] = None
 
         # 将系统的干预记下来，用于pilot study的分析
 
