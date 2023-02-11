@@ -386,7 +386,6 @@
                     data: formdata,
                     async: false,
                     success: function (res) {
-                        console.log(res);
                         let word_inter = res['word'];
                         let sentence_inter = res['sentence'];
                         let wander_inter = res['wander'];
@@ -394,22 +393,15 @@
                             app.getWanderRemind();
                         }else {
                             for(let i = 0; i < sentence_inter.length; i++){
-                                let word_sum = 0
-                                for(let j = 0; j < sentence_inter[i]; j++){
-                                    let w = this.sentences[j].split(' ');
-                                    for (let k = 0; k < w.length; j++)
-                                        if (w[k] == '')
-                                            w.splice(k, 1);
-                                    word_sum += w.length;
-                                }
-                                let end = word_sum + this.sentences[sentence_inter[i]].length;
+                                let start = sentence_inter[i][0];
+                                let end = sentence_inter[i][1];
                                 for(let i = 0; i < word_inter.length; i++) {
-                                    if(word_inter[i] < end && word_inter[i] >= word_sum) {
+                                    if(word_inter[i] <= end && word_inter[i] >= start) {
                                         word_inter.splice(i,1);
                                     }
                                 }
                                 {#if(sentence_inter[i] < this.translation.length)#}
-                                app.getSentenceTranslation(word_sum);
+                                app.getSentenceTranslation(start);
                             }
                             for(let i = 0; i < word_inter.length; i++)
                                 app.getWordTranslation(word_inter[i]);
@@ -464,7 +456,6 @@
                 var sentences = p.split('.');
                 if (sentences[sentences.length - 1] != '" 、 ')
                     sentences.splice(sentences.length - 1, 1);
-                console.log(sentences[sentences.length - 1])
                 for (let i = 0; i < sentences.length; i++)
                     sentences[i].replace('  ', ' ');
                 let sentenceNum = 0;
@@ -543,7 +534,6 @@
                         this.paraLoc[this.contentPerPage.length].push(num - 1);
                     this.transPerPage.push(transPerPage);
                     this.contentPerPage.push(conPerPage.join(''));
-                    console.log(this.contentPerPage)
                 }
 
                 while (e.children[0])
@@ -589,7 +579,6 @@
                 {##}
                 {##}
                 {#this.buttonCurLoc = this.buttonCurLoc.concat(this.buttonLocPerPage[this.page - 1]);#}
-                console.log(Content)
                 let sentences = Content.split('.');
                 sentences.splice(sentences.length - 1, 1);
                 this.sentences = sentences;
@@ -650,7 +639,7 @@
                     data: formdata,
                     async: false,
                     success: function () {
-                        console.log("success");
+
                     },
                     error: function () {
                         console.log("error");
@@ -724,7 +713,6 @@
 
     //开始使用
     async function get_start() {
-
         //全屏
         full_screen();
 
