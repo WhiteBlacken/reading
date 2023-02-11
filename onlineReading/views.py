@@ -1903,6 +1903,11 @@ def get_pred(request):
             word_not_understand_list = [1]
             sent_not_understand_list = []
             sent_mind_wandering_list = []
+        if time == 5:
+            word_not_understand_list = [1]
+            sent_not_understand_list = [1]
+            sent_mind_wandering_list = []
+
 
         # 模型输出预测结果
 
@@ -1915,7 +1920,7 @@ def get_pred(request):
         }
 
         time += 1
-        if time > 4:
+        if time > 5:
             request.session['time'] = None
 
         # 将系统的干预记下来，用于pilot study的分析
