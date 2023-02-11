@@ -46,7 +46,7 @@
             <h1 class="display-5 fw-bold">MemXEdu</h1>
             <div class="col-lg-6 mx-auto mt-3">
                 <p class="lead mb-4">
-                    等待标注
+                    完成实验
                 </p>
             </div>
         </div>
@@ -570,6 +570,7 @@
 
             getPage: function () {
                 {#this.getWanderRemind();#}
+                this.clearPageWords();
                 let num = 0;
                 let e = document.getElementById('para');
 
@@ -771,10 +772,11 @@
             case 32: {
                 stop = true;
                 webgazer.pause();
-                window.location.href = '/label';
+                {#window.location.href = '/label';#}
                 //之后的可以不写
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
+                webgazer.pause();
                 esc_full_screen();
                 break;
             }
