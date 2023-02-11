@@ -1889,23 +1889,23 @@ def get_pred(request):
 
         if time == 1:
             word_not_understand_list = [1]
-            sent_not_understand_list = [0]
+            sent_not_understand_list = [[0, 26]]
             sent_mind_wandering_list = []
         if time == 2:
             word_not_understand_list = [1]
             sent_not_understand_list = []
-            sent_mind_wandering_list = [0]
+            sent_mind_wandering_list = [[0, 26]]
         if time == 3:
             word_not_understand_list = [1]
-            sent_not_understand_list = [0]
-            sent_mind_wandering_list = [0]
+            sent_not_understand_list = [[0, 26]]
+            sent_mind_wandering_list = [[0, 26]]
         if time == 4:
             word_not_understand_list = [1]
             sent_not_understand_list = []
             sent_mind_wandering_list = []
         if time == 5:
-            word_not_understand_list = [1]
-            sent_not_understand_list = [1]
+            word_not_understand_list = [30]
+            sent_not_understand_list = [[0, 26]]
             sent_mind_wandering_list = []
 
         # 模型输出预测结果
