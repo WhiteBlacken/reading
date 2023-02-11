@@ -100,7 +100,7 @@ def get_paragraph_and_translation(request):
     """根据文章id获取整篇文章的分段以及翻译"""
     # 获取整篇文章的内容和翻译
 
-    article_id = request.GET.get("article_id", 20)
+    article_id = request.GET.get("article_id", 1)
 
     paragraphs = Paragraph.objects.filter(article_id=article_id)
     para_dict = {}
@@ -1900,12 +1900,12 @@ def get_pred(request):
             sent_not_understand_list = [[0, 26]]
             sent_mind_wandering_list = [[0, 26]]
         if time == 4:
-            word_not_understand_list = [1]
+            word_not_understand_list = [35]
             sent_not_understand_list = []
             sent_mind_wandering_list = []
         if time == 5:
-            word_not_understand_list = [30]
-            sent_not_understand_list = [[0, 26]]
+            word_not_understand_list = [76, 75]
+            sent_not_understand_list = [[27, 56], [78,100]]
             sent_mind_wandering_list = []
 
         # 模型输出预测结果
