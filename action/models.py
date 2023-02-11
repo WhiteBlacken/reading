@@ -16,6 +16,17 @@ class Text(models.Model):
 
         return json.dumps(dict([(attr, getattr(self, attr)) for attr in [f.name for f in self._meta.fields]]))
 
+class PilotStudy(models.Model):
+    exp_id = models.IntegerField()
+    user = models.CharField(max_length=100)
+    article_id = models.IntegerField()
+    word_intervention = models.CharField(max_length=1000)
+    sent_intervention = models.CharField(max_length=1000)
+    mind_wander_intervention = models.CharField(max_length=1000)
+
+    class Meta:
+        db_table = "pilot_study"
+
 
 class Paragraph(models.Model):
     article_id = models.BigIntegerField()
