@@ -1918,7 +1918,6 @@ def get_pred(request):
     history_y = request.session.get('history_y', None)
     history_t = request.session.get('history_t', None)
 
-
     if len(x) > 0:
         if history_x is None:
             request.session['history_x'] = x
@@ -1943,7 +1942,6 @@ def get_pred(request):
     if history_x and history_y and history_t:
         gaze_points = format_gaze(request.session['history_x'], request.session['history_y'],
                                   request.session['history_t'], begin_time=30, end_time=30)
-
 
         print(f'gaze_points:{gaze_points}')
         result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
