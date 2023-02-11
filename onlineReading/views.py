@@ -1908,7 +1908,6 @@ def get_pred(request):
             sent_not_understand_list = [1]
             sent_mind_wandering_list = []
 
-
         # 模型输出预测结果
 
         # 系统实际的干预动作
@@ -1920,6 +1919,9 @@ def get_pred(request):
         }
 
         time += 1
+
+        request.session['time'] = time
+
         if time > 5:
             request.session['time'] = None
 
