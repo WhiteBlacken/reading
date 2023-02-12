@@ -1661,6 +1661,7 @@ def get_handcraft_feature(request):
     for line in lines:
         experiment_list_select.append(line)
 
+    # experiment_list_select = [506]
     experiment_failed_list = []
 
     experiments = (
@@ -1670,110 +1671,139 @@ def get_handcraft_feature(request):
     )
     print(f"一共会生成{len(experiments)}条数据")
 
+    interval = 2 * 1000
+
     success = 0
     for experiment in experiments:
+        time = 0
         # 一次实验保存一次
         page_data_list = PageData.objects.filter(experiment_id=experiment.id)
 
-        # 不是第一页，要把上一页的信息加上
+        # 先生成不同page的feature
+        feature_list = []
         for page_data in page_data_list:
             featureSet = FeatureSet(get_word_count(page_data.texts))
 
             word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            word_understand, sentence_understand, mind_wander = compute_label(
+                page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
+            )
+
+            featureSet.setLabel(word_understand, sentence_understand, mind_wander)
+            featureSet.setWordList(word_list)
+
+            feature_list.append(featureSet)
+
+        # 不是第一页，要把上一页的信息加上
+        for p, page_data in enumerate(page_data_list):
+            featureSet = feature_list[p]
+
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            border, rows, danger_zone, len_per_word = textarea(page_data.location)
 
             gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
             result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
                 gaze_points, page_data.texts, page_data.location, use_not_blank_assumption=True
             )
 
-            border, rows, danger_zone, len_per_word = textarea(page_data.location)
+            pre_gaze = 0
+            for g, gaze in enumerate(gaze_points):
+                if g == 0:
+                    continue
+                if gaze[-1] - gaze_points[pre_gaze][-1] > interval:
+                    fixations_before = get_fix_by_time(result_fixations, gaze[-1])
+                    fixations_now = get_fix_this_time(result_fixations, gaze_points[pre_gaze][-1], gaze[-1])
 
-            pre_word_index = -1
-            for i, fixation in enumerate(result_fixations):
-                word_index, isAdjust = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
-                if word_index != -1:
-                    featureSet.number_of_fixation[word_index] += 1
-                    featureSet.total_fixation_duration[word_index] += fixation[2]
+                    pre_gaze = g
+                    pre_word_index = -1
+                    featureSet.clean()
+                    for i, fixation in enumerate(fixations_before):
+                        word_index, isAdjust = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
+                        if word_index != -1:
+                            featureSet.number_of_fixation[word_index] += 1
+                            featureSet.total_fixation_duration[word_index] += fixation[2]
 
-                    pre_row = get_row(pre_word_index, rows)
-                    now_row = get_row(word_index, rows)
+                            pre_row = get_row(pre_word_index, rows)
+                            now_row = get_row(word_index, rows)
 
-                    if word_index != pre_word_index:
-                        featureSet.reading_times[word_index] += 1
+                            if word_index != pre_word_index:
+                                featureSet.reading_times[word_index] += 1
 
-                        # 计算sentence的saccade相关
-                        sent_index = get_sentence_by_word(pre_word_index, sentence_list)
-                        sentence = sentence_list[sent_index]
-                        for j in range(sentence[1], sentence[2]):
-                            featureSet.saccade_times[j] += 1
-                            if i != 0:
-                                featureSet.saccade_duration[j] += result_fixations[i][3] - result_fixations[i - 1][4]
-                                featureSet.saccade_distance[j] += get_euclid_distance(result_fixations[i][0],
-                                                                                      result_fixations[i - 1][0],
-                                                                                      result_fixations[i][1],
-                                                                                      result_fixations[i - 1][1])
-                        if word_index > pre_word_index:
+                                # 计算sentence的saccade相关
+                                sent_index = get_sentence_by_word(pre_word_index, sentence_list)
+                                sentence = sentence_list[sent_index]
+                                for j in range(sentence[1], sentence[2]):
+                                    featureSet.saccade_times[j] += 1
+                                    if i != 0:
+                                        featureSet.saccade_duration[j] += result_fixations[i][3] - \
+                                                                          result_fixations[i - 1][4]
+                                        featureSet.saccade_distance[j] += get_euclid_distance(result_fixations[i][0],
+                                                                                              result_fixations[i - 1][
+                                                                                                  0],
+                                                                                              result_fixations[i][1],
+                                                                                              result_fixations[i - 1][1])
+                                if word_index > pre_word_index:
+                                    for j in range(sentence[1], sentence[2]):
+                                        featureSet.forward_saccade_times[j] += 1
+                                else:
+                                    for j in range(sentence[1], sentence[2]):
+                                        featureSet.backward_saccade_times[j] += 1
+
+                                if pre_row == now_row:
+                                    for j in range(sentence[1], sentence[2]):
+                                        featureSet.horizontal_saccade[j] += 1
+
+                                pre_word_index = word_index
+                    for i, fixation in enumerate(fixations_before):
+                        word_index, isAdjust = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
+                        sentence_index = get_sentence_by_word(word_index, sentence_list)
+
+                        if sentence_index != -1:
+                            sentence = sentence_list[sentence_index]
+                            # 累积fixation duration
                             for j in range(sentence[1], sentence[2]):
-                                featureSet.forward_saccade_times[j] += 1
+                                featureSet.total_dwell_time[j] += fixation[2]
 
+                    saccades_vel, velocity = detect_saccades(fixations_before)
 
+                    for saccade in saccades_vel:
+                        sac_begin = saccade["begin"]
+                        sac_end = saccade["end"]
+                        begin_word, isAdjust = get_item_index_x_y(page_data.location, sac_begin[0], sac_begin[1])
+                        end_word, isAdjust = get_item_index_x_y(page_data.location, sac_end[0], sac_end[1])
+                        sent_index = get_sentence_by_word(begin_word, sentence_list)
+                        sentence = sentence_list[sent_index]
+
+                        for j in range(sentence[1], sentence[2]):
+                            featureSet.saccade_times_vel[j] += 1
+
+                        if end_word > begin_word:
+                            for j in range(sentence[1], sentence[2]):
+                                featureSet.forward_saccade_times_vel[j] += 1
                         else:
                             for j in range(sentence[1], sentence[2]):
-                                featureSet.backward_saccade_times[j] += 1
+                                featureSet.backward_saccade_times_vel[j] += 1
 
-                        if pre_row == now_row:
-                            for j in range(sentence[1], sentence[2]):
-                                featureSet.horizontal_saccade[j] += 1
+                    for sentence in sentence_list:
+                        for i in range(sentence[1], sentence[2]):
+                            featureSet.sentence_length[i] = sentence[3]
 
-                        pre_word_index = word_index
-            for i, fixation in enumerate(result_fixations):
-                word_index, isAdjust = get_item_index_x_y(page_data.location, fixation[0], fixation[1])
-                sentence_index = get_sentence_by_word(word_index, sentence_list)
+                    # 生成单词所在句子
+                    for i, word in enumerate(word_list):
+                        sent_index = get_sentence_by_word(i, sentence_list)
+                        featureSet.sentence_index[i] = sent_index
 
-                if sentence_index != -1:
-                    sentence = sentence_list[sentence_index]
-                    # 累积fixation duration
-                    for j in range(sentence[1], sentence[2]):
-                        featureSet.total_dwell_time[j] += fixation[2]
+                    for fix in fixations_now:
+                        index, isAdjust = get_item_index_x_y(page_data.location, fix[0], fix[1])
+                        if index != -1:
+                            featureSet.is_watching[index] = 1
 
-            saccades_vel, velocity = detect_saccades(result_fixations)
+                    for feature in feature_list:
+                        feature.to_csv('jupyter/dataset/handcraft-0212-2s.csv', experiment.id, experiment.user,
+                                       experiment.article_id, page_data.id, time)
 
-            for saccade in saccades_vel:
-                sac_begin = saccade["begin"]
-                sac_end = saccade["end"]
-                begin_word, isAdjust = get_item_index_x_y(page_data.location, sac_begin[0], sac_begin[1])
-                end_word, isAdjust = get_item_index_x_y(page_data.location, sac_end[0], sac_end[1])
-                sent_index = get_sentence_by_word(begin_word, sentence_list)
-                sentence = sentence_list[sent_index]
-
-                for j in range(sentence[1], sentence[2]):
-                    featureSet.saccade_times_vel[j] += 1
-
-                if end_word > begin_word:
-                    for j in range(sentence[1], sentence[2]):
-                        featureSet.forward_saccade_times_vel[j] += 1
-                else:
-                    for j in range(sentence[1], sentence[2]):
-                        featureSet.backward_saccade_times_vel[j] += 1
-
-            word_understand, sentence_understand, mind_wander = compute_label(
-                page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
-            )
-
-            for sentence in sentence_list:
-                for i in range(sentence[1], sentence[2]):
-                    featureSet.sentence_length[i] = sentence[3]
-
-            # 生成单词所在句子
-            for i, word in enumerate(word_list):
-                sent_index = get_sentence_by_word(i, sentence_list)
-                featureSet.sentence_index[i] = sent_index
-
-            featureSet.setLabel(word_understand, sentence_understand, mind_wander)
-            featureSet.setWordList(word_list)
-
-            featureSet.to_csv('jupyter/dataset/handcraft-0208.csv', experiment.id, experiment.user,
-                              experiment.article_id, page_data.id)
+                    time += 1
+                    featureSet.clean_watching()
 
         success += 1
         logger.info("成功生成%d条" % (success))
@@ -1820,6 +1850,34 @@ class FeatureSet(object):
         # word_list
         self.word_list = []
 
+        # watching
+        self.is_watching = [0 for _ in range(num)]
+
+    def clean(self):
+        self.total_fixation_duration = [0 for _ in range(self.num)]
+        self.number_of_fixation = [0 for _ in range(self.num)]
+        self.reading_times = [0 for _ in range(self.num)]
+
+        self.total_dwell_time = [0 for _ in range(self.num)]
+        self.saccade_times = [0 for _ in range(self.num)]
+        self.forward_saccade_times = [0 for _ in range(self.num)]
+        self.backward_saccade_times = [0 for _ in range(self.num)]
+
+        self.saccade_times_vel = [0 for _ in range(self.num)]
+        self.forward_saccade_times_vel = [0 for _ in range(self.num)]
+        self.backward_saccade_times_vel = [0 for _ in range(self.num)]
+
+        self.saccade_duration = [0 for _ in range(self.num)]
+        self.saccade_amplitude = [0 for _ in range(self.num)]
+        self.saccade_velocity = [0 for _ in range(self.num)]
+        self.number_of_saccade = [0 for _ in range(self.num)]
+
+        self.horizontal_saccade = [0 for _ in range(self.num)]
+        self.saccade_distance = [0 for _ in range(self.num)]
+
+    def clean_watching(self):
+        self.is_watching = [0 for _ in range(self.num)]
+
     def setLabel(self, label1, label2, label3):
         self.word_understand = label1
         self.sentence_understand = label2
@@ -1842,19 +1900,20 @@ class FeatureSet(object):
             log_list[i] = math.log(list_a[i] + 1)
         return log_list
 
-    def to_csv(self, filename, exp_id, user, article_id, page_id):
+    def to_csv(self, filename, exp_id, user, article_id, page_id, time):
         df = pd.DataFrame(
             {
                 # 1. 实验信息相关
                 "experiment_id": [exp_id for _ in range(self.num)],
                 "user": [user for _ in range(self.num)],
                 "article_id": [article_id for _ in range(self.num)],
-                "time": [0 for _ in range(self.num)],
+                "time": [time for _ in range(self.num)],
                 "word": self.word_list,
 
                 "page_id": [page_id for _ in range(self.num)],
                 "sentence": self.sentence_index,
-                # "word_watching": word_watching_all,
+                "word_watching": self.is_watching,
+
                 # # 2. label相关
                 "word_understand": self.word_understand,
                 "sentence_understand": self.sentence_understand,
