@@ -110,6 +110,9 @@ with open('model/wordSVM.pickle', 'rb') as f:
 with open('model/sentSVM.pickle', 'rb') as f:
     sentSVM = pickle.load(f)
 
+with open('model/abnormalSVM.pickle', 'rb') as f:
+    abnormalSVM = pickle.load(f)
+
 
 def login_page(request):
     return render(request, "login.html")
@@ -1981,6 +1984,7 @@ def get_pred(request):
 
     word_predicts = [0 for _ in range(len(word_list))]
     sent_predicts = [0 for _ in range(len(sentence_list))]
+    abnormal_predicts = [0 for _ in range(len(sentence_list))]
     # TODO 为了减少计算量，仅在当前的单词上计算特征
     if history_x and history_y and history_t:
         gaze_points = format_gaze(request.session['history_x'], request.session['history_y'],
@@ -2005,7 +2009,7 @@ def get_pred(request):
         sentFeature = sentFeature.to_dataframe()
 
         sent_predicts = sentSVM.predict_proba(sentFeature)[:, 1]
-
+        abnormal_predicts = abnormalSVM.predict(sentFeature)
         print(f'sent_predicts:{sent_predicts}')
 
     word_watching_list = []
@@ -2045,7 +2049,15 @@ def get_pred(request):
     for watching in sent_watching_list:
         if sent_predicts[watching] > sent_threshold:
             sent = sentence_list[watching]
-            sent_not_understand_list.append([sent[1], sent[2] - 1])
+            # abnormal 再来判断原因
+            if abnormal_predicts[watching] == 0:
+                sent_mind_wandering_list.append([sent[1], sent[2] - 1])
+                sent_not_understand_list.append([sent[1], sent[2] - 1])
+            if abnormal_predicts[watching] == 1:
+                sent_not_understand_list.append([sent[1], sent[2] - 1])
+            if abnormal_predicts[watching] == 2:
+                sent_mind_wandering_list.append([sent[1], sent[2] - 1])
+
     print(f'word_not_understand_list:{word_not_understand_list}')
 
     context = {
