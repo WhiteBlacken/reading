@@ -13,7 +13,7 @@ from loguru import logger
 from PIL import Image
 
 from action.models import Dictionary, Experiment, PageData, Paragraph, Text, Translation
-from feature.utils import detect_fixations, keep_row
+from feature.utils import detect_fixations, keep_row, textarea
 from onlineReading.utils import get_euclid_distance, translate
 from pyheatmap import myHeatmap
 from semantic_attention import (  # generate_sentence_difficulty,
@@ -101,11 +101,14 @@ from utils import (
     join_two_image,
     paint_gaze_on_pic,
     preprocess_data,
-    x_y_t_2_coordinate, process_fixations,
+    x_y_t_2_coordinate, process_fixations, get_row,
 )
 
 with open('model/wordSVM.pickle', 'rb') as f:
     wordSVM = pickle.load(f)
+
+with open('model/sentSVM.pickle', 'rb') as f:
+    sentSVM = pickle.load(f)
 
 
 def login_page(request):
@@ -163,11 +166,9 @@ def get_paragraph_and_translation(request):
     """根据文章id获取整篇文章的分段以及翻译"""
     # 获取整篇文章的内容和翻译
 
-
     article_id = request.GET.get("article_id", 1)
 
     request.session['article_id'] = article_id
-
 
     paragraphs = Paragraph.objects.filter(article_id=article_id)
     para_dict = {}
@@ -1903,6 +1904,40 @@ def get_word_feature(wordFeature, result_fixations, location):
     return wordFeature
 
 
+def get_sent_feature(sentFeature, result_fixations, location, sent_list, rows):
+    pre_word_index = -1
+
+    for i, fixation in enumerate(result_fixations):
+        index, flag = get_item_index_x_y(location, fixation[0],
+                                         fixation[1])
+
+        pre_row = get_row(pre_word_index, rows)
+        now_row = get_row(index, rows)
+
+        if index != -1:
+            sent_index = get_sentence_by_word(index, sent_list)
+            if sent_index != 0:
+                sentFeature.total_dwell_time_of_sentence[sent_index] += fixation[2]
+                sentFeature.saccade_times_of_sentence[sent_index] += 1
+                if i != 0:
+                    sentFeature.saccade_duration[sent_index] += result_fixations[i][3] - \
+                                                                result_fixations[i - 1][4]
+                    sentFeature.saccade_distance[sent_index] += get_euclid_distance(result_fixations[i][0],
+                                                                                    result_fixations[i - 1][
+                                                                                        0],
+                                                                                    result_fixations[i][1],
+                                                                                    result_fixations[i - 1][1])
+                if index > pre_word_index:
+                    sentFeature.forward_times_of_sentence[sent_index] += 1
+                else:
+                    sentFeature.backward_times_of_sentence[sent_index] += 1
+                if pre_row == now_row:
+                    sentFeature.horizontal_saccade[sent_index] += 1
+
+            pre_word_index = index
+    return sentFeature
+
+
 def get_pred(request):
     """
     输入应该是
@@ -1910,6 +1945,9 @@ def get_pred(request):
         * 历史的所有gaze点（后端存储--存储在哪？）
         * 该页的位置信息（后端存储--存储在哪？）
     """
+    word_threshold = 0.2
+    sent_threshold = 0.15
+
     x = request.POST.get("x")
     y = request.POST.get("y")
     t = request.POST.get("t")
@@ -1934,10 +1972,15 @@ def get_pred(request):
     print(f'history_x:{request.session["history_x"]}')
     page_text = request.session['page_text']
     word_list, sentence_list = get_word_and_sentence_from_text(page_text)
-    wordFeature = WordFeature(len(word_list), word_list, sentence_list, request.session['semantic_feature'])
     location = request.session['location']
 
-    predicts = [0 for _ in range(len(word_list))]
+    wordFeature = WordFeature(len(word_list), word_list, sentence_list, request.session['semantic_feature'])
+    sentFeature = SentFeature(len(sentence_list), sentence_list, word_list)
+
+    border, rows, danger_zone, len_per_word = textarea(location)
+
+    word_predicts = [0 for _ in range(len(word_list))]
+    sent_predicts = [0 for _ in range(len(sentence_list))]
     # TODO 为了减少计算量，仅在当前的单词上计算特征
     if history_x and history_y and history_t:
         gaze_points = format_gaze(request.session['history_x'], request.session['history_y'],
@@ -1945,37 +1988,64 @@ def get_pred(request):
 
         print(f'gaze_points:{gaze_points}')
         result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
-            gaze_points, request.session['page_text'], request.session['location']
+            gaze_points, request.session['page_text'], location
         )
         print(f'fix:{result_fixations}')
 
         wordFeature = get_word_feature(wordFeature, result_fixations, location)
         wordFeature.update()
-        feature_data = wordFeature.to_dataframe()
-        predicts = wordSVM.predict(feature_data)
-        print(f'predicts:{predicts}')
+        word_feature = wordFeature.to_dataframe()
+        word_predicts = wordSVM.predict_proba(word_feature)[:, 1]
 
-    watching_list = []
+        print(wordFeature.fixation_duration)
+        print(f'word_predicts:{word_predicts}')
+
+        sentFeature = get_sent_feature(sentFeature, result_fixations, location, sentence_list, rows)
+        sentFeature.update()
+        sentFeature = sentFeature.to_dataframe()
+
+        sent_predicts = sentSVM.predict_proba(sentFeature)[:, 1]
+
+        print(f'sent_predicts:{sent_predicts}')
+
+    word_watching_list = []
+    sent_watching_list = []
     if len(x) > 0:
         gaze_points = format_gaze(x, y,
                                   t, begin_time=30, end_time=30)
         result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
             gaze_points, request.session['page_text'], request.session['location']
         )
+        # 单词fixation最多的句子，为需要判断的句子
+        sent_fix = [0 for _ in range(len(sentence_list))]
         for fixation in result_fixations:
             index, flag = get_item_index_x_y(location, fixation[0],
                                              fixation[1])
             if index != -1:
-                watching_list.append(index)
+                word_watching_list.append(index)
+                sent_index = get_sentence_by_word(index, sentence_list)
+                if sent_index != 0:
+                    sent_fix[sent_index] += 1
+        max_fix_sent = 0
+        max_index_sent = 0
+        for i, sent in enumerate(sent_fix):
+            if sent > max_fix_sent:
+                max_fix_sent = sent
+                max_index_sent = i
+        sent_watching_list.append(max_index_sent)
 
     word_not_understand_list = []
     sent_not_understand_list = []
     sent_mind_wandering_list = []
 
-    for watching in watching_list:
-        if predicts[watching] == 1:
+    for watching in word_watching_list:
+        if word_predicts[watching] > word_threshold:
             word_not_understand_list.append(watching)
 
+    for watching in sent_watching_list:
+        if sent_predicts[watching] > sent_threshold:
+            sent = sentence_list[watching]
+            sent_not_understand_list.append([sent[1], sent[2] - 1])
     print(f'word_not_understand_list:{word_not_understand_list}')
 
     context = {
@@ -2136,6 +2206,88 @@ class WordFeature:
 
             'fixation_duration_div_syllable': self.fixation_duration_div_syllable,
             'fixation_duration_div_length': self.fixation_duration_div_length
+        })
+        return data
+
+
+class SentFeature:
+
+    def __init__(self, num, sent_list, word_list):
+        super().__init__()
+        self.num = num
+        self.sent_list = sent_list
+        self.word_list = word_list
+
+        self.backward_times_of_sentence = [0 for _ in range(num)]
+        self.forward_times_of_sentence = [0 for _ in range(num)]
+        self.horizontal_saccade_proportion = [0 for _ in range(num)]
+        self.saccade_duration = [0 for _ in range(num)]
+        self.saccade_times_of_sentence = [0 for _ in range(num)]
+        self.saccade_velocity = [0 for _ in range(num)]
+        self.total_dwell_time_of_sentence = [0 for _ in range(num)]
+
+        self.saccade_distance = [0 for _ in range(num)]
+
+        self.horizontal_saccade = [0 for _ in range(num)]
+
+        self.backward_times_of_sentence_div_syllable = [0 for _ in range(num)]
+        self.forward_times_of_sentence_div_syllable = [0 for _ in range(num)]
+        self.horizontal_saccade_proportion_div_syllable = [0 for _ in range(num)]
+        self.saccade_duartion_div_syllable = [0 for _ in range(num)]
+        self.saccade_times_of_sentence_div_syllable = [0 for _ in range(num)]
+        self.saccade_velocity_div_syllable = [0 for _ in range(num)]
+        self.total_dwell_time_of_sentence_div_syllable = [0 for _ in range(num)]
+
+    def update(self):
+        self.backward_times_of_sentence_div_syllable = self.div_syllable(self.backward_times_of_sentence)
+        self.forward_times_of_sentence_div_syllable = self.div_syllable(self.forward_times_of_sentence)
+
+        self.horizontal_saccade_proportion = self.get_list_div(self.horizontal_saccade, self.saccade_times_of_sentence)
+        self.horizontal_saccade_proportion_div_syllable = self.div_syllable(self.horizontal_saccade_proportion)
+
+        self.saccade_duration_div_syllable = self.div_syllable(self.saccade_duration)
+        self.saccade_times_of_sentence_div_syllable = self.div_syllable(self.saccade_times_of_sentence)
+
+        self.saccade_velocity = self.get_list_div(self.saccade_distance, self.saccade_duration)
+        self.saccade_velocity_div_syllable = self.div_syllable(self.saccade_velocity)
+
+        self.total_dwell_time_of_sentence_div_syllable = self.div_syllable(self.total_dwell_time_of_sentence)
+
+    def get_list_div(self, list_a, list_b):
+        div_list = [0 for _ in range(self.num)]
+        for i in range(len(list_b)):
+            if list_b[i] != 0:
+                div_list[i] = list_a[i] / list_b[i]
+
+        return div_list
+
+    def div_syllable(self, feature):
+        assert len(feature) == len(self.sent_list)
+        results = []
+        for i in range(len(feature)):
+            sent = self.sent_list[i]
+            syllable_len = self.get_syllable(self.word_list[sent[1]:sent[2]])
+            if syllable_len > 0:
+                results.append(feature[i] / syllable_len)
+            else:
+                results.append(0)
+        return results
+
+    def get_syllable(self, word_list):
+        syllable_len = 0
+        for word in word_list:
+            syllable_len += textstat.syllable_count(word)
+        return syllable_len
+
+    def to_dataframe(self):
+        data = pd.DataFrame({
+            'backward_times_of_sentence_div_syllable': self.backward_times_of_sentence_div_syllable,
+            'forward_times_of_sentence_div_syllable': self.forward_times_of_sentence_div_syllable,
+            'horizontal_saccade_proportion_div_syllable': self.horizontal_saccade_proportion_div_syllable,
+            'saccade_duration_div_syllable': self.saccade_duration_div_syllable,
+            'saccade_times_of_sentence_div_syllable': self.saccade_times_of_sentence_div_syllable,
+            'saccade_velocity_div_syllable': self.saccade_velocity_div_syllable,
+            'total_dwell_time_of_sentence_div_syllable': self.total_dwell_time_of_sentence_div_syllable
         })
         return data
 
