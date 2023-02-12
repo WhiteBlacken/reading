@@ -1599,7 +1599,9 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
     # assert sum(row_pass_time) == len(result_rows)
     print(len(result_rows))
     print(len(sequence_fixations))
+
     assert len(result_rows) == len(sequence_fixations)
+
     for i, sequence in enumerate(sequence_fixations):
         if result_rows[i] != -1:
             adjust_y = (rows[result_rows[i]]["top"] + rows[result_rows[i]]["bottom"]) / 2
@@ -1612,7 +1614,6 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
     print(f"len of rows:{len(rows)}")
     # assert (max(result_rows) == len(rows) - 1) or (max(result_rows) == len(rows) - 2)
     return result_fixations, result_rows, row_level_fix, sequence_fixations
-
 
 if __name__ == "__main__":
     # list = [1,0.85,1,0.89,0.83,1,1,1,1,1,1,0.93,0.42,0.88,0.9,1,0.92,0.89,1,1,1,1,0.81,0.95]
