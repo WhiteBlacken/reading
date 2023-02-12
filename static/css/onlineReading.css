@@ -73,12 +73,15 @@ html,body{
 .word{
     font-size: 18pt;
     padding: 8px 8px;
+    /*padding: 9pt 9pt;*/
     width: auto;
     height: auto;
     border-width: 0;
     display: inline;
     background: rgba(0,0,0,0);
     cursor: pointer;
+    margin: 0;
+    /*font-family: Arial;*/
 }
 
 .fillLine{
