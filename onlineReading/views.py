@@ -247,7 +247,7 @@ def get_page_data(request):
     x = request.POST.get("x")  # str类型
     y = request.POST.get("y")  # str类型
     t = request.POST.get("t")  # str类型
-    interventions = request.POST.get("interventions")
+    interventions = request.session.get("interventions")
     texts = request.POST.get("text")
     page = request.POST.get("page")
 
@@ -269,6 +269,7 @@ def get_page_data(request):
             is_test=0,
         )
         logger.info("第%s页数据已存储,id为%s" % (page, str(pagedata.id)))
+        request.session['intervention'] = None
     return HttpResponse(1)
 
 
@@ -2060,6 +2061,13 @@ def get_pred(request):
                 sent_mind_wandering_list.append([sent[1], sent[2] - 1])
 
     print(f'word_not_understand_list:{word_not_understand_list}')
+
+    intervention = request.session.get('intervention',None)
+    if intervention:
+        intervention += f"word_not_understand_list = {word_not_understand_list},sent_not_understand_list = {sent_not_understand_list},sent_mind_wandering_list = {sent_mind_wandering_list};"
+    else:
+        intervention = f"word_not_understand_list = {word_not_understand_list},sent_not_understand_list = {sent_not_understand_list},sent_mind_wandering_list = {sent_mind_wandering_list};"
+    request.session['intervention'] = intervention
 
     context = {
         "word": word_not_understand_list,
