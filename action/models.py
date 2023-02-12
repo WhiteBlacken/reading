@@ -1,6 +1,7 @@
 import django.utils.timezone as timezone
 from django.db import models
 
+
 # Create your models here.
 
 
@@ -15,6 +16,7 @@ class Text(models.Model):
         import json
 
         return json.dumps(dict([(attr, getattr(self, attr)) for attr in [f.name for f in self._meta.fields]]))
+
 
 class PilotStudy(models.Model):
     exp_id = models.IntegerField()
@@ -62,7 +64,7 @@ class Experiment(models.Model):
     article_id = models.BigIntegerField()
     user = models.CharField(max_length=200)
     is_finish = models.BooleanField()
-    device = models.CharField(max_length=96,default="not detect")
+    device = models.CharField(max_length=96, default="not detect")
 
     class Meta:
         db_table = "data_experiment"
@@ -122,3 +124,73 @@ class Dispersion(models.Model):
 
     class Meta:
         db_table = "dispersion"
+
+
+class UserReadingInfo(models.Model):
+    user = models.CharField(max_length=100)
+
+    backward_times_of_sentence_div_syllable_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    backward_times_of_sentence_div_syllable_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    forward_times_of_sentence_div_syllable_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    forward_times_of_sentence_div_syllable_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    horizontal_saccade_proportion_div_syllable_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    horizontal_saccade_proportion_div_syllable_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    saccade_duartion_div_syllable_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    saccade_duartion_div_syllable_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    saccade_times_of_sentence_div_syllable_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    saccade_times_of_sentence_div_syllable_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    saccade_velocity_div_syllable_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    saccade_velocity_div_syllable_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    total_dwell_time_of_sentence_div_syllable_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    total_dwell_time_of_sentence_div_syllable_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    fixation_duration_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    fixation_duration_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    number_of_fixations_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    number_of_fixations_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    reading_times_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    reading_times_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    fixation_duration_diff_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    fixation_duration_diff_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    number_of_fixations_diff_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    number_of_fixations_diff_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    reading_times_diff_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    reading_times_diff_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    fixation_duration_mean_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    fixation_duration_mean_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    fixation_duration_var_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    fixation_duration_var_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    number_of_fixations_mean_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    number_of_fixations_mean_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    number_of_fixations_var_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    number_of_fixations_var_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    reading_times_mean_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    reading_times_mean_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    reading_times_var_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    reading_times_var_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    fixation_duration_div_syllable_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    fixation_duration_div_syllable_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    fixation_duration_div_length_mean = models.DecimalField(max_digits=9, decimal_places=2)
+    fixation_duration_div_length_var = models.DecimalField(max_digits=9, decimal_places=2)
+
+    class Meta:
+        db_table = "user_reading_info"
