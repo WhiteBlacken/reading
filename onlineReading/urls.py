@@ -30,7 +30,7 @@ urlpatterns = [
     path("label/", views.label),
     path("data/", views.get_page_data),
     path("label/send/", views.get_labels),
-    path("test/", views.test_dispersion),
+    path("test/", views.Test),
     path("heatmap/all/", views.get_all_heatmap),
     path("heatmap/visual/", views.get_visual_heatmap),
     path("article/", views.article_2_csv),

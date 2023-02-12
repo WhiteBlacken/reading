@@ -12,7 +12,7 @@ from django.shortcuts import render
 from loguru import logger
 from PIL import Image
 
-from action.models import Dictionary, Experiment, PageData, Paragraph, Text, Translation
+from action.models import Dictionary, Experiment, PageData, Paragraph, Text, Translation, UserReadingInfo
 from feature.utils import detect_fixations, keep_row, textarea
 from onlineReading.utils import get_euclid_distance, translate
 from pyheatmap import myHeatmap
@@ -1948,7 +1948,7 @@ def get_pred(request):
         * 历史的所有gaze点（后端存储--存储在哪？）
         * 该页的位置信息（后端存储--存储在哪？）
     """
-    word_threshold = 0.2
+    word_threshold = 0.045
     sent_threshold = 0.15
 
     x = request.POST.get("x")
@@ -2037,6 +2037,7 @@ def get_pred(request):
                 max_fix_sent = sent
                 max_index_sent = i
         sent_watching_list.append(max_index_sent)
+    print(f'sent_watching:{sent_watching_list}')
 
     word_not_understand_list = []
     sent_not_understand_list = []
@@ -2068,6 +2069,101 @@ def get_pred(request):
 
     # 将系统的干预记下来，用于pilot study的分析
     return JsonResponse(context)
+
+
+def Test(request):
+    data = pd.read_csv('jupyter/dataset/word-train-processed-20230209-div-duration.csv')
+    users = ['pwt',
+             'czh',
+             'ys',
+             'chenyuwang',
+             'shiyubin',
+             'luqi',
+             'xuzhenyu',
+             'qxy',
+             'zhouyanglu',
+             'zyf',
+             'Zhenyu',
+             'dongfang',
+             'xuhailin',
+             'wuyuting',
+             'liuyiting',
+             'XianweiWang',
+             '梁胃寒',
+             'ln',
+             'luyutian',
+             'gonghaotong']
+
+    for user in users:
+        dat = data[data.user == user]
+
+        UserReadingInfo.objects.create(
+            user=user,
+            backward_times_of_sentence_div_syllable_mean=np.mean(dat['backward_times_of_sentence']),
+            backward_times_of_sentence_div_syllable_var=np.var(dat['backward_times_of_sentence']),
+
+            forward_times_of_sentence_div_syllable_mean=np.mean(dat['forward_times_of_sentence']),
+            forward_times_of_sentence_div_syllable_var=np.var(dat['forward_times_of_sentence']),
+
+            horizontal_saccade_proportion_div_syllable_mean=np.mean(dat['horizontal_saccade_proportion']),
+            horizontal_saccade_proportion_div_syllable_var=np.var(dat['horizontal_saccade_proportion']),
+
+            saccade_duartion_div_syllable_mean=np.mean(dat['saccade_duartion']),
+            saccade_duartion_div_syllable_var=np.var(dat['saccade_duartion']),
+
+            saccade_times_of_sentence_div_syllable_mean=np.mean(dat['saccade_times_of_sentence']),
+            saccade_times_of_sentence_div_syllable_var=np.var(dat['saccade_times_of_sentence']),
+
+            saccade_velocity_div_syllable_mean=np.mean(dat['saccade_velocity']),
+            saccade_velocity_div_syllable_var=np.var(dat['saccade_velocity']),
+
+            total_dwell_time_of_sentence_div_syllable_mean=np.mean(dat['total_dwell_time_of_sentence']),
+            total_dwell_time_of_sentence_div_syllable_var=np.var(dat['total_dwell_time_of_sentence']),
+
+            fixation_duration_mean=np.mean(dat['fixation_duration']),
+            fixation_duration_var=np.var(dat['fixation_duration']),
+
+            number_of_fixations_mean=np.mean(dat['number_of_fixations']),
+            number_of_fixations_var=np.var(dat['number_of_fixations']),
+
+            reading_times_mean=np.mean(dat['reading_times']),
+            reading_times_var=np.var(dat['reading_times']),
+
+            fixation_duration_diff_mean=np.mean(dat['fixation_duration']),
+            fixation_duration_diff_var=np.var(dat['fixation_duration']),
+
+            number_of_fixations_diff_mean=np.mean(dat['number_of_fixations_diff']),
+            number_of_fixations_diff_var=np.var(dat['number_of_fixations_diff']),
+
+            reading_times_diff_mean=np.mean(dat['reading_times_diff']),
+            reading_times_diff_var=np.var(dat['reading_times_diff']),
+
+            fixation_duration_mean_mean=np.mean(dat['fixation_duration_mean']),
+            fixation_duration_mean_var=np.var(dat['fixation_duration_mean']),
+
+            fixation_duration_var_mean=np.mean(dat['fixation_duration_var']),
+            fixation_duration_var_var=np.var(dat['fixation_duration_var']),
+
+            number_of_fixations_mean_mean=np.mean(dat['number_of_fixations_mean']),
+            number_of_fixations_mean_var=np.var(dat['number_of_fixations_mean']),
+
+            number_of_fixations_var_mean=np.mean(dat['number_of_fixations_var']),
+            number_of_fixations_var_var=np.var(dat['number_of_fixations_var']),
+
+            reading_times_mean_mean=np.mean(dat['reading_times_mean']),
+            reading_times_mean_var=np.var(dat['reading_times_mean']),
+
+            reading_times_var_mean=np.mean(dat['reading_times_var']),
+            reading_times_var_var=np.var(dat['reading_times_var']),
+
+            fixation_duration_div_syllable_mean=np.mean(dat['fixation_duration_div_syllable']),
+            fixation_duration_div_syllable_var=np.var(dat['fixation_duration_div_syllable']),
+
+            fixation_duration_div_length_mean=np.mean(dat['fixation_duration_div_length']),
+            fixation_duration_div_length_var=np.var(dat['fixation_duration_div_length']),
+        )
+
+        break
 
 
 def get_page_info(request):
@@ -2199,25 +2295,34 @@ class WordFeature:
     def to_str(self):
         print(f"fixation_duration_mean:{self.fixation_duration_mean}")
 
+    def norm(self, list1):
+        results = []
+        mean = np.mean(list1)
+        var = np.var(list1)
+        for item in list1:
+            a = (item - mean) / var
+            results.append(a)
+        return results
+
     def to_dataframe(self):
         data = pd.DataFrame({
-            'fixation_duration': self.fixation_duration,
-            'number_of_fixations': self.number_of_fixations,
-            'reading_times': self.reading_times,
+            'fixation_duration': self.norm(self.fixation_duration),
+            'number_of_fixations': self.norm(self.number_of_fixations),
+            'reading_times': self.norm(self.reading_times),
 
-            'fixation_duration_diff': self.fixation_duration_diff,
-            'number_of_fixations_diff': self.number_of_fixations_diff,
-            'reading_times_diff': self.reading_times_diff,
+            'fixation_duration_diff': self.norm(self.fixation_duration_diff),
+            'number_of_fixations_diff': self.norm(self.number_of_fixations_diff),
+            'reading_times_diff': self.norm(self.reading_times_diff),
 
-            'fixation_duration_mean': self.fixation_duration_mean,
-            'fixation_duration_var': self.fixation_duration_var,
-            'number_of_fixations_mean': self.number_of_fixations_mean,
-            'number_of_fixations_var': self.number_of_fixations_var,
-            'reading_times_mean': self.reading_times_mean,
-            'reading_times_var': self.reading_times_var,
+            'fixation_duration_mean': self.norm(self.fixation_duration_mean),
+            'fixation_duration_var': self.norm(self.fixation_duration_var),
+            'number_of_fixations_mean': self.norm(self.number_of_fixations_mean),
+            'number_of_fixations_var': self.norm(self.number_of_fixations_var),
+            'reading_times_mean': self.norm(self.reading_times_mean),
+            'reading_times_var': self.norm(self.reading_times_var),
 
-            'fixation_duration_div_syllable': self.fixation_duration_div_syllable,
-            'fixation_duration_div_length': self.fixation_duration_div_length
+            'fixation_duration_div_syllable': self.norm(self.fixation_duration_div_syllable),
+            'fixation_duration_div_length': self.norm(self.fixation_duration_div_length)
         })
         return data
 
@@ -2265,6 +2370,15 @@ class SentFeature:
 
         self.total_dwell_time_of_sentence_div_syllable = self.div_syllable(self.total_dwell_time_of_sentence)
 
+    def norm(self, list1):
+        results = []
+        mean = np.mean(list1)
+        var = np.var(list1)
+        for item in list1:
+            a = (item - mean) / var
+            results.append(a)
+        return results
+
     def get_list_div(self, list_a, list_b):
         div_list = [0 for _ in range(self.num)]
         for i in range(len(list_b)):
@@ -2301,6 +2415,7 @@ class SentFeature:
             'saccade_velocity_div_syllable': self.saccade_velocity_div_syllable,
             'total_dwell_time_of_sentence_div_syllable': self.total_dwell_time_of_sentence_div_syllable
         })
+        print(data)
         return data
 
 
