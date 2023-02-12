@@ -1974,7 +1974,7 @@ def get_pred(request):
     word_list, sentence_list = get_word_and_sentence_from_text(page_text)
     location = request.session['location']
 
-    wordFeature = WordFeature(len(word_list), word_list, sentence_list, request.session['semantic_feature'])
+    wordFeature = WordFeature(len(word_list), word_list, sentence_list, 'test')
     sentFeature = SentFeature(len(sentence_list), sentence_list, word_list)
 
     border, rows, danger_zone, len_per_word = textarea(location)
@@ -2072,8 +2072,8 @@ def get_page_info(request):
 
     # print(f'feature:{readingArticle.get_original_features()}')
 
-    request.session['semantic_feature'] = readingArticle.get_original_features()
-    print(f"feature:{request.session['semantic_feature']}")
+    # request.session['semantic_feature'] = readingArticle.get_original_features()
+    # print(f"feature:{request.session['semantic_feature']}")
     logger.info("该页信息已加载")
     return HttpResponse(1)
 
