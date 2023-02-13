@@ -22,9 +22,11 @@ class PilotStudy(models.Model):
     exp_id = models.IntegerField()
     user = models.CharField(max_length=100)
     article_id = models.IntegerField()
+
     word_intervention = models.CharField(max_length=1000)
     sent_intervention = models.CharField(max_length=1000)
     mind_wander_intervention = models.CharField(max_length=1000)
+
 
     class Meta:
         db_table = "pilot_study"
@@ -87,6 +89,9 @@ class PageData(models.Model):
     is_test = models.BooleanField()
     para = models.CharField(max_length=1000)
 
+    word_intervention = models.CharField(max_length=1000)
+    sent_intervention = models.CharField(max_length=1000)
+    mind_wander_intervention = models.CharField(max_length=1000)
     class Meta:
         db_table = "data_page"
 
