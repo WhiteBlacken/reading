@@ -1980,7 +1980,7 @@ def get_pred(request):
         * 历史的所有gaze点（后端存储--存储在哪？）
         * 该页的位置信息（后端存储--存储在哪？）
     """
-    word_threshold = 0.045
+    word_threshold = 0.06
     sent_threshold = 0.15
 
     x = request.POST.get("x")
