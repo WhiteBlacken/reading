@@ -668,7 +668,7 @@
                     data: formdata,
                     async: false,
                     success: function () {
-
+                        console.log("success");
                     },
                     error: function () {
                         console.log("error");
@@ -760,12 +760,12 @@
             y.push(data.y);
             t.push(elapsedTime);
 
-         }).begin();
+         }).begin().showPredictionPoints(false);
 
         app.getPage();
-        setInterval(function () {
-            app.autoIntervention();
-        }, 8000);
+        {#setInterval(function () {#}
+        {#    app.autoIntervention();#}
+        {# }, 8000);#}
     }
 
     //监听空格事件
