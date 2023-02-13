@@ -2020,9 +2020,8 @@ def get_pred(request):
                                   request.session['history_t'], begin_time=30, end_time=30)
 
         print(f'gaze_points:{gaze_points}')
-        result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
-            gaze_points, request.session['page_text'], location
-        )
+        result_fixations = detect_fixations(gaze_points)
+        result_fixations = keep_row(result_fixations)
         print(f'fix:{result_fixations}')
 
         wordFeature = get_word_feature(wordFeature, result_fixations, location)
@@ -2044,11 +2043,9 @@ def get_pred(request):
     word_watching_list = []
     sent_watching_list = []
     if len(x) > 0:
-        gaze_points = format_gaze(x, y,
-                                  t, begin_time=30, end_time=30)
-        result_fixations, row_sequence, row_level_fix, sequence_fixations = process_fixations(
-            gaze_points, request.session['page_text'], request.session['location']
-        )
+        gaze_points = format_gaze(x, y, t, begin_time=30, end_time=30)
+        result_fixations = detect_fixations(gaze_points)
+        result_fixations = keep_row(result_fixations)
         # 单词fixation最多的句子，为需要判断的句子
         sent_fix = [0 for _ in range(len(sentence_list))]
         for fixation in result_fixations:
@@ -2090,7 +2087,7 @@ def get_pred(request):
 
     print(f'word_not_understand_list:{word_not_understand_list}')
 
-    intervention = request.session.get('intervention',None)
+    intervention = request.session.get('intervention', None)
     if intervention:
         intervention += f"word_not_understand_list = {word_not_understand_list},sent_not_understand_list = {sent_not_understand_list},sent_mind_wandering_list = {sent_mind_wandering_list};"
     else:
@@ -2493,7 +2490,6 @@ def get_semantic_attention_map(request):
 # 'context_trf_758', 'context_trf_759', 'context_trf_760', 'context_trf_761', 'context_trf_762', 'context_trf_763',
 # 'context_trf_764', 'context_trf_765', 'context_trf_766', 'context_trf_767']
 class WordFeature:
-
     def __init__(self, num, word_list, sentence_list, semantic_feature):
         super().__init__()
         self.num = num
@@ -2716,4 +2712,3 @@ class SentFeature:
         })
         print(data)
         return data
-
