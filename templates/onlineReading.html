@@ -727,7 +727,7 @@
             }
         },
     })
-
+    let autoInter;
     //开始使用
     async function get_start() {
         //全屏
@@ -751,7 +751,7 @@
          }).begin()
 
         app.getPage();
-        setInterval(function () {
+        autoInter = setInterval(function () {
             app.autoIntervention();
          }, 8000);
     }
@@ -776,12 +776,12 @@
             }
             case 32: {
                 stop = true;
+                clearInterval(autoInter);
                 webgazer.pause();
                 {#window.location.href = '/label';#}
                 //之后的可以不写
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";
-                webgazer.pause();
                 esc_full_screen();
                 break;
             }
@@ -794,6 +794,7 @@
     let y = [];
     let t = [];
     let interventions = [];
+
     //记录停止
     let stop = false;
 
