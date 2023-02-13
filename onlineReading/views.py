@@ -38,9 +38,11 @@ import matplotlib.pyplot as plt
 from pke.unsupervised import YAKE
 
 nlp = spacy.load("en_core_web_lg")
+# base = "D:\\qxy\\pre-trained-model\\"
+base = ""
 
-xlnet_tokenizer = XLNetTokenizerFast.from_pretrained('xlnet-base-cased')
-xlnet_model = XLNetModel.from_pretrained('xlnet-base-cased', output_attentions=True)
+xlnet_tokenizer = XLNetTokenizerFast.from_pretrained(base+'xlnet-base-cased')
+xlnet_model = XLNetModel.from_pretrained(base+'xlnet-base-cased', output_attentions=True)
 
 kw_extractor = YAKE()
 
@@ -2185,6 +2187,7 @@ def Test(request):
 def get_page_info(request):
     page_text = request.POST.get("page_text")
     location = request.POST.get("location")
+    is_end = request.POST.get("end",0)
 
     page_info = request.session.get('page_info', None)
 
@@ -2216,8 +2219,10 @@ def get_page_info(request):
             request.session['mind_wander_intervention'] = None
     else:
         request.session['page_info'] = 1
-    request.session['page_text'] = page_text
-    request.session['location'] = location
+
+    if int(is_end) == 1:
+        request.session['page_text'] = None
+        request.session['location'] = None
     logger.info("该页信息已加载")
     return HttpResponse(1)
 
