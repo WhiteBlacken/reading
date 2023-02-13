@@ -714,15 +714,6 @@
                 this.readSequel = [];
                 this.buttonCurLoc = [];
             },
-
-            autoIntervention: function () {
-                if (stop === false) {
-                    setInterval(function () {
-                        get_base64_gaze_and_intervention(0);
-                    }, 5000);
-                }
-
-             },
         },
         created() {
 
@@ -760,9 +751,9 @@
          }).begin()
 
         app.getPage();
-        {#setInterval(function () {#}
-        {#    app.autoIntervention();#}
-        {# }, 8000);#}
+        setInterval(function () {
+            app.autoIntervention();
+         }, 8000);
     }
 
     //监听空格事件
