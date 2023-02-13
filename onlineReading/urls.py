@@ -46,5 +46,6 @@ urlpatterns = [
     path('att/', views.get_att),
     path('article/check/', views.check_article),
     path('page_info/', views.get_page_info),
-    path('gaze/', views.get_pred)
+    path('gaze/', views.get_pred),
+    path('semantic_attention_map/', views.get_semantic_attention_map),
 ]
