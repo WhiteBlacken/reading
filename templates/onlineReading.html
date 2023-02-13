@@ -718,14 +718,14 @@
                 this.buttonCurLoc = [];
             },
 
-            {#autoIntervention: function () {#}
-            {#    if (stop === false) {#}
-            {#        setInterval(function () {#}
-            {#            get_base64_gaze_and_intervention(0);#}
-            {#        }, 5000);#}
-            {#    }#}
-            {##}
-            {# },#}
+            autoIntervention: function () {
+                if (stop === false) {
+                    setInterval(function () {
+                        get_base64_gaze_and_intervention(0);
+                    }, 5000);
+                }
+
+             },
         },
         created() {
 
