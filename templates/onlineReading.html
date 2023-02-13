@@ -780,7 +780,7 @@
                 webgazer.pause();
                 let formdata = new FormData();
                 {#formdata.append("interventions", interventions.toString());#}
-                formdata.append("is_end", 1);
+                formdata.append("is_end", '1');
                 {#formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page - 1]));#}
                 $.ajax({
                     type: 'POST',
