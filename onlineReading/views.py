@@ -153,6 +153,7 @@ def test_dispersion(request):
 
 
 def label(request):
+    request.session['page_info'] = None
     return render(request, "label.html")
 
 
@@ -839,16 +840,16 @@ def get_all_heatmap(request):
         1. 生成3张图片
         2. 填充top_k
         """
-        # get_word_level_nlp_attention(
-        #     pageData.texts,
-        #     page_data_id,
-        #     top_dict,
-        #     background,
-        #     word_list,
-        #     word_locations,
-        #     exp.first().user,
-        #     base_path,
-        # )
+        get_word_level_nlp_attention(
+            pageData.texts,
+            page_data_id,
+            top_dict,
+            background,
+            word_list,
+            word_locations,
+            exp.first().user,
+            base_path,
+        )
         """
         sentence level
         """
@@ -1973,7 +1974,6 @@ def get_pred(request):
     print(f"x:{x}")
     print(f"y:{y}")
 
-    print(f'history_x:{request.session["history_x"]}')
     page_text = request.session['page_text']
     word_list, sentence_list = get_word_and_sentence_from_text(page_text)
     location = request.session['location']
@@ -2059,12 +2059,16 @@ def get_pred(request):
 
     print(f'word_not_understand_list:{word_not_understand_list}')
 
-    intervention = request.session.get('intervention', None)
-    if intervention:
-        intervention += f"word_not_understand_list = {word_not_understand_list},sent_not_understand_list = {sent_not_understand_list},sent_mind_wandering_list = {sent_mind_wandering_list};"
-    else:
-        intervention = f"word_not_understand_list = {word_not_understand_list},sent_not_understand_list = {sent_not_understand_list},sent_mind_wandering_list = {sent_mind_wandering_list};"
-    request.session['intervention'] = intervention
+
+
+    intervention_type = ['word_intervention', 'sent_intervention', 'mind_wander_intervention']
+    intervention_list = [word_not_understand_list, sent_not_understand_list, sent_mind_wandering_list]
+    for i, interv in enumerate(intervention_type):
+        intervention = request.session.get(interv, None)
+        if intervention:
+            request.session[interv] += "," + str(intervention_list[i])
+        else:
+            request.session[interv] = str(intervention_list[i])
 
     context = {
         "word": word_not_understand_list,
@@ -2177,16 +2181,38 @@ def get_page_info(request):
     print(f'page_text:{page_text}')
     print(f'location:{location}')
 
+    page_info = request.session.get('page_info', None)
+
+    if page_info:
+        experiment_id = request.session.get("experiment_id", None)
+        print(f'experiment_id:{experiment_id}')
+        if experiment_id:
+            pagedata = PageData.objects.create(
+                gaze_x=request.session['history_x'],
+                gaze_y=request.session['history_y'],
+                gaze_t=request.session['history_t'],
+                texts=request.session['page_text'],
+                page=page_info,
+                image="",
+                experiment_id=experiment_id,
+                location=request.session['location'],
+                word_intervention=request.session['word_intervention'],
+                sent_intervention=request.session['sent_intervention'],
+                mind_wander_intervention=request.session['mind_wander_intervention'],
+                is_test=0,
+            )
+            logger.info("第%s页数据已存储,id为%s" % (page_info, str(pagedata.id)))
+            request.session['page_info'] += 1
+            request.session['history_x'] = None
+            request.session['history_y'] = None
+            request.session['history_t'] = None
+            request.session['word_intervention'] = None
+            request.session['sent_intervention'] = None
+            request.session['mind_wander_intervention'] = None
+    else:
+        request.session['page_info'] = 1
     request.session['page_text'] = page_text
     request.session['location'] = location
-
-    # readingArticle = ReadingArticle(page_text)
-    # transformer_feature = readingArticle.get_transformer_features()
-
-    # print(f'feature:{readingArticle.get_original_features()}')
-
-    # request.session['semantic_feature'] = readingArticle.get_original_features()
-    # print(f"feature:{request.session['semantic_feature']}")
     logger.info("该页信息已加载")
     return HttpResponse(1)
 
@@ -2379,7 +2405,10 @@ class SentFeature:
         mean = np.mean(list1)
         var = np.var(list1)
         for item in list1:
-            a = (item - mean) / var
+            if var != 0:
+                a = (item - mean) / var
+            else:
+                a = 0
             results.append(a)
         return results
 
@@ -2411,13 +2440,13 @@ class SentFeature:
 
     def to_dataframe(self):
         data = pd.DataFrame({
-            'backward_times_of_sentence_div_syllable': self.backward_times_of_sentence_div_syllable,
-            'forward_times_of_sentence_div_syllable': self.forward_times_of_sentence_div_syllable,
-            'horizontal_saccade_proportion_div_syllable': self.horizontal_saccade_proportion_div_syllable,
-            'saccade_duration_div_syllable': self.saccade_duration_div_syllable,
-            'saccade_times_of_sentence_div_syllable': self.saccade_times_of_sentence_div_syllable,
-            'saccade_velocity_div_syllable': self.saccade_velocity_div_syllable,
-            'total_dwell_time_of_sentence_div_syllable': self.total_dwell_time_of_sentence_div_syllable
+            'backward_times_of_sentence_div_syllable': self.norm(self.backward_times_of_sentence_div_syllable),
+            'forward_times_of_sentence_div_syllable': self.norm(self.forward_times_of_sentence_div_syllable),
+            'horizontal_saccade_proportion_div_syllable': self.norm(self.horizontal_saccade_proportion_div_syllable),
+            'saccade_duration_div_syllable': self.norm(self.saccade_duration_div_syllable),
+            'saccade_times_of_sentence_div_syllable': self.norm(self.saccade_times_of_sentence_div_syllable),
+            'saccade_velocity_div_syllable': self.norm(self.saccade_velocity_div_syllable),
+            'total_dwell_time_of_sentence_div_syllable': self.norm(self.total_dwell_time_of_sentence_div_syllable)
         })
         print(data)
         return data
