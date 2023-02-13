@@ -77,7 +77,7 @@ class PageData(models.Model):
     gaze_y = models.TextField()
     gaze_t = models.TextField()
     texts = models.TextField()
-    interventions = models.CharField(max_length=1000)
+
     wordLabels = models.CharField(max_length=1000)
     sentenceLabels = models.CharField(max_length=1000)
     wanderLabels = models.CharField(max_length=1000)
@@ -86,12 +86,15 @@ class PageData(models.Model):
     page = models.IntegerField()
     created_time = models.DateTimeField(default=timezone.now)
     location = models.TextField()
-    is_test = models.BooleanField()
+    is_test = models.BooleanField(default=False)
     para = models.CharField(max_length=1000)
 
     word_intervention = models.CharField(max_length=1000)
     sent_intervention = models.CharField(max_length=1000)
     mind_wander_intervention = models.CharField(max_length=1000)
+
+    is_pilot_study = models.BooleanField(default=False)
+
     class Meta:
         db_table = "data_page"
 
