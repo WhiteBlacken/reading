@@ -470,7 +470,6 @@ def get_visual_heatmap(request):
 
 
 def get_row_level_fixations_map(request):
-    print("执行了")
     page_data_ids = request.GET.get("id").split(',')
     print(page_data_ids)
     for page_data_id in page_data_ids:
@@ -2033,7 +2032,6 @@ def get_pred(request):
         word_predicts = wordSVM.predict_proba(word_feature)[:, 1]
 
         print(wordFeature.fixation_duration)
-        print(f'word_predicts:{word_predicts}')
 
         sentFeature = get_sent_feature(sentFeature, result_fixations, location, sentence_list, rows)
         sentFeature.update()
@@ -2041,7 +2039,7 @@ def get_pred(request):
 
         sent_predicts = sentSVM.predict_proba(sentFeature)[:, 1]
         abnormal_predicts = abnormalSVM.predict(sentFeature)
-        print(f'sent_predicts:{sent_predicts}')
+
 
     word_watching_list = []
     sent_watching_list = []
@@ -2217,8 +2215,6 @@ def Test(request):
 def get_page_info(request):
     page_text = request.POST.get("page_text")
     location = request.POST.get("location")
-    print(f'page_text:{page_text}')
-    print(f'location:{location}')
 
     page_info = request.session.get('page_info', None)
 
