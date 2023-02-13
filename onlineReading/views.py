@@ -2013,6 +2013,7 @@ def get_pred(request):
     sent_predicts = [0 for _ in range(len(sentence_list))]
     abnormal_predicts = [0 for _ in range(len(sentence_list))]
 
+    diff_list = generate_word_difficulty(page_text)
     # TODO 为了减少计算量，仅在当前的单词上计算特征
     if history_x and history_y and history_t:
         gaze_points = format_gaze(request.session['history_x'], request.session['history_y'],
@@ -2020,14 +2021,14 @@ def get_pred(request):
 
         result_fixations = detect_fixations(gaze_points)
         result_fixations = keep_row(result_fixations)
-        print(f'fix:{result_fixations}')
+        # print(f'fix:{result_fixations}')
 
         wordFeature = get_word_feature(wordFeature, result_fixations, location)
         wordFeature.norm(userInfo)
 
         word_feature = wordFeature.to_dataframe()
         word_predicts_proba = wordSVM.predict_proba(word_feature)[:, 1]
-        print(f'word_predicts_proba:{word_predicts_proba}')
+        # print(f'word_predicts_proba:{word_predicts_proba}')
         word_predicts = wordSVM.predict(word_feature)
 
         print(wordFeature.fixation_duration)
@@ -2039,7 +2040,7 @@ def get_pred(request):
         sentFeature = sentFeature.to_dataframe()
 
         sent_predicts_proba = sentSVM.predict_proba(sentFeature)[:, 1]
-        print(f'sent_predicts_proba:{sent_predicts_proba}')
+        # print(f'sent_predicts_proba:{sent_predicts_proba}')
         sent_predicts = sentSVM.predict(sentFeature)
         abnormal_predicts = abnormalSVM.predict(sentFeature)
 
@@ -2048,9 +2049,11 @@ def get_pred(request):
     if len(x) > 0:
         gaze_points = format_gaze(x, y, t, begin_time=30, end_time=30)
         result_fixations = detect_fixations(gaze_points)
-        result_fixations = keep_row(result_fixations)
+        # result_fixations = keep_row(result_fixations)
         # 单词fixation最多的句子，为需要判断的句子
         sent_fix = [0 for _ in range(len(sentence_list))]
+
+        print(f"result_fixation:{result_fixations}")
         for fixation in result_fixations:
             index, flag = get_item_index_x_y(location, fixation[0],
                                              fixation[1])
@@ -2066,6 +2069,8 @@ def get_pred(request):
                 max_fix_sent = sent
                 max_index_sent = i
         sent_watching_list.append(max_index_sent)
+
+    print(f'word_watching:{word_watching_list}')
     print(f'sent_watching:{sent_watching_list}')
 
     word_not_understand_list = []
@@ -2075,13 +2080,18 @@ def get_pred(request):
     sent_mind_wandering_list = []
 
     for watching in word_watching_list:
-        if word_predicts[watching]:
-            for q in range(watching - 5, watching + 6):
-                word_not_understand_list_copy.append(q)
+        # if word_predicts[watching]:
+        #     for q in range(watching - 5, watching + 6):
+        #         word_not_understand_list_copy.append(q)
+        print("test")
+        print(wordFeature.fixation_duration[watching])
+        print(diff_list[watching])
+        if wordFeature.fixation_duration[watching] >= 1 and diff_list[watching][1] >= 2:
+            word_not_understand_list.append(watching)
 
-    for item in word_not_understand_list_copy:
-        if 0 <= item < len(word_list):
-            word_not_understand_list.append(item)
+    # for item in word_not_understand_list_copy:
+    #     if 0 <= item < len(word_list):
+    #         word_not_understand_list.append(item)
 
     word_not_understand_list = list(set(word_not_understand_list))
     print(f"word_not_understand:{word_not_understand_list}")
@@ -2337,7 +2347,7 @@ class WordFeature:
             'number_of_fixations': self.number_of_fixations,
             'reading_times': self.reading_times,
         })
-        print(data)
+        # print(data)
         return data
 
 
@@ -2419,5 +2429,5 @@ class SentFeature:
             'saccade_times_of_sentence_div_syllable': self.saccade_times_of_sentence_div_syllable,
             'total_dwell_time_of_sentence_div_syllable': self.total_dwell_time_of_sentence_div_syllable
         })
-        print(data)
+        # print(data)
         return data
