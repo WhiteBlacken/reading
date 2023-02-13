@@ -869,9 +869,11 @@ def get_word_and_sentence_from_text(content):
             begin = cnt
     return word_list, sentence_list
 
+
 def get_word_count(content):
-    all_word_list,all_sentence_list = get_word_and_sentence_from_text(content)
+    all_word_list, all_sentence_list = get_word_and_sentence_from_text(content)
     return len(all_word_list)
+
 
 def topk_tuple(data_list, k=10):
     # 笨拙的top_k的方法 针对tuple [('word',num)]
@@ -1162,9 +1164,21 @@ def preprocess_data(data, filters):
 def format_gaze(
         gaze_x: str, gaze_y: str, gaze_t: str, use_filter=True, begin_time: int = 500, end_time: int = 500
 ) -> list:
-    list_x = list(map(float, gaze_x.split(",")))
-    list_y = list(map(float, gaze_y.split(",")))
-    list_t = list(map(float, gaze_t.split(",")))
+    list_x = []
+    list_y = []
+    list_t = []
+
+    for item in gaze_x.split(","):
+        if len(item) > 0:
+            list_x.append(float(item))
+
+    for item in gaze_y.split(","):
+        if len(item) > 0:
+            list_y.append(float(item))
+
+    for item in gaze_t.split(","):
+        if len(item) > 0:
+            list_t.append(float(item))
 
     print(f'len(x):{len(list_x)}')
     # 时序滤波
@@ -1195,7 +1209,7 @@ def format_gaze(
             end = i
             break
     assert begin < end
-    print(f'len(end_x):{end-begin+1}')
+    print(f'len(end_x):{end - begin + 1}')
     return gaze_points[begin:end]
 
 
@@ -1614,6 +1628,7 @@ def process_fixations(gaze_points, texts, location, use_not_blank_assumption=Tru
     print(f"len of rows:{len(rows)}")
     # assert (max(result_rows) == len(rows) - 1) or (max(result_rows) == len(rows) - 2)
     return result_fixations, result_rows, row_level_fix, sequence_fixations
+
 
 if __name__ == "__main__":
     # list = [1,0.85,1,0.89,0.83,1,1,1,1,1,1,0.93,0.42,0.88,0.9,1,0.92,0.89,1,1,1,1,0.81,0.95]
