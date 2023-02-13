@@ -2111,24 +2111,26 @@ def get_pred(request):
         #     if abnormal_predicts[watching] == 2:
         #         sent_mind_wandering_list.append([sent[1], sent[2] - 1])
 
-    word_intervention = []
+    word_intervention = ""
     if word_not_understand_list:
         if page_data.word_intervention:
-            word_intervention = list(page_data.word_intervention)
-        word_intervention.extend(word_not_understand_list)
+            word_intervention = page_data.word_intervention + "," + str(word_not_understand_list)
+        else:
+            word_intervention = str(word_not_understand_list)
 
-    sent_intervention = []
-    if word_not_understand_list:
-        sent_intervention = []
+    sent_intervention = ""
+    if sent_not_understand_list:
         if page_data.sent_intervention:
-            sent_intervention = list(page_data.sent_intervention)
-        sent_intervention.extend(sent_not_understand_list)
+            sent_intervention = page_data.sent_intervention + "," + str(sent_not_understand_list)
+        else:
+            sent_intervention = str(sent_not_understand_list)
 
-    mind_intervention = []
+    mind_intervention = ""
     if sent_mind_wandering_list:
         if page_data.mind_wander_intervention:
-            mind_intervention = list(page_data.mind_wander_intervention)
-        mind_intervention.extend(sent_mind_wandering_list)
+            mind_intervention = page_data.mind_wander_intervention + "," + str(sent_mind_wandering_list)
+        else:
+            mind_intervention = str(sent_mind_wandering_list)
 
     PageData.objects.filter(id=page_id).update(
         gaze_x=gaze_x,
