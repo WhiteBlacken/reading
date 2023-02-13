@@ -1265,6 +1265,7 @@ def get_visual_attention(
     paint_gaze_on_pic(fixations, path + filename, path + "fixation.png")
     paint_gaze_on_pic(fixations, path + "visual.png", path + "fix_heat.png")
 
+
 # def get_semantic_attention(
 #         page_data_id,
 #         username,
@@ -2066,12 +2067,21 @@ def get_pred(request):
     print(f'sent_watching:{sent_watching_list}')
 
     word_not_understand_list = []
+    word_not_understand_list_copy = []
+
     sent_not_understand_list = []
     sent_mind_wandering_list = []
 
     for watching in word_watching_list:
         if word_predicts[watching] > word_threshold:
-            word_not_understand_list.append(watching)
+            for q in range(watching - 5, watching + 6):
+                word_not_understand_list_copy.append(q)
+
+    for item in word_not_understand_list_copy:
+        if 0 <= item < len(word_list):
+            word_not_understand_list.append(item)
+
+    word_not_understand_list = list(set(word_not_understand_list))
 
     for watching in sent_watching_list:
         if sent_predicts[watching] > sent_threshold:
@@ -2086,8 +2096,6 @@ def get_pred(request):
                 sent_mind_wandering_list.append([sent[1], sent[2] - 1])
 
     print(f'word_not_understand_list:{word_not_understand_list}')
-
-
 
     intervention_type = ['word_intervention', 'sent_intervention', 'mind_wander_intervention']
     intervention_list = [word_not_understand_list, sent_not_understand_list, sent_mind_wandering_list]
@@ -2244,6 +2252,7 @@ def get_page_info(request):
     logger.info("该页信息已加载")
     return HttpResponse(1)
 
+
 # def generate_point_on_word_by_semantic(page_data_id):
 
 def get_semantic_attention_map(request):
@@ -2297,13 +2306,6 @@ def get_semantic_attention_map(request):
             # for i in range(len(word_fam_data)):
 
             word_fam_data = dict(zip(word_fam_data['word'], word_fam_data['fam']))
-
-
-
-
-
-
-
 
 
 # ['syllable', 'length', 'fam', 'ent_flag', 'topic_score', 'fixation_duration', 'number_of_fixations',
