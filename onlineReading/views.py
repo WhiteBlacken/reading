@@ -41,9 +41,8 @@ nlp = spacy.load("en_core_web_lg")
 # base = "D:\\qxy\\pre-trained-model\\"
 base = ""
 
-xlnet_tokenizer = XLNetTokenizerFast.from_pretrained(base+'xlnet-base-cased')
-xlnet_model = XLNetModel.from_pretrained(base+'xlnet-base-cased', output_attentions=True)
-
+xlnet_tokenizer = XLNetTokenizerFast.from_pretrained(base + 'xlnet-base-cased')
+xlnet_model = XLNetModel.from_pretrained(base + 'xlnet-base-cased', output_attentions=True)
 
 kw_extractor = YAKE()
 
@@ -1987,15 +1986,19 @@ def get_pred(request):
 
     userInfo = UserReadingInfo.objects.filter(user=request.session['username']).first()
 
+    gaze_x = ""
+    gaze_y = ""
+    gaze_t = ""
+
     if len(x) > 0:
         if page_data.gaze_x is None:
-            page_data.gaze_x = x
-            page_data.gaze_y = y
-            page_data.gaze_t = t
+            gaze_x = x
+            gaze_y = y
+            gaze_t = t
         else:
-            page_data.gaze_x += "," + x
-            page_data.gaze_y += "," + y
-            page_data.gaze_t += "," + t
+            gaze_x = page_data.gaze_x + "," + x
+            gaze_y = page_data.gaze_y + "," + y
+            gaze_t = page_data.gaze_t + "," + t
 
     word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
 
@@ -2015,8 +2018,8 @@ def get_pred(request):
 
     # TODO 为了减少计算量，仅在当前的单词上计算特征
     if page_data.gaze_x and page_data.gaze_y and page_data.gaze_t:
-        gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y,
-                                  page_data.gaze_t, begin_time=30, end_time=30)
+        gaze_points = format_gaze(gaze_x, gaze_y,
+                                  gaze_t, begin_time=30, end_time=30)
 
         result_fixations = detect_fixations(gaze_points)
 
@@ -2080,17 +2083,21 @@ def get_pred(request):
 
         # print(wordFeature.fixation_duration[watching])
         # print(diff_list[watching])
-        if wordFeature.fixation_duration[watching] >= 2 * float(userInfo.fixation_duration_mean) and diff_list[watching][1] >= 1:
+        if wordFeature.fixation_duration[watching] >= 2 * float(userInfo.fixation_duration_mean) and \
+                diff_list[watching][1] >= 1:
             word_not_understand_list.append(watching)
 
     print(f"word_not_understand:{word_not_understand_list}")
 
     for watching in sent_watching_list:
         sent = sentence_list[watching]
-        if watching -1 >= 0:
-            if sentFeature.total_dwell_time_of_sentence[watching-1] > 2 * float(userInfo.total_dwell_time_of_sentence_mean) and sentFeature.backward_times_of_sentence[watching-1] > float(userInfo.backward_times_of_sentence_mean):
+        if watching - 1 >= 0:
+            if sentFeature.total_dwell_time_of_sentence[watching - 1] > 2 * float(
+                    userInfo.total_dwell_time_of_sentence_mean) and sentFeature.backward_times_of_sentence[
+                watching - 1] > float(userInfo.backward_times_of_sentence_mean):
                 sent_not_understand_list.append([sent[1], sent[2] - 1])
-            if sentFeature.total_dwell_time_of_sentence[watching-1] < (1 / 3) * float(userInfo.total_dwell_time_of_sentence_mean):
+            if sentFeature.total_dwell_time_of_sentence[watching - 1] < (1 / 5) * float(
+                    userInfo.total_dwell_time_of_sentence_mean):
                 sent_mind_wandering_list.append([sent[1], sent[2] - 1])
 
         # if sent_predicts[watching]:
@@ -2123,10 +2130,14 @@ def get_pred(request):
             mind_intervention = list(page_data.mind_wander_intervention)
         mind_intervention.extend(sent_mind_wandering_list)
 
-    page_data.word_intervention = word_intervention
-    page_data.sent_intervention = sent_intervention
-    page_data.mind_wander_intervention = mind_intervention
-    page_data.save()
+    PageData.objects.filter(id=page_id).update(
+        gaze_x=gaze_x,
+        gaze_y=gaze_y,
+        gaze_t=gaze_t,
+        word_intervention=word_intervention,
+        sent_intervention=sent_intervention,
+        mind_wander_intervention=mind_intervention
+    )
 
     context = {
         "word": word_not_understand_list,
@@ -2203,7 +2214,7 @@ def get_page_info(request):
     is_end = request.POST.get("is_end", 0)
 
     experiment_id = request.session.get("experiment_id", None)
-    if experiment_id:
+    if experiment_id and page_text:
         page_num = request.session.get('page_num')
 
         if not page_num:
