@@ -778,6 +778,24 @@
                 stop = true;
                 clearInterval(autoInter);
                 webgazer.pause();
+                let formdata = new FormData();
+                {#formdata.append("interventions", interventions.toString());#}
+                formdata.append("is_end", 1);
+                {#formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page - 1]));#}
+                $.ajax({
+                    type: 'POST',
+                    url: '/page_info/',
+                    data: formdata,
+                    async: false,
+                    success: function () {
+                        console.log("finish reading");
+                    },
+                    error: function () {
+                        console.log("finish error");
+                    },
+                    processData: false,
+                    contentType: false
+                })
                 {#window.location.href = '/label';#}
                 //之后的可以不写
                 document.getElementById("mainContent").style.display = "none";
