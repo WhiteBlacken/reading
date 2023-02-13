@@ -145,6 +145,8 @@ def cal(request):
 def reading(request):
     if not request.session.get("username", None):
         return render(request, "login.html")
+
+    request.session['page_info'] = None
     return render(request, "onlineReading.html")
 
 
@@ -2082,6 +2084,7 @@ def get_pred(request):
             word_not_understand_list.append(item)
 
     word_not_understand_list = list(set(word_not_understand_list))
+    print(f"word_not_understand:{word_not_understand_list}")
 
     for watching in sent_watching_list:
         if sent_predicts[watching] > sent_threshold:
