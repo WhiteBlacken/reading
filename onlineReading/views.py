@@ -1957,17 +1957,11 @@ def get_sent_feature(sentFeature, result_fixations, location, sent_list, rows):
                 if i != 0:
                     sentFeature.saccade_duration[sent_index] += result_fixations[i][3] - \
                                                                 result_fixations[i - 1][4]
-                    sentFeature.saccade_distance[sent_index] += get_euclid_distance(result_fixations[i][0],
-                                                                                    result_fixations[i - 1][
-                                                                                        0],
-                                                                                    result_fixations[i][1],
-                                                                                    result_fixations[i - 1][1])
+
                 if index > pre_word_index:
                     sentFeature.forward_times_of_sentence[sent_index] += 1
                 else:
                     sentFeature.backward_times_of_sentence[sent_index] += 1
-                if pre_row == now_row:
-                    sentFeature.horizontal_saccade[sent_index] += 1
 
             pre_word_index = index
     return sentFeature
@@ -1980,8 +1974,6 @@ def get_pred(request):
         * 历史的所有gaze点（后端存储--存储在哪？）
         * 该页的位置信息（后端存储--存储在哪？）
     """
-    word_threshold = 0.06
-    sent_threshold = 0.2
 
     x = request.POST.get("x")
     y = request.POST.get("y")
@@ -1990,6 +1982,8 @@ def get_pred(request):
     history_x = request.session.get('history_x', None)
     history_y = request.session.get('history_y', None)
     history_t = request.session.get('history_t', None)
+
+    userInfo = UserReadingInfo.objects.filter(user=request.session['username']).first()
 
     if len(x) > 0:
         if history_x is None:
@@ -2016,6 +2010,7 @@ def get_pred(request):
     word_predicts = [0 for _ in range(len(word_list))]
     sent_predicts = [0 for _ in range(len(sentence_list))]
     abnormal_predicts = [0 for _ in range(len(sentence_list))]
+
     # TODO 为了减少计算量，仅在当前的单词上计算特征
     if history_x and history_y and history_t:
         gaze_points = format_gaze(request.session['history_x'], request.session['history_y'],
@@ -2026,19 +2021,25 @@ def get_pred(request):
         print(f'fix:{result_fixations}')
 
         wordFeature = get_word_feature(wordFeature, result_fixations, location)
-        wordFeature.update()
+        wordFeature.norm(userInfo)
+
         word_feature = wordFeature.to_dataframe()
-        word_predicts = wordSVM.predict_proba(word_feature)[:, 1]
+        word_predicts_proba = wordSVM.predict_proba(word_feature)[:, 1]
+        print(f'word_predicts_proba:{word_predicts_proba}')
+        word_predicts = wordSVM.predict(word_feature)
 
         print(wordFeature.fixation_duration)
 
         sentFeature = get_sent_feature(sentFeature, result_fixations, location, sentence_list, rows)
         sentFeature.update()
+        sentFeature.norm(userInfo)
+
         sentFeature = sentFeature.to_dataframe()
 
-        sent_predicts = sentSVM.predict_proba(sentFeature)[:, 1]
+        sent_predicts_proba = sentSVM.predict_proba(sentFeature)[:, 1]
+        print(f'sent_predicts_proba:{sent_predicts_proba}')
+        sent_predicts = sentSVM.predict(sentFeature)
         abnormal_predicts = abnormalSVM.predict(sentFeature)
-
 
     word_watching_list = []
     sent_watching_list = []
@@ -2072,7 +2073,7 @@ def get_pred(request):
     sent_mind_wandering_list = []
 
     for watching in word_watching_list:
-        if word_predicts[watching] > word_threshold:
+        if word_predicts[watching]:
             for q in range(watching - 5, watching + 6):
                 word_not_understand_list_copy.append(q)
 
@@ -2084,7 +2085,7 @@ def get_pred(request):
     print(f"word_not_understand:{word_not_understand_list}")
 
     for watching in sent_watching_list:
-        if sent_predicts[watching] > sent_threshold:
+        if sent_predicts[watching]:
             sent = sentence_list[watching]
             # abnormal 再来判断原因
             if abnormal_predicts[watching] == 0:
@@ -2100,9 +2101,16 @@ def get_pred(request):
     for i, interv in enumerate(intervention_type):
         intervention = request.session.get(interv, None)
         if intervention:
-            request.session[interv] += "," + str(intervention_list[i])
+            if len(intervention_list[i]) > 0:
+                request.session[interv] += "," + str(intervention_list[i])
+            else:
+                request.session[interv] = None
+
         else:
-            request.session[interv] = str(intervention_list[i])
+            if len(intervention_list[i]) > 0:
+                request.session[interv] = str(intervention_list[i])
+            else:
+                request.session[interv] = None
 
     context = {
         "word": word_not_understand_list,
@@ -2115,7 +2123,7 @@ def get_pred(request):
 
 
 def Test(request):
-    data = pd.read_csv('jupyter/dataset/word-train-processed-20230209-div-duration.csv')
+    data = pd.read_csv('jupyter/dataset/handcraft-div-duration.csv')
     users = ['pwt',
              'czh',
              'ys',
@@ -2139,29 +2147,27 @@ def Test(request):
 
     for user in users:
         dat = data[data.user == user]
+        # backward_times_of_sentence_var = np.var(dat['backward_times_of_sentence_div_syllable'])
+        # print(backward_times_of_sentence_var)
 
         UserReadingInfo.objects.create(
             user=user,
-            backward_times_of_sentence_div_syllable_mean=np.mean(dat['backward_times_of_sentence']),
-            backward_times_of_sentence_div_syllable_var=np.var(dat['backward_times_of_sentence']),
+            backward_times_of_sentence_mean=np.mean(dat['backward_times_of_sentence_div_syllable']),
+            backward_times_of_sentence_var=np.var(dat['backward_times_of_sentence_div_syllable']),
 
-            forward_times_of_sentence_div_syllable_mean=np.mean(dat['forward_times_of_sentence']),
-            forward_times_of_sentence_div_syllable_var=np.var(dat['forward_times_of_sentence']),
+            forward_times_of_sentence_mean=np.mean(dat['forward_times_of_sentence_div_syllable']),
+            forward_times_of_sentence_var=np.var(dat['forward_times_of_sentence_div_syllable']),
 
-            horizontal_saccade_proportion_div_syllable_mean=np.mean(dat['horizontal_saccade_proportion']),
-            horizontal_saccade_proportion_div_syllable_var=np.var(dat['horizontal_saccade_proportion']),
 
-            saccade_duartion_div_syllable_mean=np.mean(dat['saccade_duartion']),
-            saccade_duartion_div_syllable_var=np.var(dat['saccade_duartion']),
+            saccade_duration_mean=np.mean(dat['saccade_duartion_div_syllable']),
+            saccade_duration_var=np.var(dat['saccade_duartion_div_syllable']),
 
-            saccade_times_of_sentence_div_syllable_mean=np.mean(dat['saccade_times_of_sentence']),
-            saccade_times_of_sentence_div_syllable_var=np.var(dat['saccade_times_of_sentence']),
+            saccade_times_of_sentence_mean=np.mean(dat['saccade_times_of_sentence_div_syllable']),
+            saccade_times_of_sentence_var=np.var(dat['saccade_times_of_sentence_div_syllable']),
 
-            saccade_velocity_div_syllable_mean=np.mean(dat['saccade_velocity']),
-            saccade_velocity_div_syllable_var=np.var(dat['saccade_velocity']),
 
-            total_dwell_time_of_sentence_div_syllable_mean=np.mean(dat['total_dwell_time_of_sentence']),
-            total_dwell_time_of_sentence_div_syllable_var=np.var(dat['total_dwell_time_of_sentence']),
+            total_dwell_time_of_sentence_mean=np.mean(dat['total_dwell_time_of_sentence_div_syllable']),
+            total_dwell_time_of_sentence_var=np.var(dat['total_dwell_time_of_sentence_div_syllable']),
 
             fixation_duration_mean=np.mean(dat['fixation_duration']),
             fixation_duration_var=np.var(dat['fixation_duration']),
@@ -2171,42 +2177,9 @@ def Test(request):
 
             reading_times_mean=np.mean(dat['reading_times']),
             reading_times_var=np.var(dat['reading_times']),
-
-            fixation_duration_diff_mean=np.mean(dat['fixation_duration']),
-            fixation_duration_diff_var=np.var(dat['fixation_duration']),
-
-            number_of_fixations_diff_mean=np.mean(dat['number_of_fixations_diff']),
-            number_of_fixations_diff_var=np.var(dat['number_of_fixations_diff']),
-
-            reading_times_diff_mean=np.mean(dat['reading_times_diff']),
-            reading_times_diff_var=np.var(dat['reading_times_diff']),
-
-            fixation_duration_mean_mean=np.mean(dat['fixation_duration_mean']),
-            fixation_duration_mean_var=np.var(dat['fixation_duration_mean']),
-
-            fixation_duration_var_mean=np.mean(dat['fixation_duration_var']),
-            fixation_duration_var_var=np.var(dat['fixation_duration_var']),
-
-            number_of_fixations_mean_mean=np.mean(dat['number_of_fixations_mean']),
-            number_of_fixations_mean_var=np.var(dat['number_of_fixations_mean']),
-
-            number_of_fixations_var_mean=np.mean(dat['number_of_fixations_var']),
-            number_of_fixations_var_var=np.var(dat['number_of_fixations_var']),
-
-            reading_times_mean_mean=np.mean(dat['reading_times_mean']),
-            reading_times_mean_var=np.var(dat['reading_times_mean']),
-
-            reading_times_var_mean=np.mean(dat['reading_times_var']),
-            reading_times_var_var=np.var(dat['reading_times_var']),
-
-            fixation_duration_div_syllable_mean=np.mean(dat['fixation_duration_div_syllable']),
-            fixation_duration_div_syllable_var=np.var(dat['fixation_duration_div_syllable']),
-
-            fixation_duration_div_length_mean=np.mean(dat['fixation_duration_div_length']),
-            fixation_duration_div_length_var=np.var(dat['fixation_duration_div_length']),
         )
 
-        break
+    return HttpResponse(1)
 
 
 def get_page_info(request):
@@ -2318,62 +2291,13 @@ class WordFeature:
         self.number_of_fixations = [0 for _ in range(num)]
         self.reading_times = [0 for _ in range(num)]
 
-        self.fixation_duration_diff = [0 for _ in range(num)]
-        self.number_of_fixations_diff = [0 for _ in range(num)]
-        self.reading_times_diff = [0 for _ in range(num)]
-
-        self.fixation_duration_mean = [0 for _ in range(num)]
-        self.fixation_duration_var = [0 for _ in range(num)]
-        self.number_of_fixations_mean = [0 for _ in range(num)]
-        self.number_of_fixations_var = [0 for _ in range(num)]
-        self.reading_times_mean = [0 for _ in range(num)]
-        self.reading_times_var = [0 for _ in range(num)]
-
-        self.fixation_duration_div_syllable = [0 for _ in range(num)]
-        self.fixation_duration_div_length = [0 for _ in range(num)]
-
-        # bert feature
-
-        # 辅助
-
-    # def get_semantic_feature(self):
-    #     syllable = [0 for _ in range(self.num)]
-    #     length = [0 for _ in range(self.num)]
-    #     fam = [0 for _ in range(self.num)]
-    #     ent_flag = [0 for _ in range(self.num)]
-    #     topic_score = [0 for _ in range(self.num)]
-    #     for i, semantic in enumerate(self.semantic_feature):
-    #         syllable[i] = semantic['syllable']
-    #         length[i] = semantic['length']
-    #         fam[i] = semantic['fam']
-    #         ent_flag[i] = semantic['ent_flag']
-    #         topic_score[i] = semantic['topic_score']
-    #     return syllable, length, fam, ent_flag, topic_score
-
-    def update(self):
-        self.fixation_duration_diff = self.get_diff(self.fixation_duration)
-        self.number_of_fixations_diff = self.get_diff(self.number_of_fixations)
-        self.reading_times_diff = self.get_diff(self.reading_times)
-
-        for i, word in enumerate(self.word_list):
-            syllable_len = textstat.syllable_count(word)
-            if syllable_len != 0:
-                self.fixation_duration_div_syllable[i] = self.fixation_duration[i] / syllable_len
-            else:
-                self.fixation_duration_div_syllable[i] = 0
-
-            if len(word) != 0:
-                self.fixation_duration_div_length[i] = self.fixation_duration[i] / len(word)
-            else:
-                self.fixation_duration_div_length[i] = 0
-
-        self.fixation_duration_mean, self.fixation_duration_var = self.get_sentence_statistic(self.sent_list,
-                                                                                              self.fixation_duration)
-        self.number_of_fixations_mean, self.number_of_fixations_var = self.get_sentence_statistic(self.sent_list,
-                                                                                                  self.number_of_fixations)
-
-        self.reading_times_mean, self.reading_times_var = self.get_sentence_statistic(self.sent_list,
-                                                                                      self.reading_times)
+    def norm(self, userInfo):
+        for i in range(self.num):
+            self.fixation_duration[i] = (self.fixation_duration[
+                                             i] - float(userInfo.fixation_duration_mean)) / float(userInfo.fixation_duration_var)
+            self.number_of_fixations[i] = (self.number_of_fixations[
+                                               i] - float(userInfo.number_of_fixations_mean)) / float(userInfo.number_of_fixations_var)
+            self.reading_times[i] = (self.reading_times[i] - float(userInfo.reading_times_mean)) / float(userInfo.reading_times_var)
 
     def get_diff(self, list1):
         results = [0 for _ in range(len(list1))]
@@ -2402,37 +2326,11 @@ class WordFeature:
                 var_list[i] = var
         return mean_list, var_list
 
-    def to_str(self):
-        print(f"fixation_duration_mean:{self.fixation_duration_mean}")
-
-    def norm(self, list1):
-        results = []
-        mean = np.mean(list1)
-        var = np.var(list1)
-        for item in list1:
-            a = (item - mean) / var
-            results.append(a)
-        return results
-
     def to_dataframe(self):
         data = pd.DataFrame({
-            'fixation_duration': self.norm(self.fixation_duration),
-            'number_of_fixations': self.norm(self.number_of_fixations),
-            'reading_times': self.norm(self.reading_times),
-
-            'fixation_duration_diff': self.norm(self.fixation_duration_diff),
-            'number_of_fixations_diff': self.norm(self.number_of_fixations_diff),
-            'reading_times_diff': self.norm(self.reading_times_diff),
-
-            'fixation_duration_mean': self.norm(self.fixation_duration_mean),
-            'fixation_duration_var': self.norm(self.fixation_duration_var),
-            'number_of_fixations_mean': self.norm(self.number_of_fixations_mean),
-            'number_of_fixations_var': self.norm(self.number_of_fixations_var),
-            'reading_times_mean': self.norm(self.reading_times_mean),
-            'reading_times_var': self.norm(self.reading_times_var),
-
-            'fixation_duration_div_syllable': self.norm(self.fixation_duration_div_syllable),
-            'fixation_duration_div_length': self.norm(self.fixation_duration_div_length)
+            'fixation_duration': self.fixation_duration,
+            'number_of_fixations': self.number_of_fixations,
+            'reading_times': self.reading_times,
         })
         print(data)
         return data
@@ -2448,50 +2346,39 @@ class SentFeature:
 
         self.backward_times_of_sentence = [0 for _ in range(num)]
         self.forward_times_of_sentence = [0 for _ in range(num)]
-        self.horizontal_saccade_proportion = [0 for _ in range(num)]
+
         self.saccade_duration = [0 for _ in range(num)]
         self.saccade_times_of_sentence = [0 for _ in range(num)]
-        self.saccade_velocity = [0 for _ in range(num)]
+
         self.total_dwell_time_of_sentence = [0 for _ in range(num)]
-
-        self.saccade_distance = [0 for _ in range(num)]
-
-        self.horizontal_saccade = [0 for _ in range(num)]
 
         self.backward_times_of_sentence_div_syllable = [0 for _ in range(num)]
         self.forward_times_of_sentence_div_syllable = [0 for _ in range(num)]
-        self.horizontal_saccade_proportion_div_syllable = [0 for _ in range(num)]
         self.saccade_duartion_div_syllable = [0 for _ in range(num)]
         self.saccade_times_of_sentence_div_syllable = [0 for _ in range(num)]
-        self.saccade_velocity_div_syllable = [0 for _ in range(num)]
         self.total_dwell_time_of_sentence_div_syllable = [0 for _ in range(num)]
 
     def update(self):
         self.backward_times_of_sentence_div_syllable = self.div_syllable(self.backward_times_of_sentence)
         self.forward_times_of_sentence_div_syllable = self.div_syllable(self.forward_times_of_sentence)
 
-        self.horizontal_saccade_proportion = self.get_list_div(self.horizontal_saccade, self.saccade_times_of_sentence)
-        self.horizontal_saccade_proportion_div_syllable = self.div_syllable(self.horizontal_saccade_proportion)
-
         self.saccade_duration_div_syllable = self.div_syllable(self.saccade_duration)
         self.saccade_times_of_sentence_div_syllable = self.div_syllable(self.saccade_times_of_sentence)
 
-        self.saccade_velocity = self.get_list_div(self.saccade_distance, self.saccade_duration)
-        self.saccade_velocity_div_syllable = self.div_syllable(self.saccade_velocity)
-
         self.total_dwell_time_of_sentence_div_syllable = self.div_syllable(self.total_dwell_time_of_sentence)
 
-    def norm(self, list1):
-        results = []
-        mean = np.mean(list1)
-        var = np.var(list1)
-        for item in list1:
-            if var != 0:
-                a = (item - mean) / var
-            else:
-                a = 0
-            results.append(a)
-        return results
+    def norm(self, userInfo):
+        for i in range(self.num):
+            self.backward_times_of_sentence_div_syllable[i] = (self.backward_times_of_sentence_div_syllable[
+                                                                   i] - float(userInfo.backward_times_of_sentence_mean)) / float(userInfo.backward_times_of_sentence_var)
+            self.forward_times_of_sentence_div_syllable[i] = (self.forward_times_of_sentence_div_syllable[
+                                                                  i] - float(userInfo.forward_times_of_sentence_mean)) / float(userInfo.forward_times_of_sentence_var)
+            self.saccade_duration_div_syllable[i] = (self.saccade_duration_div_syllable[
+                                                         i] - float(userInfo.saccade_duration_mean)) / float(userInfo.saccade_duration_var)
+            self.saccade_times_of_sentence_div_syllable[i] = (self.saccade_times_of_sentence_div_syllable[
+                                                                  i] - float(userInfo.saccade_times_of_sentence_mean)) / float(userInfo.saccade_times_of_sentence_var)
+            self.total_dwell_time_of_sentence_div_syllable[i] = (self.total_dwell_time_of_sentence_div_syllable[
+                                                                     i] - float(userInfo.total_dwell_time_of_sentence_mean)) / float(userInfo.total_dwell_time_of_sentence_var)
 
     def get_list_div(self, list_a, list_b):
         div_list = [0 for _ in range(self.num)]
@@ -2521,13 +2408,11 @@ class SentFeature:
 
     def to_dataframe(self):
         data = pd.DataFrame({
-            'backward_times_of_sentence_div_syllable': self.norm(self.backward_times_of_sentence_div_syllable),
-            'forward_times_of_sentence_div_syllable': self.norm(self.forward_times_of_sentence_div_syllable),
-            'horizontal_saccade_proportion_div_syllable': self.norm(self.horizontal_saccade_proportion_div_syllable),
-            'saccade_duration_div_syllable': self.norm(self.saccade_duration_div_syllable),
-            'saccade_times_of_sentence_div_syllable': self.norm(self.saccade_times_of_sentence_div_syllable),
-            'saccade_velocity_div_syllable': self.norm(self.saccade_velocity_div_syllable),
-            'total_dwell_time_of_sentence_div_syllable': self.norm(self.total_dwell_time_of_sentence_div_syllable)
+            'backward_times_of_sentence_div_syllable': self.backward_times_of_sentence_div_syllable,
+            'forward_times_of_sentence_div_syllable': self.forward_times_of_sentence_div_syllable,
+            'saccade_duration_div_syllable': self.saccade_duration_div_syllable,
+            'saccade_times_of_sentence_div_syllable': self.saccade_times_of_sentence_div_syllable,
+            'total_dwell_time_of_sentence_div_syllable': self.total_dwell_time_of_sentence_div_syllable
         })
         print(data)
         return data

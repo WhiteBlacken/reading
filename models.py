@@ -266,3 +266,98 @@
 #
 #     def get_sentence_word_mapping(self):
 #         return self._sentence_word_mapping
+
+
+# class SentFeature:
+#
+#     def __init__(self, num, sent_list, word_list):
+#         super().__init__()
+#         self.num = num
+#         self.sent_list = sent_list
+#         self.word_list = word_list
+#
+#         self.backward_times_of_sentence = [0 for _ in range(num)]
+#         self.forward_times_of_sentence = [0 for _ in range(num)]
+#         # self.horizontal_saccade_proportion = [0 for _ in range(num)]
+#         self.saccade_duration = [0 for _ in range(num)]
+#         self.saccade_times_of_sentence = [0 for _ in range(num)]
+#         self.saccade_velocity = [0 for _ in range(num)]
+#         self.total_dwell_time_of_sentence = [0 for _ in range(num)]
+#
+#         self.saccade_distance = [0 for _ in range(num)]
+#
+#         # self.horizontal_saccade = [0 for _ in range(num)]
+#
+#         self.backward_times_of_sentence_div_syllable = [0 for _ in range(num)]
+#         self.forward_times_of_sentence_div_syllable = [0 for _ in range(num)]
+#         self.horizontal_saccade_proportion_div_syllable = [0 for _ in range(num)]
+#         self.saccade_duartion_div_syllable = [0 for _ in range(num)]
+#         self.saccade_times_of_sentence_div_syllable = [0 for _ in range(num)]
+#         self.saccade_velocity_div_syllable = [0 for _ in range(num)]
+#         self.total_dwell_time_of_sentence_div_syllable = [0 for _ in range(num)]
+#
+#     def update(self):
+#         self.backward_times_of_sentence_div_syllable = self.div_syllable(self.backward_times_of_sentence)
+#         self.forward_times_of_sentence_div_syllable = self.div_syllable(self.forward_times_of_sentence)
+#
+#         self.horizontal_saccade_proportion = self.get_list_div(self.horizontal_saccade, self.saccade_times_of_sentence)
+#         self.horizontal_saccade_proportion_div_syllable = self.div_syllable(self.horizontal_saccade_proportion)
+#
+#         self.saccade_duration_div_syllable = self.div_syllable(self.saccade_duration)
+#         self.saccade_times_of_sentence_div_syllable = self.div_syllable(self.saccade_times_of_sentence)
+#
+#         self.saccade_velocity = self.get_list_div(self.saccade_distance, self.saccade_duration)
+#         self.saccade_velocity_div_syllable = self.div_syllable(self.saccade_velocity)
+#
+#         self.total_dwell_time_of_sentence_div_syllable = self.div_syllable(self.total_dwell_time_of_sentence)
+#
+#     def norm(self, list1):
+#         results = []
+#         mean = np.mean(list1)
+#         var = np.var(list1)
+#         for item in list1:
+#             if var != 0:
+#                 a = (item - mean) / var
+#             else:
+#                 a = 0
+#             results.append(a)
+#         return results
+#
+#     def get_list_div(self, list_a, list_b):
+#         div_list = [0 for _ in range(self.num)]
+#         for i in range(len(list_b)):
+#             if list_b[i] != 0:
+#                 div_list[i] = list_a[i] / list_b[i]
+#
+#         return div_list
+#
+#     def div_syllable(self, feature):
+#         assert len(feature) == len(self.sent_list)
+#         results = []
+#         for i in range(len(feature)):
+#             sent = self.sent_list[i]
+#             syllable_len = self.get_syllable(self.word_list[sent[1]:sent[2]])
+#             if syllable_len > 0:
+#                 results.append(feature[i] / syllable_len)
+#             else:
+#                 results.append(0)
+#         return results
+#
+#     def get_syllable(self, word_list):
+#         syllable_len = 0
+#         for word in word_list:
+#             syllable_len += textstat.syllable_count(word)
+#         return syllable_len
+#
+#     def to_dataframe(self):
+#         data = pd.DataFrame({
+#             'backward_times_of_sentence_div_syllable': self.norm(self.backward_times_of_sentence_div_syllable),
+#             'forward_times_of_sentence_div_syllable': self.norm(self.forward_times_of_sentence_div_syllable),
+#             'horizontal_saccade_proportion_div_syllable': self.norm(self.horizontal_saccade_proportion_div_syllable),
+#             'saccade_duration_div_syllable': self.norm(self.saccade_duration_div_syllable),
+#             'saccade_times_of_sentence_div_syllable': self.norm(self.saccade_times_of_sentence_div_syllable),
+#             'saccade_velocity_div_syllable': self.norm(self.saccade_velocity_div_syllable),
+#             'total_dwell_time_of_sentence_div_syllable': self.norm(self.total_dwell_time_of_sentence_div_syllable)
+#         })
+#         print(data)
+#         return data
