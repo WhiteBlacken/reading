@@ -207,6 +207,7 @@
                         .css('top', this.wordLocation.top - 40 + "px")
                         .html(this.transPerPage[this.page - 1][num].zh)
                         .fadeIn('fast', function () {
+                            webgazer.pause();
                             setTimeout(function () {
                                 $('#transWord' + num).fadeOut('fast', function () {
                                     app.changeTextStyle(num, num + 1, 0);
@@ -214,7 +215,9 @@
                                     app._data.currentTransBox.splice(ind, 1);
                                     $('#transWord' + num).remove();
                                 })
-                            }, 1500);
+                                if (app._data.currentTransSentenceBox.length == 0)
+                                    webgazer.resume();
+                            }, 1300);
                         });
                 } else {
                     this.currentTransBox.splice(this.currentTransBox.indexOf(num), 1);
@@ -271,6 +274,7 @@
                         .css('top', this.wordLocation.top - 40 + "px")
                         .html(this.transPerPage[this.page - 1][num].sentence_zh)
                         .fadeIn('fast', function () {
+                            webgazer.pause();
                             setTimeout(function () {
                                 $('#transSentence' + start).fadeOut('fast', function () {
                                     app.changeTextStyle(start, end, 0);
@@ -283,8 +287,10 @@
                                     }
                                     app._data.currentTransSentenceBox.splice(ind, 1);
                                     $('#transSentence' + start).remove();
-                                })
-                            }, 3000);
+                                });
+                                webgazer.resume();
+                            }, 2800);
+
                         });
                 }
                 {#else {#}
@@ -310,11 +316,13 @@
                     .addClass('alert ' + style)
                     .html("你刚刚走神了，请重新认真阅读错过的内容！")
                     .fadeIn('fast', function () {
+                        webgazer.pause();
                         setTimeout(function () {
                             $('.alert').fadeOut('fast', function () {
 
                             });
-                        }, 1000)
+                        }, 800)
+                        webgazer.resume();
                     });
 
             },
