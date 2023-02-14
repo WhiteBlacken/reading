@@ -8,6 +8,7 @@ from transformers import BertForMaskedLM, BertTokenizer, XLNetModel, XLNetTokeni
 
 # base = "D:\\qxy\\pre-trained-model\\"
 base = ""
+
 nlp = spacy.load("en_core_web_lg")
 tokenizer = XLNetTokenizerFast.from_pretrained(base+"xlnet-base-cased")
 model = XLNetModel.from_pretrained(base+"xlnet-base-cased", output_attentions=True)
