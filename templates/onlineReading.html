@@ -190,7 +190,7 @@
                         .addClass('trans')
                         .attr('id', 'transWord' + num)
                         .css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px")
-                        .css('bottom',  window.screen.availHeight - this.wordLocation.bottom -10 + "px")
+                        .css('bottom',  window.screen.availHeight - this.wordLocation.bottom - 15 + "px")
                         .html(this.transPerPage[this.page - 1][num].zh)
                         .fadeIn('fast', function () {
                             webgazer.pause();
@@ -250,7 +250,7 @@
                     else
                         $('#transSentence' + start).css('right', "130px");
                     $('#transSentence' + start)
-                        .css('bottom',  window.screen.availHeight - this.wordLocation.bottom - 10 + "px")
+                        .css('bottom',  window.screen.availHeight - this.wordLocation.bottom - 15 + "px")
                         .html(this.transPerPage[this.page - 1][num].sentence_zh)
                         .fadeIn('fast', function () {
                             webgazer.pause();
