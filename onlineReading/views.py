@@ -6,6 +6,7 @@ import pickle
 import shutil
 
 import cv2
+from django.db.models import F
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
@@ -2083,23 +2084,42 @@ def get_pred(request):
 
         # print(wordFeature.fixation_duration[watching])
         # print(diff_list[watching])
-        if wordFeature.fixation_duration[watching] >= 2 * float(userInfo.fixation_duration_mean) and \
+        if wordFeature.fixation_duration[watching] >= 3 * float(userInfo.fixation_duration_mean) and \
                 diff_list[watching][1] >= 1:
-            word_not_understand_list.append(watching)
+            for q in range(watching - 3, watching + 3):
+                if 0 <= q <= len(word_list) - 1:
+                    word_not_understand_list.append(q)
+    word_not_understand_list = list(set(word_not_understand_list))
 
     print(f"word_not_understand:{word_not_understand_list}")
 
+    word_intervention = ""
+    if word_not_understand_list:
+        if page_data.word_intervention:
+            word_intervention = page_data.word_intervention + "," + str(word_not_understand_list)
+        else:
+            word_intervention = str(word_not_understand_list)
+
     for watching in sent_watching_list:
-        sent = sentence_list[watching]
         if watching - 1 >= 0:
-            if sentFeature.total_dwell_time_of_sentence[watching - 1] > 2 * float(
+            sent = sentence_list[watching - 1]
+            if watching - 1 == request.session.get('pre_sent_inter', None):
+                print("重复干预")
+                continue
+            if sentFeature.total_dwell_time_of_sentence[watching - 1] > 2.5 * float(
                     userInfo.total_dwell_time_of_sentence_mean) and sentFeature.backward_times_of_sentence[
                 watching - 1] > float(userInfo.backward_times_of_sentence_mean):
                 sent_not_understand_list.append([sent[1], sent[2] - 1])
+                PageData.objects.filter(id=page_id).update(
+                    sent_intervention=page_data.sent_intervention + "," + str(watching-1)
+                )
             if sentFeature.total_dwell_time_of_sentence[watching - 1] < (1 / 5) * float(
-                    userInfo.total_dwell_time_of_sentence_mean):
+                    userInfo.total_dwell_time_of_sentence_mean) and len(word_not_understand_list) == 0:
                 sent_mind_wandering_list.append([sent[1], sent[2] - 1])
-
+                PageData.objects.filter(id=page_id).update(
+                    mind_wander_intervention=page_data.mind_wander_intervention + "," + str(watching-1)
+                )
+            request.session['pre_sent_inter'] = watching - 1
         # if sent_predicts[watching]:
         #     sent = sentence_list[watching]
         #     # abnormal 再来判断原因
@@ -2111,34 +2131,11 @@ def get_pred(request):
         #     if abnormal_predicts[watching] == 2:
         #         sent_mind_wandering_list.append([sent[1], sent[2] - 1])
 
-    word_intervention = ""
-    if word_not_understand_list:
-        if page_data.word_intervention:
-            word_intervention = page_data.word_intervention + "," + str(word_not_understand_list)
-        else:
-            word_intervention = str(word_not_understand_list)
-
-    sent_intervention = ""
-    if sent_not_understand_list:
-        if page_data.sent_intervention:
-            sent_intervention = page_data.sent_intervention + "," + str(sent_not_understand_list)
-        else:
-            sent_intervention = str(sent_not_understand_list)
-
-    mind_intervention = ""
-    if sent_mind_wandering_list:
-        if page_data.mind_wander_intervention:
-            mind_intervention = page_data.mind_wander_intervention + "," + str(sent_mind_wandering_list)
-        else:
-            mind_intervention = str(sent_mind_wandering_list)
-
     PageData.objects.filter(id=page_id).update(
         gaze_x=gaze_x,
         gaze_y=gaze_y,
         gaze_t=gaze_t,
-        word_intervention=word_intervention,
-        sent_intervention=sent_intervention,
-        mind_wander_intervention=mind_intervention
+        word_intervention=word_intervention
     )
 
     context = {
@@ -2239,6 +2236,7 @@ def get_page_info(request):
         request.session['page_num'] = None
         request.session['experiment_id'] = None
 
+    request.session['pre_sent_inter'] = None
     return HttpResponse(1)
 
 
