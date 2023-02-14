@@ -1974,169 +1974,137 @@ def get_pred(request):
     """
     输入应该是
         * 当前2s内的gaze点（前端传输）
-        * 历史的所有gaze点（后端存储--存储在哪？）
-        * 该页的位置信息（后端存储--存储在哪？）
+        * 历史的所有gaze点
+        * 该页的位置信息
     """
+    with Timer("pred"):  # 开启计时
+        x = request.POST.get("x")
+        y = request.POST.get("y")
+        t = request.POST.get("t")
 
-    x = request.POST.get("x")
-    y = request.POST.get("y")
-    t = request.POST.get("t")
+        page_id = request.session['page_id']
+        page_data = PageData.objects.get(id=page_id)
 
-    page_id = request.session['page_id']
-    page_data = PageData.objects.get(id=page_id)
+        userInfo = UserReadingInfo.objects.filter(user=request.session['username']).first()
 
-    userInfo = UserReadingInfo.objects.filter(user=request.session['username']).first()
+        gaze_x = ""
+        gaze_y = ""
+        gaze_t = ""
 
-    gaze_x = ""
-    gaze_y = ""
-    gaze_t = ""
+        if len(x) > 0:
+            if page_data.gaze_x is None:
+                gaze_x = x
+                gaze_y = y
+                gaze_t = t
+            else:
+                gaze_x = page_data.gaze_x + "," + x
+                gaze_y = page_data.gaze_y + "," + y
+                gaze_t = page_data.gaze_t + "," + t
 
-    if len(x) > 0:
-        if page_data.gaze_x is None:
-            gaze_x = x
-            gaze_y = y
-            gaze_t = t
-        else:
-            gaze_x = page_data.gaze_x + "," + x
-            gaze_y = page_data.gaze_y + "," + y
-            gaze_t = page_data.gaze_t + "," + t
+        word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
 
-    word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+        border, rows, danger_zone, len_per_word = textarea(page_data.location)
 
-    wordFeature = WordFeature(len(word_list), word_list, sentence_list, 'test')
-    sentFeature = SentFeature(len(sentence_list), sentence_list, word_list)
+        diff_list = generate_word_difficulty(page_data.texts)
 
-    border, rows, danger_zone, len_per_word = textarea(page_data.location)
+        word_watching_list = []
+        sent_watching_list = []
 
-    word_predicts = [0 for _ in range(len(word_list))]
-    sent_predicts = [0 for _ in range(len(sentence_list))]
-    abnormal_predicts = [0 for _ in range(len(sentence_list))]
+        # TODO 为了减少计算量，仅在当前的单词上计算特征
 
-    diff_list = generate_word_difficulty(page_data.texts)
+        if len(x) > 0:
+            gaze_points = format_gaze(x, y, t, begin_time=0, end_time=0)
+            result_fixations = detect_fixations(gaze_points)
 
-    word_watching_list = []
-    sent_watching_list = []
+            now_word_feature = WordFeature(len(word_list), word_list, sentence_list, 'test')
+            now_word_feature = get_word_feature(now_word_feature, result_fixations, page_data.location)
 
-    # TODO 为了减少计算量，仅在当前的单词上计算特征
-    if page_data.gaze_x and page_data.gaze_y and page_data.gaze_t:
-        gaze_points = format_gaze(gaze_x, gaze_y,
-                                  gaze_t, begin_time=30, end_time=30)
+            now_sent_feature = SentFeature(len(sentence_list), sentence_list, word_list)
+            now_sent_feature = get_sent_feature(now_sent_feature, result_fixations, page_data.location, sentence_list,
+                                                rows)
+            now_sent_feature.update()  # 特征除以syllable
 
-        result_fixations = detect_fixations(gaze_points)
+            # result_fixations = keep_row(result_fixations)
+            # 单词fixation最多的句子，为需要判断的句子
+            sent_fix = [0 for _ in range(len(sentence_list))]
 
-        # word feature
-        wordFeature = get_word_feature(wordFeature, result_fixations, page_data.location)
+            print(f"result_fixation:{result_fixations}")
+            for fixation in result_fixations:
+                index, flag = get_item_index_x_y(page_data.location, fixation[0],
+                                                 fixation[1])
+                if index != -1:
+                    word_watching_list.append(index)
+                    sent_index = get_sentence_by_word(index, sentence_list)
+                    if sent_index != 0:
+                        sent_fix[sent_index] += 1
 
-        # wordFeature.norm(userInfo)
-        # word_feature = wordFeature.to_dataframe()
-        # word_predicts_proba = wordSVM.predict_proba(word_feature)[:, 1]
-        # print(f'word_predicts_proba:{word_predicts_proba}')
-        # word_predicts = wordSVM.predict(word_feature)
+            max_fix_sent = 0
+            max_index_sent = 0
+            for i, sent in enumerate(sent_fix):
+                if sent > max_fix_sent:
+                    max_fix_sent = sent
+                    max_index_sent = i
+            sent_watching_list.append(max_index_sent)
 
-        sentFeature = get_sent_feature(sentFeature, result_fixations, page_data.location, sentence_list, rows)
-        sentFeature.update()  # 特征除以syllable
+        print(f'word_watching:{word_watching_list}')
+        print(f'sent_watching:{sent_watching_list}')
 
-        # sentFeature.norm(userInfo)
+        word_not_understand_list = []
+        sent_not_understand_list = []
+        sent_mind_wandering_list = []
 
-        # sentFeature = sentFeature.to_dataframe()
-        # sent_predicts_proba = sentSVM.predict_proba(sentFeature)[:, 1]
-        # print(f'sent_predicts_proba:{sent_predicts_proba}')
-        # sent_predicts = sentSVM.predict(sentFeature)
-        # abnormal_predicts = abnormalSVM.predict(sentFeature)
+        print(now_word_feature.fixation_duration)
+        for watching in word_watching_list:
+            if now_word_feature.fixation_duration[watching] >= 3 * float(userInfo.fixation_duration_mean) and \
+                    diff_list[watching][1] >= 1:
+                for q in range(watching - 3, watching + 3):
+                    if 0 <= q <= len(word_list) - 1:
+                        word_not_understand_list.append(q)
+        word_not_understand_list = list(set(word_not_understand_list))
 
-    if len(x) > 0:
-        gaze_points = format_gaze(x, y, t, begin_time=0, end_time=0)
-        result_fixations = detect_fixations(gaze_points)
-        # result_fixations = keep_row(result_fixations)
-        # 单词fixation最多的句子，为需要判断的句子
-        sent_fix = [0 for _ in range(len(sentence_list))]
+        print(f"word_not_understand:{word_not_understand_list}")
 
-        print(f"result_fixation:{result_fixations}")
-        for fixation in result_fixations:
-            index, flag = get_item_index_x_y(page_data.location, fixation[0],
-                                             fixation[1])
-            if index != -1:
-                word_watching_list.append(index)
-                sent_index = get_sentence_by_word(index, sentence_list)
-                if sent_index != 0:
-                    sent_fix[sent_index] += 1
+        if len(word_not_understand_list) > 0:
+            PageData.objects.filter(id=page_id).update(
+                word_intervention=page_data.word_intervention + "," + str(word_not_understand_list)
+            )
 
-        max_fix_sent = 0
-        max_index_sent = 0
-        for i, sent in enumerate(sent_fix):
-            if sent > max_fix_sent:
-                max_fix_sent = sent
-                max_index_sent = i
-        sent_watching_list.append(max_index_sent)
+        for watching in sent_watching_list:
+            if watching - 1 >= 0:
+                sent = sentence_list[watching]
+                if watching - 1 == request.session.get('pre_sent_inter', None):
+                    print("重复干预")
+                    continue
+                if now_sent_feature.total_dwell_time_of_sentence[watching] > 2 * float(
+                        userInfo.total_dwell_time_of_sentence_mean) and now_sent_feature.backward_times_of_sentence[
+                    watching - 1] > float(userInfo.backward_times_of_sentence_mean):
+                    sent_not_understand_list.append([sent[1], sent[2] - 1])
+                    PageData.objects.filter(id=page_id).update(
+                        sent_intervention=page_data.sent_intervention + "," + str(watching - 1)
+                    )
+                if now_sent_feature.total_dwell_time_of_sentence[watching] < (1 / 6) * float(
+                        userInfo.total_dwell_time_of_sentence_mean) and len(word_not_understand_list) == 0:
+                    sent_mind_wandering_list.append([sent[1], sent[2] - 1])
+                    PageData.objects.filter(id=page_id).update(
+                        mind_wander_intervention=page_data.mind_wander_intervention + "," + str(watching - 1)
+                    )
+                request.session['pre_sent_inter'] = watching
+            # if sent_predicts[watching]:
+            #     sent = sentence_list[watching]
+            #     # abnormal 再来判断原因
+            #     if abnormal_predicts[watching] == 0:
+            #         sent_mind_wandering_list.append([sent[1], sent[2] - 1])
+            #         sent_not_understand_list.append([sent[1], sent[2] - 1])
+            #     if abnormal_predicts[watching] == 1:
+            #         sent_not_understand_list.append([sent[1], sent[2] - 1])
+            #     if abnormal_predicts[watching] == 2:
+            #         sent_mind_wandering_list.append([sent[1], sent[2] - 1])
 
-    print(f'word_watching:{word_watching_list}')
-    print(f'sent_watching:{sent_watching_list}')
-
-    word_not_understand_list = []
-    sent_not_understand_list = []
-    sent_mind_wandering_list = []
-
-    print(wordFeature.fixation_duration)
-    for watching in word_watching_list:
-        # if word_predicts[watching]:
-        #     for q in range(watching - 5, watching + 6):
-        #         word_not_understand_list_copy.append(q)
-
-        # print(wordFeature.fixation_duration[watching])
-        # print(diff_list[watching])
-        if wordFeature.fixation_duration[watching] >= 3 * float(userInfo.fixation_duration_mean) and \
-                diff_list[watching][1] >= 1:
-            for q in range(watching - 3, watching + 3):
-                if 0 <= q <= len(word_list) - 1:
-                    word_not_understand_list.append(q)
-    word_not_understand_list = list(set(word_not_understand_list))
-
-    print(f"word_not_understand:{word_not_understand_list}")
-
-    word_intervention = ""
-    if word_not_understand_list:
-        if page_data.word_intervention:
-            word_intervention = page_data.word_intervention + "," + str(word_not_understand_list)
-        else:
-            word_intervention = str(word_not_understand_list)
-
-    for watching in sent_watching_list:
-        if watching - 1 >= 0:
-            sent = sentence_list[watching - 1]
-            if watching - 1 == request.session.get('pre_sent_inter', None):
-                print("重复干预")
-                continue
-            if sentFeature.total_dwell_time_of_sentence[watching - 1] > 2.5 * float(
-                    userInfo.total_dwell_time_of_sentence_mean) and sentFeature.backward_times_of_sentence[
-                watching - 1] > float(userInfo.backward_times_of_sentence_mean):
-                sent_not_understand_list.append([sent[1], sent[2] - 1])
-                PageData.objects.filter(id=page_id).update(
-                    sent_intervention=page_data.sent_intervention + "," + str(watching-1)
-                )
-            if sentFeature.total_dwell_time_of_sentence[watching - 1] < (1 / 5) * float(
-                    userInfo.total_dwell_time_of_sentence_mean) and len(word_not_understand_list) == 0:
-                sent_mind_wandering_list.append([sent[1], sent[2] - 1])
-                PageData.objects.filter(id=page_id).update(
-                    mind_wander_intervention=page_data.mind_wander_intervention + "," + str(watching-1)
-                )
-            request.session['pre_sent_inter'] = watching - 1
-        # if sent_predicts[watching]:
-        #     sent = sentence_list[watching]
-        #     # abnormal 再来判断原因
-        #     if abnormal_predicts[watching] == 0:
-        #         sent_mind_wandering_list.append([sent[1], sent[2] - 1])
-        #         sent_not_understand_list.append([sent[1], sent[2] - 1])
-        #     if abnormal_predicts[watching] == 1:
-        #         sent_not_understand_list.append([sent[1], sent[2] - 1])
-        #     if abnormal_predicts[watching] == 2:
-        #         sent_mind_wandering_list.append([sent[1], sent[2] - 1])
-
-    PageData.objects.filter(id=page_id).update(
-        gaze_x=gaze_x,
-        gaze_y=gaze_y,
-        gaze_t=gaze_t,
-        word_intervention=word_intervention
-    )
+        PageData.objects.filter(id=page_id).update(
+            gaze_x=gaze_x,
+            gaze_y=gaze_y,
+            gaze_t=gaze_t,
+        )
 
     context = {
         "word": word_not_understand_list,
@@ -2309,6 +2277,11 @@ class WordFeature:
         self.number_of_fixations = [0 for _ in range(num)]
         self.reading_times = [0 for _ in range(num)]
 
+    def add(self, word_feature):
+        self.fixation_duration = np.sum([self.fixation_duration, word_feature.fixation_duration], axis=0).tolist()
+        self.number_of_fixations = np.sum([self.number_of_fixations, word_feature.number_of_fixations], axis=0).tolist()
+        self.reading_times = np.sum([self.reading_times, word_feature.reading_times], axis=0).tolist()
+
     def norm(self, userInfo):
         for i in range(self.num):
             self.fixation_duration[i] = (self.fixation_duration[
@@ -2387,6 +2360,22 @@ class SentFeature:
         self.saccade_times_of_sentence_div_syllable = self.div_syllable(self.saccade_times_of_sentence)
 
         self.total_dwell_time_of_sentence_div_syllable = self.div_syllable(self.total_dwell_time_of_sentence)
+
+    def add(self, sent_feature):
+        self.backward_times_of_sentence_div_syllable = np.sum(
+            [self.backward_times_of_sentence_div_syllable, sent_feature.backward_times_of_sentence_div_syllable],
+            axis=0).tolist()
+        self.forward_times_of_sentence_div_syllable = np.sum(
+            [self.forward_times_of_sentence_div_syllable, sent_feature.forward_times_of_sentence_div_syllable],
+            axis=0).tolist()
+        self.saccade_duration_div_syllable = np.sum(
+            [self.saccade_duration_div_syllable, sent_feature.saccade_duration_div_syllable], axis=0).tolist()
+        self.saccade_times_of_sentence_div_syllable = np.sum(
+            [self.saccade_times_of_sentence_div_syllable, sent_feature.saccade_times_of_sentence_div_syllable],
+            axis=0).tolist()
+        self.total_dwell_time_of_sentence_div_syllable = np.sum(
+            [self.total_dwell_time_of_sentence_div_syllable, sent_feature.total_dwell_time_of_sentence_div_syllable],
+            axis=0).tolist()
 
     def norm(self, userInfo):
         for i in range(self.num):
