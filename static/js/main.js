@@ -95,7 +95,8 @@ window.onbeforeunload = function() {
  */
 function Restart(){
     full_screen();
-    document.getElementById("Accuracy").innerHTML = "<a>Not yet Calibrated</a>";
+    document.getElementById("Accuracy").innerHTML = "<a>暂未校准</a>";
+    webgazer.clearData();
     ClearCalibration();
     PopUpInstruction();
 }

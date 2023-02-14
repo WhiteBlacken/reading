@@ -181,22 +181,8 @@
 
             getWordTranslation: function (num) {
                 if (!this.isWordTranslated(num)) {
-                    {#if($('#trans').css('display') == "none")#}
-                    {#    $('#trans').css('display','');#}
-                    {#else if($('#trans').css('display') != "none" && this.currentTransWord == num)#}
-                    {#    $('#trans').css('display','none');#}
                     this.changeTextStyle(num, num + 1, 1);
                     this.wordLocation = this.getWordLocation(num);
-                    {#let el = document.createElement('div');#}
-                    {#el.className = "trans";#}
-                    {##}
-                    {#el.innerHTML = this.transPerPage[this.page - 1][num].zh;#}
-                    {##}
-                    {#el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";#}
-                    {##}
-                    {#el.style.top = this.wordLocation.top - 20 + "px";#}
-                    {#let e = document.getElementById('readArea');#}
-                    {#e.appendChild(el);#}
                     this.currentTransBox.push(num);
                     this.currentTransWord = num;
                     $('<div>')
@@ -204,35 +190,35 @@
                         .addClass('trans')
                         .attr('id', 'transWord' + num)
                         .css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px")
-                        .css('top', this.wordLocation.top - 40 + "px")
+                        .css('bottom',  window.screen.availHeight - this.wordLocation.bottom - 65 + "px")
                         .html(this.transPerPage[this.page - 1][num].zh)
                         .fadeIn('fast', function () {
                             webgazer.pause();
-                            {#autoInterClass.MyAutoRun();#}
-                            setTimeout(function () {
-                                $('#transWord' + num).fadeOut('fast', function () {
-                                    app.changeTextStyle(num, num + 1, 0);
-                                    let ind = app._data.currentTransBox.indexOf(num);
-                                    app._data.currentTransBox.splice(ind, 1);
-                                    $('#transWord' + num).remove();
-                                })
-                                if (app._data.currentTransSentenceBox.length == 0) {
-                                    webgazer.resume();
-                                    {#autoInterClass.MyAutoRun();#}
-                                }
-                            }, 1600);
+                            autoInterClass.MyAutoRunSuspend();
+
+                            {#setTimeout(function () {#}
+                            {#    $('#transWord' + num).fadeOut('fast', function () {#}
+                            {#        app.changeTextStyle(num, num + 1, 0);#}
+                            {#        let ind = app._data.currentTransBox.indexOf(num);#}
+                            {#        app._data.currentTransBox.splice(ind, 1);#}
+                            {#        $('#transWord' + num).remove();#}
+                            {#    })#}
+                            {#    if (app._data.currentTransSentenceBox.length == 0) {#}
+                            {#        webgazer.resume();#}
+                            {#        autoInterClass.MyAutoRun();#}
+                            {#    }#}
+                            {# }, 1600);#}
                         });
                 } else {
-                    this.currentTransBox.splice(this.currentTransBox.indexOf(num), 1);
+                    {#this.changeTextStyle(num, num + 1, 0);#}
+                    let ind = this.currentTransBox.indexOf(num);
+                    this.currentTransBox.splice(ind, 1);
                     $('#transWord' + num).remove();
+                    if (this.currentTransSentenceBox.length == 0 && this.currentTransBox.length == 0) {
+                        webgazer.resume();
+                        autoInterClass.MyAutoRun();
+                    }
                 }
-                {#else {#}
-                {#    this.changeTextStyle(num, num+1, 0);#}
-                {#    let ind = this.currentTransBox.indexOf(num);#}
-                {#    this.currentTransBox.splice(ind, 1);#}
-                {#    document.getElementsByClassName('trans')[ind].remove();#}
-                {# }#}
-
             },
 
             getSentenceTranslation: function (num) {
@@ -253,16 +239,6 @@
                 if (!this.isSentenceTranslated(num)) {
                     this.changeTextStyle(start, end, 1);
                     this.wordLocation = this.getWordLocation(num);
-                    {#let el = document.createElement('div');#}
-                    {#el.className = "transSentence";#}
-                    {##}
-                    {#el.innerHTML = this.transPerPage[this.page - 1][num].sentence_zh;#}
-                    {##}
-                    {#el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";#}
-                    {##}
-                    {#el.style.top = this.wordLocation.top - 20 + "px";#}
-                    {#let e = document.getElementById('readArea');#}
-                    {#e.appendChild(el);#}
                     this.currentTransSentenceBox.push(new Array(start, end));
 
                     $('<div>')
@@ -274,29 +250,43 @@
                     else
                         $('#transSentence' + start).css('right', "130px");
                     $('#transSentence' + start)
-                        .css('top', this.wordLocation.top - 40 + "px")
+                        .css('bottom',  window.screen.availHeight - this.wordLocation.bottom - 65 + "px")
                         .html(this.transPerPage[this.page - 1][num].sentence_zh)
                         .fadeIn('fast', function () {
                             webgazer.pause();
-                            {#autoInterClass.MyAutoRunSuspend();#}
-                            setTimeout(function () {
-                                $('#transSentence' + start).fadeOut('fast', function () {
-                                    app.changeTextStyle(start, end, 0);
-                                    let ind = 0;
-                                    for (let i = 0; i < app._data.currentTransSentenceBox.length; i++) {
-                                        if (app._data.currentTransSentenceBox[i][0] == start && app._data.currentTransSentenceBox[i][1] == end) {
-                                            ind = i;
-                                            break;
-                                        }
-                                    }
-                                    app._data.currentTransSentenceBox.splice(ind, 1);
-                                    $('#transSentence' + start).remove();
-                                });
-                                webgazer.resume();
-                                {#autoInterClass.MyAutoRun();#}
-                            }, 3300);
-
+                            autoInterClass.MyAutoRunSuspend();
+                            {#setTimeout(function () {#}
+                            {#    $('#transSentence' + start).fadeOut('fast', function () {#}
+                            {#        app.changeTextStyle(start, end, 0);#}
+                            {#        let ind = 0;#}
+                            {#        for (let i = 0; i < app._data.currentTransSentenceBox.length; i++) {#}
+                            {#            if (app._data.currentTransSentenceBox[i][0] == start && app._data.currentTransSentenceBox[i][1] == end) {#}
+                            {#                ind = i;#}
+                            {#                break;#}
+                            {#            }#}
+                            {#        }#}
+                            {#        app._data.currentTransSentenceBox.splice(ind, 1);#}
+                            {#        $('#transSentence' + start).remove();#}
+                            {#    });#}
+                            {#    webgazer.resume();#}
+                            {#    autoInterClass.MyAutoRun();#}
+                            {# }, 3300);#}
                         });
+                }else {
+                    {#app.changeTextStyle(start, end, 0);#}
+                    let ind = 0;
+                    for (let i = 0; i < this.currentTransSentenceBox.length; i++) {
+                        if (this.currentTransSentenceBox[i][0] == start && this.currentTransSentenceBox[i][1] == end) {
+                            ind = i;
+                            break;
+                        }
+                    }
+                    this.currentTransSentenceBox.splice(ind, 1);
+                    $('#transSentence' + start).remove();
+                    if (this.currentTransSentenceBox.length == 0 && this.currentTransBox.length == 0) {
+                        webgazer.resume();
+                        autoInterClass.MyAutoRun();
+                    }
                 }
                 {#else {#}
                 {#this.changeTextStyle(start, end, 0);#}
@@ -792,8 +782,10 @@
                 }, 8000);
             },
             MyAutoRunSuspend: function () { //暂停方法
-                clearInterval(autoInterClass.autoInter);
-                autoInterClass.autoInter = null;
+                if(autoInterClass.autoInter) {
+                    clearInterval(autoInterClass.autoInter);
+                    autoInterClass.autoInter = null;
+                }
             }
     }
     //开始使用
