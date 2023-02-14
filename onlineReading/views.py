@@ -1981,7 +1981,7 @@ def get_pred(request):
     """
     global start
     end = time.perf_counter()
-    logger.info(f"两次接口调用用时{end-start}ms")
+    logger.info(f"两次接口调用用时{end - start}ms")
     start = end
     with Timer("pred"):  # 开启计时
         x = request.POST.get("x")
@@ -2059,9 +2059,9 @@ def get_pred(request):
         sent_not_understand_list = []
         sent_mind_wandering_list = []
 
-        print(now_word_feature.fixation_duration)
         for watching in word_watching_list:
-            if now_word_feature.fixation_duration[watching] >= 3 * float(userInfo.fixation_duration_mean) and \
+            print(f'now_word_feature:{now_word_feature.fixation_duration[watching]}')
+            if now_word_feature.fixation_duration[watching] >= 3.7 * float(userInfo.fixation_duration_mean) and \
                     diff_list[watching][1] >= 1:
                 for q in range(watching - 3, watching + 3):
                     if 0 <= q <= len(word_list) - 1:
@@ -2076,25 +2076,29 @@ def get_pred(request):
             )
 
         for watching in sent_watching_list:
-            if watching - 1 >= 0:
+            if watching >= 0:
                 sent = sentence_list[watching]
-                if watching - 1 == request.session.get('pre_sent_inter', None):
+                if watching == request.session.get('pre_sent_inter', None):
                     print("重复干预")
                     continue
-                if now_sent_feature.total_dwell_time_of_sentence[watching] > 2 * float(
+                print(f"total dwell time:{now_sent_feature.total_dwell_time_of_sentence_div_syllable[watching]}")
+                if now_sent_feature.total_dwell_time_of_sentence_div_syllable[watching] > (1/2)*float(
                         userInfo.total_dwell_time_of_sentence_mean) and now_sent_feature.backward_times_of_sentence[
-                    watching - 1] > float(userInfo.backward_times_of_sentence_mean):
+                    watching] > float(userInfo.backward_times_of_sentence_mean):
                     sent_not_understand_list.append([sent[1], sent[2] - 1])
                     PageData.objects.filter(id=page_id).update(
-                        sent_intervention=page_data.sent_intervention + "," + str(watching - 1)
+                        sent_intervention=page_data.sent_intervention + "," + str(watching)
                     )
-                if now_sent_feature.total_dwell_time_of_sentence[watching] < (1 / 6) * float(
-                        userInfo.total_dwell_time_of_sentence_mean) and len(word_not_understand_list) == 0:
-                    sent_mind_wandering_list.append([sent[1], sent[2] - 1])
-                    PageData.objects.filter(id=page_id).update(
-                        mind_wander_intervention=page_data.mind_wander_intervention + "," + str(watching - 1)
-                    )
-                request.session['pre_sent_inter'] = watching
+                    request.session['pre_sent_inter'] = watching
+                if watching - 1 > 0:
+                    if now_sent_feature.total_dwell_time_of_sentence_div_syllable[watching] < (1 / 4) * float(
+                            userInfo.total_dwell_time_of_sentence_mean) and len(word_not_understand_list) <= 9:
+                        sent_mind_wandering_list.append([sent[1], sent[2] - 1])
+                        PageData.objects.filter(id=page_id).update(
+                            mind_wander_intervention=page_data.mind_wander_intervention + "," + str(watching)
+                        )
+                        request.session['pre_sent_inter'] = watching
+
             # if sent_predicts[watching]:
             #     sent = sentence_list[watching]
             #     # abnormal 再来判断原因
