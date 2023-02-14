@@ -208,7 +208,7 @@
                         .html(this.transPerPage[this.page - 1][num].zh)
                         .fadeIn('fast', function () {
                             webgazer.pause();
-                            autoInterClass.MyAutoRun();
+                            {#autoInterClass.MyAutoRun();#}
                             setTimeout(function () {
                                 $('#transWord' + num).fadeOut('fast', function () {
                                     app.changeTextStyle(num, num + 1, 0);
@@ -218,9 +218,9 @@
                                 })
                                 if (app._data.currentTransSentenceBox.length == 0) {
                                     webgazer.resume();
-                                    autoInterClass.MyAutoRun();
+                                    {#autoInterClass.MyAutoRun();#}
                                 }
-                            }, 1300);
+                            }, 1600);
                         });
                 } else {
                     this.currentTransBox.splice(this.currentTransBox.indexOf(num), 1);
@@ -278,7 +278,7 @@
                         .html(this.transPerPage[this.page - 1][num].sentence_zh)
                         .fadeIn('fast', function () {
                             webgazer.pause();
-                            autoInterClass.MyAutoRunSuspend();
+                            {#autoInterClass.MyAutoRunSuspend();#}
                             setTimeout(function () {
                                 $('#transSentence' + start).fadeOut('fast', function () {
                                     app.changeTextStyle(start, end, 0);
@@ -293,8 +293,8 @@
                                     $('#transSentence' + start).remove();
                                 });
                                 webgazer.resume();
-                                autoInterClass.MyAutoRun();
-                            }, 2800);
+                                {#autoInterClass.MyAutoRun();#}
+                            }, 3300);
 
                         });
                 }
@@ -321,13 +321,13 @@
                     .html("你刚刚走神了，请重新认真阅读错过的内容！")
                     .fadeIn('fast', function () {
                         webgazer.pause();
-                        autoInterClass.MyAutoRunSuspend();
+                        {#autoInterClass.MyAutoRunSuspend();#}
                         setTimeout(function () {
                             $('.alert').fadeOut('fast', function () {
                             });
                         }, 800)
                         webgazer.resume();
-                        autoInterClass.MyAutoRun();
+                        {#autoInterClass.MyAutoRun();#}
                     });
             },
 
