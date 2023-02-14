@@ -208,6 +208,7 @@
                         .html(this.transPerPage[this.page - 1][num].zh)
                         .fadeIn('fast', function () {
                             webgazer.pause();
+                            autoInterClass.MyAutoRun();
                             setTimeout(function () {
                                 $('#transWord' + num).fadeOut('fast', function () {
                                     app.changeTextStyle(num, num + 1, 0);
@@ -215,8 +216,10 @@
                                     app._data.currentTransBox.splice(ind, 1);
                                     $('#transWord' + num).remove();
                                 })
-                                if (app._data.currentTransSentenceBox.length == 0)
+                                if (app._data.currentTransSentenceBox.length == 0) {
                                     webgazer.resume();
+                                    autoInterClass.MyAutoRun();
+                                }
                             }, 1300);
                         });
                 } else {
@@ -275,6 +278,7 @@
                         .html(this.transPerPage[this.page - 1][num].sentence_zh)
                         .fadeIn('fast', function () {
                             webgazer.pause();
+                            autoInterClass.MyAutoRunSuspend();
                             setTimeout(function () {
                                 $('#transSentence' + start).fadeOut('fast', function () {
                                     app.changeTextStyle(start, end, 0);
@@ -289,6 +293,7 @@
                                     $('#transSentence' + start).remove();
                                 });
                                 webgazer.resume();
+                                autoInterClass.MyAutoRun();
                             }, 2800);
 
                         });
@@ -310,21 +315,20 @@
 
             getWanderRemind: function () {
                 let style = 'alert-warning';
-                let time = 1200;
                 $('<div>')
                     .appendTo('body')
                     .addClass('alert ' + style)
                     .html("你刚刚走神了，请重新认真阅读错过的内容！")
                     .fadeIn('fast', function () {
                         webgazer.pause();
+                        autoInterClass.MyAutoRunSuspend();
                         setTimeout(function () {
                             $('.alert').fadeOut('fast', function () {
-
                             });
                         }, 800)
                         webgazer.resume();
+                        autoInterClass.MyAutoRun();
                     });
-
             },
 
             changeTextStyle: function (start, end, isHighlight) {
@@ -735,7 +739,63 @@
             }
         },
     })
-    let autoInter;
+
+    var autoInterClass = {
+            autoInter: null, //全局变量,暂停用。
+            MyAutoRun: function () { //开始方法
+                autoInterClass.autoInter = setInterval(function () {
+                    let formdata = new FormData();
+                    formdata.append("x", x.toString());
+                    formdata.append("y", y.toString());
+                    formdata.append("t", t.toString());
+                    x = [];
+                    y = [];
+                    t = [];
+                    $.ajax({
+                        type: 'POST',
+                        url: '/gaze/',
+                        data: formdata,
+                        async: false,
+                        success: function (res) {
+                            let word_inter = res['word'];
+                            let sentence_inter = res['sentence'];
+                            let wander_inter = res['wander'];
+                            if(wander_inter && wander_inter.length > 0) {
+                                app.getWanderRemind();
+                            }else {
+                                for(let i = 0; i < sentence_inter.length; i++){
+                                    let start = sentence_inter[i][0];
+                                    let end = sentence_inter[i][1];
+                                    let tmp = [];
+                                    for(let j = 0; j < word_inter.length; j++) {
+                                        if(word_inter[j] <= end && word_inter[j] >= start) {
+                                            tmp.push(j);
+                                        }
+                                    }
+                                    for (let j = 0; j < tmp.length; j++) {
+                                        word_inter.splice(j, 1);
+                                    }
+                                    {#if(sentence_inter[i] < this.translation.length)#}
+                                    app.getSentenceTranslation(start);
+                                }
+                                for(let i = 0; i < word_inter.length; i++)
+                                    app.getWordTranslation(word_inter[i]);
+                            }
+
+                        },
+                        error: function () {
+                            console.log("error");
+                        },
+                        processData: false,
+                        contentType: false
+                    })
+                }, 8000);
+            },
+            MyAutoRunSuspend: function () { //暂停方法
+                clearInterval(autoInterClass.autoInter);
+                autoInterClass.autoInter = null;
+            }
+    }
     //开始使用
     async function get_start() {
         //全屏
@@ -759,9 +819,7 @@
          }).begin()
 
         app.getPage();
-        autoInter = setInterval(function () {
-            app.autoIntervention();
-         }, 8000);
+        autoInterClass.MyAutoRun();
     }
 
     //监听空格事件
@@ -784,7 +842,7 @@
             }
             case 32: {
                 stop = true;
-                clearInterval(autoInter);
+                autoInterClass.MyAutoRunSuspend();
                 webgazer.pause();
                 let formdata = new FormData();
                 {#formdata.append("interventions", interventions.toString());#}
