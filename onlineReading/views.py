@@ -31,7 +31,7 @@ from transformers import XLNetTokenizerFast, XLNetModel
 import numpy as np
 import spacy
 import torch
-
+import time
 from nltk.tokenize import sent_tokenize
 import pandas as pd
 import json
@@ -46,6 +46,8 @@ xlnet_tokenizer = XLNetTokenizerFast.from_pretrained(base + 'xlnet-base-cased')
 xlnet_model = XLNetModel.from_pretrained(base + 'xlnet-base-cased', output_attentions=True)
 
 kw_extractor = YAKE()
+
+start = time.perf_counter()
 
 word_fam_map = {}
 with open('mrc2.dct', 'r') as fp:
@@ -1977,6 +1979,10 @@ def get_pred(request):
         * 历史的所有gaze点
         * 该页的位置信息
     """
+    global start
+    end = time.perf_counter()
+    logger.info(f"两次接口调用用时{end-start}ms")
+    start = end
     with Timer("pred"):  # 开启计时
         x = request.POST.get("x")
         y = request.POST.get("y")
