@@ -47,6 +47,8 @@ urlpatterns = [
     path('article/check/', views.check_article),
     path('page_info/', views.get_page_info),
     path('gaze/', views.get_pred),
+    path('gaze_by_glass/', views.get_pred_by_glass),
     path('semantic_attention_map/', views.get_semantic_attention_map),
-    path('question_dataset/', views.get_question_dataset),
+    # path('question_dataset/', views.get_question_dataset),
+    path('marker/',views.go_marker)
 ]
