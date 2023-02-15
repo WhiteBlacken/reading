@@ -1167,18 +1167,22 @@ def format_gaze(
     list_x = []
     list_y = []
     list_t = []
+    if type(gaze_x) == list:
+        list_x = gaze_x
+        list_y = gaze_y
+        list_t = gaze_t
+    else:
+        for item in gaze_x.split(","):
+            if len(item) > 0:
+                list_x.append(float(item))
 
-    for item in gaze_x.split(","):
-        if len(item) > 0:
-            list_x.append(float(item))
+        for item in gaze_y.split(","):
+            if len(item) > 0:
+                list_y.append(float(item))
 
-    for item in gaze_y.split(","):
-        if len(item) > 0:
-            list_y.append(float(item))
-
-    for item in gaze_t.split(","):
-        if len(item) > 0:
-            list_t.append(float(item))
+        for item in gaze_t.split(","):
+            if len(item) > 0:
+                list_t.append(float(item))
 
     print(f'len(x):{len(list_x)}')
     # 时序滤波
@@ -1198,18 +1202,19 @@ def format_gaze(
     assert len(list_x) == len(list_y) == len(list_t)
     gaze_points = [[list_x[i], list_y[i], list_t[i]] for i in range(len(list_x))]
 
-    begin = 0
-    end = 0
-    for i, gaze in enumerate(gaze_points):
-        if gaze[2] - gaze_points[0][2] > begin_time:
-            begin = i
-            break
-    for i in range(len(gaze_points) - 1, 0, -1):
-        if gaze_points[-1][2] - gaze_points[i][2] > end_time:
-            end = i
-            break
-    assert begin < end
-    print(f'len(end_x):{end - begin + 1}')
+    # begin = 0
+    # end = 0
+    # for i, gaze in enumerate(gaze_points):
+    #     if gaze[2] - gaze_points[0][2] > begin_time:
+    #         begin = i
+    #         break
+    # for i in range(len(gaze_points) - 1, 0, -1):
+    #     if gaze_points[-1][2] - gaze_points[i][2] > end_time:
+    #         end = i
+    #         break
+    # assert begin < end
+    # print(f'len(end_x):{end - begin + 1}')
+    return gaze_points
     return gaze_points[begin:end]
 
 
