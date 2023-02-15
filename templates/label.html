@@ -51,9 +51,10 @@
 {#                </div>#}
             </div>
         </div>
-        <el-button type="primary" style="position: fixed;bottom: 1.8rem;right: 1.8rem;" v-if="page == totalPage"
+        <el-button type="primary" style="position: fixed;bottom: 1.8rem;right: 1.8rem;"
                        v-on:click="collect_labels">标注完成
         </el-button>
+{#    v-if="page == totalPage"#}
     </div>
 </body>
 <script>

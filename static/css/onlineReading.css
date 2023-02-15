@@ -37,7 +37,7 @@ html,body{
     height: auto;
     text-align: center;
     padding: 10px 20px;
-    border: 1px solid red;
+    /*border: 1px solid red;*/
     border-radius: 5px;
     font-size: 17pt;
     background-color: white;
@@ -51,7 +51,7 @@ html,body{
     height: auto;
     text-align: center;
     padding: 10px 20px;
-    border: 1px solid red;
+    /*border: 1px solid red;*/
     border-radius: 5px;
     font-size: 17pt;
     background-color: white;
@@ -112,21 +112,23 @@ html,body{
 .alert {
     display: none;
     position: absolute !important;
-    top: 50%;
-    left: 50%;
+    top: 40%;
+    left: 54%;
     transform: translate(-50%, -50%);
     width: 320px;
     padding: 25px;
-    border: 1px solid transparent;
-    border-radius: 10px;
+    /*border: 1px solid transparent;*/
+    /*border-radius: 10px;*/
     text-align: center;
+    font-size: 17pt;
+    background-color: white;
 }
 
-.alert-warning {
-    color: #8a6d3b;
-    background-color: #fcf8e3;
-    border-color: #faebcc;
-}
+/*.alert-warning {*/
+/*    !*color: #8a6d3b;*!*/
+/*    background-color: white;*/
+/*    !*border-color: #faebcc;*!*/
+/*}*/
 
 #markers-top {
     width: 100%;

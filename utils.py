@@ -870,6 +870,21 @@ def get_word_and_sentence_from_text(content):
     return word_list, sentence_list
 
 
+def get_interventions(word,sent,mind):
+    word_list = str(word).split(',[')[1:]
+    wor = []
+    wor_ = []
+    for i in range(len(word_list)):
+        word_list[i] = word_list[i].split(']')[0]
+        wor.extend(word_list[i].split(','))
+        wor_.append(word_list[i].split(','))
+    word_list = wor
+    sent_list = str(sent).split(',')[1:]
+    mind_list = str(mind).split(',')[1:]
+    # print("wor_:{s}".format(s=wor_))
+    return word_list, sent_list, mind_list, wor_
+
+
 def get_word_count(content):
     all_word_list, all_sentence_list = get_word_and_sentence_from_text(content)
     return len(all_word_list)

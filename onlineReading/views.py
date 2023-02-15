@@ -107,6 +107,7 @@ from utils import (
     paint_gaze_on_pic,
     preprocess_data,
     x_y_t_2_coordinate, process_fixations, get_row,
+    get_interventions,
 )
 
 with open('model/wordSVM.pickle', 'rb') as f:
@@ -2271,6 +2272,69 @@ def get_semantic_attention_map(request):
             # for i in range(len(word_fam_data)):
 
             word_fam_data = dict(zip(word_fam_data['word'], word_fam_data['fam']))
+
+
+def get_question_dataset(request):
+    user = request.GET.get("user")
+    exp_ids = request.GET.get("exp_id").split(',')
+    questionaire_word = pd.DataFrame()
+    questionaire_sent = pd.DataFrame()
+    words = []
+    word_block = []
+    sent_block = []
+    sentences = []
+    base_path = "pilot study\\" + str(user) + "\\"
+    if not os.path.exists(base_path):
+        os.makedirs(base_path)
+
+    for exp_id in exp_ids:
+        page_data_ls = PageData.objects.filter(experiment_id=exp_id)
+        for page_data in page_data_ls:
+            page_data_id = page_data.id
+            pageData = PageData.objects.get(id=page_data_id)
+            # 准备工作，获取单词和句子的信息
+            word_list, sentence_list = get_word_and_sentence_from_text(pageData.texts)
+            word_intervention, sent_intervention, mind_intervention, word_raw = \
+                get_interventions(pageData.word_intervention, pageData.sent_intervention,
+                                  pageData.mind_wander_intervention)
+            # print(word_intervention)
+            # print(sent_intervention)
+            for i in range(len(word_intervention)):
+                words.append(word_list[int(word_intervention[i])])
+
+            for i in range(len(sent_intervention)):
+                sentences.append(sentence_list[int(sent_intervention[i])][0])
+                if int(sent_intervention[i]) == 0:
+                    sent_block.append([sentence_list[int(sent_intervention[i])][0]])
+                elif int(sent_intervention[i]) == 1:
+                    sent_block.append([sentence_list[int(sent_intervention[i])-1][0],sentence_list[int(sent_intervention[i])][0]])
+                elif int(sent_intervention[i]) == 2:
+                    sent_block.append(
+                        [sentence_list[int(sent_intervention[i]) - 2][0], sentence_list[int(sent_intervention[i]) - 1][0], sentence_list[int(sent_intervention[i])][0]])
+                else:
+                    sent_block.append(
+                        [sentence_list[int(sent_intervention[i]) - 3][0], sentence_list[int(sent_intervention[i]) - 2][0], sentence_list[int(sent_intervention[i]) - 1][0],
+                         sentence_list[int(sent_intervention[i])][0]])
+            for i in range(len(word_raw)):
+                wor_blk = []
+                for j in range(len(word_raw[i])):
+                    wor_blk.append(word_list[int(word_raw[i][j])])
+                word_block.append(wor_blk)
+    words = list(set(words))
+    sentences = list(set(sentences))
+    # print(word_block)
+    print("word blocks:{w}".format(w=word_block))
+    print("sent blocks:{w}".format(w=sent_block))
+    questionaire_word['words'] = words
+    questionaire_sent['sentences'] = sentences
+    questionaire_word['understand?(Y/N)'] = None
+    questionaire_word['understand before experiment?(Y/N)'] = None
+    questionaire_sent['understand?(Y/N)'] = None
+    questionaire_sent['understand before experiment?(Y/N)'] = None
+
+    questionaire_word.to_csv(base_path + "word_question.csv")
+    questionaire_sent.to_csv(base_path + "sent_question.csv")
+    return HttpResponse(1)
 
 
 class WordFeature:
