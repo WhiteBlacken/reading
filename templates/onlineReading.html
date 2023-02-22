@@ -68,7 +68,7 @@
 </body>
 <!--bp5 js集成文件-->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-<!--webgazer-->
+{#<!--webgazer-->#}
 <script src="/static/js/webgazer.js"></script>
 <!--截图相关-->
 <script src="/static/js/canvas2image.js"></script>
@@ -102,6 +102,7 @@
             currentTransWord: -1,
             currentTransBox: [],
             currentTransSentenceBox: [],
+            currentMindWanderBox: [],
             readSequel: [],
             //每段末尾词的索引
             paraLoc: [],
@@ -179,18 +180,41 @@
                 return false;
             },
 
+            isMindwandered: function (num) {
+                let start = 0;
+                let end = 0;
+                for (let i = 0; i < this.sentences.length; i++) {
+                    let w = this.sentences[i].split(' ');
+                    for (let j = 0; j < w.length; j++)
+                        if (w[j] == '')
+                            w.splice(j, 1);
+                    if (start + w.length <= num) {
+                        start += w.length;
+                    } else {
+                        end = start + w.length;
+                        break;
+                    }
+                }
+                for (let i = 0; i < this.currentMindWanderBox.length; i++) {
+                    if (this.currentMindWanderBox[i][0] == start && this.currentMindWanderBox[i][1] == end)
+                        return true;
+                }
+                return false;
+            },
+
             getWordTranslation: function (num) {
                 if (!this.isWordTranslated(num)) {
-                    this.changeTextStyle(num, num + 1, 1);
-                    this.wordLocation = this.getWordLocation(num);
+                    this.changeTextStyle(num, num + 1, 'word');
+                    let wordLocation = this.getWordLocation(num);
                     this.currentTransBox.push(num);
                     this.currentTransWord = num;
                     $('<div>')
                         .appendTo('#readArea')
                         .addClass('trans')
                         .attr('id', 'transWord' + num)
-                        .css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px")
-                        .css('top',  this.wordLocation.top - 56 + "px")
+                        .css('left', (wordLocation.left + wordLocation.right) / 2 + "px")
+                        .css('transform', "translate(-50%, 0)")
+                        .css('bottom',  $('#reading').height() - wordLocation.top + "px")
                         .html(this.transPerPage[this.page - 1][num].zh)
                         .fadeIn('fast', function () {
                             webgazer.pause();
@@ -210,7 +234,7 @@
                             {# }, 1600);#}
                         });
                 } else {
-                    {#this.changeTextStyle(num, num + 1, 0);#}
+                    this.changeTextStyle(num, num + 1, 'word');
                     let ind = this.currentTransBox.indexOf(num);
                     this.currentTransBox.splice(ind, 1);
                     $('#transWord' + num).remove();
@@ -219,6 +243,7 @@
                         autoInterClass.MyAutoRun();
                     }
                 }
+
             },
 
             getSentenceTranslation: function (num) {
@@ -237,10 +262,9 @@
                     }
                 }
                 if (!this.isSentenceTranslated(num)) {
-                    this.changeTextStyle(start, end, 1);
-                    this.wordLocation = this.getWordLocation(num);
+                    this.changeTextStyle(start, end, 'sentence');
+                    let wordLocation = this.getWordLocation(start);
                     this.currentTransSentenceBox.push(new Array(start, end));
-
                     $('<div>')
                         .appendTo('#readArea')
                         .addClass('transSentence')
@@ -255,7 +279,7 @@
                     $('#transSentence' + start).css('left', "330px");
                     $('#transSentence' + start).css('right', "130px");
                     $('#transSentence' + start)
-                        .css('top',  this.wordLocation.top - 88 + "px")
+                        .css('bottom', $('#reading').height() - wordLocation.top + "px")
                         .html(this.transPerPage[this.page - 1][num].sentence_zh)
                         .fadeIn('fast', function () {
                             webgazer.pause();
@@ -278,7 +302,7 @@
                             {# }, 3300);#}
                         });
                 }else {
-                    {#app.changeTextStyle(start, end, 0);#}
+                    this.changeTextStyle(start, end, 'sentence');
                     let ind = 0;
                     for (let i = 0; i < this.currentTransSentenceBox.length; i++) {
                         if (this.currentTransSentenceBox[i][0] == start && this.currentTransSentenceBox[i][1] == end) {
@@ -286,6 +310,7 @@
                             break;
                         }
                     }
+
                     this.currentTransSentenceBox.splice(ind, 1);
                     $('#transSentence' + start).remove();
                     if (this.currentTransSentenceBox.length == 0 && this.currentTransBox.length == 0) {
@@ -308,9 +333,28 @@
 
             },
 
-            getWanderRemind: function () {
+            getWanderRemind: function (num) {
                 {#let style = 'alert-warning';#}
-                $('<div>')
+                let start = 0;
+                let end = 0;
+                for (let i = 0; i < this.sentences.length; i++) {
+                    let w = this.sentences[i].split(' ');
+                    for (let j = 0; j < w.length; j++)
+                        if (w[j] == '')
+                            w.splice(j, 1);
+                    if (start + w.length <= num) {
+                        start += w.length;
+                    } else {
+                        end = start + w.length;
+                        break;
+                    }
+                }
+                if (!this.isMindwandered(num)) {
+                    this.changeTextStyle(start, end, 'mind');
+                    this.currentMindWanderBox.push(new Array(start, end));
+                }
+                if(this.currentMindWanderBox.length == 1) {
+                    $('<div>')
                     .appendTo('body')
                     .addClass('alert')
                     .html("你刚刚走神了，请重新认真阅读错过的内容！")
@@ -319,27 +363,51 @@
                         {#autoInterClass.MyAutoRunSuspend();#}
                         setTimeout(function () {
                             $('.alert').fadeOut('fast', function () {
+                                for (let i = 0; i < this.currentMindWanderBox.length; i++) {
+                                    let start = this.currentMindWanderBox[i][0];
+                                    let end = this.currentMindWanderBox[i][1];
+                                    this.changeTextStyle(start, end, 'mind');
+                                }
+                                this.currentMindWanderBox = [];
                             });
-                        }, 80000)
+                        }, 800)
                         webgazer.resume();
                         {#autoInterClass.MyAutoRun();#}
                     });
+                }
             },
 
-            changeTextStyle: function (start, end, isHighlight) {
-                if (isHighlight == 1) {
-                    for (let i = start; i < end; i++) {
-                        if ($('.word:eq(' + i + ')').css('text-decoration') == 'none solid rgb(51, 51, 51)') {
-                            $('.word:eq(' + i + ')').css('text-decoration', "underline");
-                            $('.word:eq(' + i + ')').css('color', "blue");
+            changeTextStyle: function (start, end, inter_type) {
+                switch(inter_type) {
+                    case 'word': {
+                        for (let i = start; i < end; i++) {
+                            if (!this.isWordTranslated(i)) {
+                                $('.word:eq(' + i + ')').css('background-color', "#32B4EF");
+                            }else {
+                                $('.word:eq(' + i + ')').css('background-color', "white");
+                            }
                         }
+                        break;
                     }
-                } else {
-                    for (let i = start; i < end; i++) {
-                        if ($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)') {
-                            $('.word:eq(' + i + ')').css('text-decoration', "none solid rgb(51, 51, 51)");
-                            $('.word:eq(' + i + ')').css('color', "black");
+                    case 'sentence': {
+                        for (let i = start; i < end; i++) {
+                            if (!this.isSentenceTranslated(i)) {
+                                $('.word:eq(' + i + ')').css('background-color', "#EB5354");
+                            }else {
+                                $('.word:eq(' + i + ')').css('background-color', "white");
+                            }
                         }
+                        break;
+                    }
+                    case 'mind': {
+                        for (let i = start; i < end; i++) {
+                            if (!this.isMindwandered(i)) {
+                                $('.word:eq(' + i + ')').css('background-color', "#FBCB0C");
+                            }else {
+                                $('.word:eq(' + i + ')').css('background-color', "white");
+                            }
+                        }
+                        break;
                     }
                 }
             },
@@ -395,7 +463,9 @@
                         let sentence_inter = res['sentence'];
                         let wander_inter = res['wander'];
                         if(wander_inter && wander_inter.length > 0) {
-                            app.getWanderRemind();
+                            for(let i = 0; i < wander_inter.length; i++) {
+                                app.getWanderRemind(wander_inter[i][0], wander_inter[i][1], 'mind');
+                            }
                         }else {
                             for(let i = 0; i < sentence_inter.length; i++){
                                 let start = sentence_inter[i][0];
@@ -469,7 +539,6 @@
                         this.sentenceTranslations.push(tr[s].sentence_zh);
                     }
                 }
-                console.log(this.sentenceTranslations)
                 {#for(let s = 0; s < tr.length; s++){#}
                 {#    for(let t = 0; t < this.sentenceTranslations.length ; t++) {#}
                 {#        if (this.sentenceTranslations[t] == tr[s].sentence_zh) {#}
@@ -673,6 +742,9 @@
                 formdata.append("page", this.page);
                 formdata.append("page_text", this.contentCurPage);
                 formdata.append("location", JSON.stringify(this.buttonCurLoc));
+                formdata.append("x",x.toString());
+                formdata.append("y",y.toString());
+                formdata.append("t",t.toString());
                 {#formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page - 1]));#}
 
                 $.ajax({

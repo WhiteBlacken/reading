@@ -107,7 +107,7 @@ from utils import (
     paint_gaze_on_pic,
     preprocess_data,
     x_y_t_2_coordinate, process_fixations, get_row,
-    get_interventions,
+    # get_interventions,
 )
 
 with open('model/wordSVM.pickle', 'rb') as f:
@@ -881,19 +881,19 @@ def get_all_heatmap(request):
         存在问题：生成top和展示图片实际上做了两个heatmap
         """
         # 滤波处理
-        # kernel_size = int(request.GET.get("window", 0))
-        # get_visual_attention(
-        #     page_data_id,
-        #     exp.first().user,
-        #     pageData.gaze_x,
-        #     pageData.gaze_y,
-        #     pageData.gaze_t,
-        #     background,
-        #     base_path,
-        #     word_list,
-        #     word_locations,
-        #     top_dict,
-        # )
+        kernel_size = int(request.GET.get("window", 0))
+        get_visual_attention(
+            page_data_id,
+            exp.first().user,
+            pageData.gaze_x,
+            pageData.gaze_y,
+            pageData.gaze_t,
+            background,
+            base_path,
+            word_list,
+            word_locations,
+            top_dict,
+        )
 
         """
         将单词不懂和句子不懂输出,走神的图示输出
@@ -2127,170 +2127,170 @@ def get_pred(request):
     return JsonResponse(context)
 
 
-def get_pred_by_glass(request):
-    import zmq
-    import msgpack
-    ctx = zmq.Context()
-
-    pupil_remote = ctx.socket(zmq.REQ)
-
-    ip = 'localhost'  # If you talk to a different machine use its IP.
-    port = 50020  # The port defaults to 50020. Set in Pupil Capture GUI.
-
-    pupil_remote.connect(f'tcp://{ip}:{port}')
-
-    # Request 'SUB_PORT' for reading data
-    pupil_remote.send_string('SUB_PORT')
-    sub_port = pupil_remote.recv_string()
-    print(f'sub_port:{sub_port}')
-
-    subscriber = ctx.socket(zmq.SUB)
-    subscriber.connect(f'tcp://{ip}:{sub_port}')
-    subscriber.subscribe('gaze.')  # receive all gaze messages
-
-    # we need a serializer
-    cnt = 0
-
-    x = []
-    y = []
-    t = []
-
-    while True: # 需要修改
-        topic, payload = subscriber.recv_multipart()
-        message = msgpack.loads(payload)
-        print(f"{topic}: {message}")
-        x.append(message['norm_pos'][0]*1920)
-        y.append(message['norm_pos'][1]*1080)
-        t.append(message['timestamp'])
-        cnt += 1
-        if cnt > 30:
-            break
-
-    with Timer("pred_by_glass"):  # 开启计时
-
-        page_id = request.session['page_id']
-        page_data = PageData.objects.get(id=page_id)
-
-        userInfo = UserReadingInfo.objects.filter(user=request.session['username']).first()
-
-
-        word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
-
-        border, rows, danger_zone, len_per_word = textarea(page_data.location)
-
-        diff_list = generate_word_difficulty(page_data.texts)
-
-        word_watching_list = []
-        sent_watching_list = []
-
-        # TODO 为了减少计算量，仅在当前的单词上计算特征
-
-        if len(x) > 0:
-            gaze_points = format_gaze(x, y, t, begin_time=0, end_time=0)
-            result_fixations = detect_fixations(gaze_points)
-
-            now_word_feature = WordFeature(len(word_list), word_list, sentence_list, 'test')
-            now_word_feature = get_word_feature(now_word_feature, result_fixations, page_data.location)
-
-            now_sent_feature = SentFeature(len(sentence_list), sentence_list, word_list)
-            now_sent_feature = get_sent_feature(now_sent_feature, result_fixations, page_data.location, sentence_list,
-                                                rows)
-            now_sent_feature.update()  # 特征除以syllable
-
-            # result_fixations = keep_row(result_fixations)
-            # 单词fixation最多的句子，为需要判断的句子
-            sent_fix = [0 for _ in range(len(sentence_list))]
-
-            print(f"result_fixation:{result_fixations}")
-            for fixation in result_fixations:
-                index, flag = get_item_index_x_y(page_data.location, fixation[0],
-                                                 fixation[1])
-                if index != -1:
-                    word_watching_list.append(index)
-                    sent_index = get_sentence_by_word(index, sentence_list)
-                    if sent_index != 0:
-                        sent_fix[sent_index] += 1
-
-            max_fix_sent = 0
-            max_index_sent = 0
-            for i, sent in enumerate(sent_fix):
-                if sent > max_fix_sent:
-                    max_fix_sent = sent
-                    max_index_sent = i
-            sent_watching_list.append(max_index_sent)
-
-        print(f'word_watching:{word_watching_list}')
-        print(f'sent_watching:{sent_watching_list}')
-
-        word_not_understand_list = []
-        sent_not_understand_list = []
-        sent_mind_wandering_list = []
-
-        for watching in word_watching_list:
-            print(f'now_word_feature:{now_word_feature.fixation_duration[watching]}')
-            if now_word_feature.fixation_duration[watching] >= 3.7 * float(userInfo.fixation_duration_mean) and \
-                    diff_list[watching][1] >= 1:
-                for q in range(watching - 3, watching + 3):
-                    if 0 <= q <= len(word_list) - 1:
-                        word_not_understand_list.append(q)
-        word_not_understand_list = list(set(word_not_understand_list))
-
-        print(f"word_not_understand:{word_not_understand_list}")
-
-        if len(word_not_understand_list) > 0:
-            PageData.objects.filter(id=page_id).update(
-                word_intervention=page_data.word_intervention + "," + str(word_not_understand_list)
-            )
-
-        for watching in sent_watching_list:
-            if watching >= 0:
-                sent = sentence_list[watching]
-                if watching == request.session.get('pre_sent_inter', None):
-                    print("重复干预")
-                    continue
-                print(f"total dwell time:{now_sent_feature.total_dwell_time_of_sentence_div_syllable[watching]}")
-                if now_sent_feature.total_dwell_time_of_sentence_div_syllable[watching] > (1 / 2) * float(
-                        userInfo.total_dwell_time_of_sentence_mean) and now_sent_feature.backward_times_of_sentence[
-                    watching] > float(userInfo.backward_times_of_sentence_mean):
-                    sent_not_understand_list.append([sent[1], sent[2] - 1])
-                    PageData.objects.filter(id=page_id).update(
-                        sent_intervention=page_data.sent_intervention + "," + str(watching)
-                    )
-                    request.session['pre_sent_inter'] = watching
-                if watching - 1 > 0:
-                    if now_sent_feature.total_dwell_time_of_sentence_div_syllable[watching] < (1 / 4) * float(
-                            userInfo.total_dwell_time_of_sentence_mean) and len(word_not_understand_list) <= 9:
-                        sent_mind_wandering_list.append([sent[1], sent[2] - 1])
-                        PageData.objects.filter(id=page_id).update(
-                            mind_wander_intervention=page_data.mind_wander_intervention + "," + str(watching)
-                        )
-                        request.session['pre_sent_inter'] = watching
-
-            # if sent_predicts[watching]:
-            #     sent = sentence_list[watching]
-            #     # abnormal 再来判断原因
-            #     if abnormal_predicts[watching] == 0:
-            #         sent_mind_wandering_list.append([sent[1], sent[2] - 1])
-            #         sent_not_understand_list.append([sent[1], sent[2] - 1])
-            #     if abnormal_predicts[watching] == 1:
-            #         sent_not_understand_list.append([sent[1], sent[2] - 1])
-            #     if abnormal_predicts[watching] == 2:
-            #         sent_mind_wandering_list.append([sent[1], sent[2] - 1])
-
-        # PageData.objects.filter(id=page_id).update(
-        #     gaze_x=gaze_x,
-        #     gaze_y=gaze_y,
-        #     gaze_t=gaze_t,
-        # )
-
-    context = {
-        "word": word_not_understand_list,
-        "sentence": sent_not_understand_list,
-        "wander": sent_mind_wandering_list
-    }
-
-    # 将系统的干预记下来，用于pilot study的分析
-    return JsonResponse(context)
+# def get_pred_by_glass(request):
+#     import zmq
+#     import msgpack
+#     ctx = zmq.Context()
+#
+#     pupil_remote = ctx.socket(zmq.REQ)
+#
+#     ip = 'localhost'  # If you talk to a different machine use its IP.
+#     port = 50020  # The port defaults to 50020. Set in Pupil Capture GUI.
+#
+#     pupil_remote.connect(f'tcp://{ip}:{port}')
+#
+#     # Request 'SUB_PORT' for reading data
+#     pupil_remote.send_string('SUB_PORT')
+#     sub_port = pupil_remote.recv_string()
+#     print(f'sub_port:{sub_port}')
+#
+#     subscriber = ctx.socket(zmq.SUB)
+#     subscriber.connect(f'tcp://{ip}:{sub_port}')
+#     subscriber.subscribe('gaze.')  # receive all gaze messages
+#
+#     # we need a serializer
+#     cnt = 0
+#
+#     x = []
+#     y = []
+#     t = []
+#
+#     while True: # 需要修改
+#         topic, payload = subscriber.recv_multipart()
+#         message = msgpack.loads(payload)
+#         print(f"{topic}: {message}")
+#         x.append(message['norm_pos'][0]*1920)
+#         y.append(message['norm_pos'][1]*1080)
+#         t.append(message['timestamp'])
+#         cnt += 1
+#         if cnt > 30:
+#             break
+#
+#     with Timer("pred_by_glass"):  # 开启计时
+#
+#         page_id = request.session['page_id']
+#         page_data = PageData.objects.get(id=page_id)
+#
+#         userInfo = UserReadingInfo.objects.filter(user=request.session['username']).first()
+#
+#
+#         word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+#
+#         border, rows, danger_zone, len_per_word = textarea(page_data.location)
+#
+#         diff_list = generate_word_difficulty(page_data.texts)
+#
+#         word_watching_list = []
+#         sent_watching_list = []
+#
+#         # TODO 为了减少计算量，仅在当前的单词上计算特征
+#
+#         if len(x) > 0:
+#             gaze_points = format_gaze(x, y, t, begin_time=0, end_time=0)
+#             result_fixations = detect_fixations(gaze_points)
+#
+#             now_word_feature = WordFeature(len(word_list), word_list, sentence_list, 'test')
+#             now_word_feature = get_word_feature(now_word_feature, result_fixations, page_data.location)
+#
+#             now_sent_feature = SentFeature(len(sentence_list), sentence_list, word_list)
+#             now_sent_feature = get_sent_feature(now_sent_feature, result_fixations, page_data.location, sentence_list,
+#                                                 rows)
+#             now_sent_feature.update()  # 特征除以syllable
+#
+#             # result_fixations = keep_row(result_fixations)
+#             # 单词fixation最多的句子，为需要判断的句子
+#             sent_fix = [0 for _ in range(len(sentence_list))]
+#
+#             print(f"result_fixation:{result_fixations}")
+#             for fixation in result_fixations:
+#                 index, flag = get_item_index_x_y(page_data.location, fixation[0],
+#                                                  fixation[1])
+#                 if index != -1:
+#                     word_watching_list.append(index)
+#                     sent_index = get_sentence_by_word(index, sentence_list)
+#                     if sent_index != 0:
+#                         sent_fix[sent_index] += 1
+#
+#             max_fix_sent = 0
+#             max_index_sent = 0
+#             for i, sent in enumerate(sent_fix):
+#                 if sent > max_fix_sent:
+#                     max_fix_sent = sent
+#                     max_index_sent = i
+#             sent_watching_list.append(max_index_sent)
+#
+#         print(f'word_watching:{word_watching_list}')
+#         print(f'sent_watching:{sent_watching_list}')
+#
+#         word_not_understand_list = []
+#         sent_not_understand_list = []
+#         sent_mind_wandering_list = []
+#
+#         for watching in word_watching_list:
+#             print(f'now_word_feature:{now_word_feature.fixation_duration[watching]}')
+#             if now_word_feature.fixation_duration[watching] >= 3.7 * float(userInfo.fixation_duration_mean) and \
+#                     diff_list[watching][1] >= 1:
+#                 for q in range(watching - 3, watching + 3):
+#                     if 0 <= q <= len(word_list) - 1:
+#                         word_not_understand_list.append(q)
+#         word_not_understand_list = list(set(word_not_understand_list))
+#
+#         print(f"word_not_understand:{word_not_understand_list}")
+#
+#         if len(word_not_understand_list) > 0:
+#             PageData.objects.filter(id=page_id).update(
+#                 word_intervention=page_data.word_intervention + "," + str(word_not_understand_list)
+#             )
+#
+#         for watching in sent_watching_list:
+#             if watching >= 0:
+#                 sent = sentence_list[watching]
+#                 if watching == request.session.get('pre_sent_inter', None):
+#                     print("重复干预")
+#                     continue
+#                 print(f"total dwell time:{now_sent_feature.total_dwell_time_of_sentence_div_syllable[watching]}")
+#                 if now_sent_feature.total_dwell_time_of_sentence_div_syllable[watching] > (1 / 2) * float(
+#                         userInfo.total_dwell_time_of_sentence_mean) and now_sent_feature.backward_times_of_sentence[
+#                     watching] > float(userInfo.backward_times_of_sentence_mean):
+#                     sent_not_understand_list.append([sent[1], sent[2] - 1])
+#                     PageData.objects.filter(id=page_id).update(
+#                         sent_intervention=page_data.sent_intervention + "," + str(watching)
+#                     )
+#                     request.session['pre_sent_inter'] = watching
+#                 if watching - 1 > 0:
+#                     if now_sent_feature.total_dwell_time_of_sentence_div_syllable[watching] < (1 / 4) * float(
+#                             userInfo.total_dwell_time_of_sentence_mean) and len(word_not_understand_list) <= 9:
+#                         sent_mind_wandering_list.append([sent[1], sent[2] - 1])
+#                         PageData.objects.filter(id=page_id).update(
+#                             mind_wander_intervention=page_data.mind_wander_intervention + "," + str(watching)
+#                         )
+#                         request.session['pre_sent_inter'] = watching
+#
+#             # if sent_predicts[watching]:
+#             #     sent = sentence_list[watching]
+#             #     # abnormal 再来判断原因
+#             #     if abnormal_predicts[watching] == 0:
+#             #         sent_mind_wandering_list.append([sent[1], sent[2] - 1])
+#             #         sent_not_understand_list.append([sent[1], sent[2] - 1])
+#             #     if abnormal_predicts[watching] == 1:
+#             #         sent_not_understand_list.append([sent[1], sent[2] - 1])
+#             #     if abnormal_predicts[watching] == 2:
+#             #         sent_mind_wandering_list.append([sent[1], sent[2] - 1])
+#
+#         # PageData.objects.filter(id=page_id).update(
+#         #     gaze_x=gaze_x,
+#         #     gaze_y=gaze_y,
+#         #     gaze_t=gaze_t,
+#         # )
+#
+#     context = {
+#         "word": word_not_understand_list,
+#         "sentence": sent_not_understand_list,
+#         "wander": sent_mind_wandering_list
+#     }
+#
+#     # 将系统的干预记下来，用于pilot study的分析
+#     return JsonResponse(context)
 
 
 def Test(request):
@@ -2356,6 +2356,13 @@ def get_page_info(request):
     location = request.POST.get("location")
 
     is_end = request.POST.get("is_end", 0)
+    x = request.POST.get("x")
+    y = request.POST.get("y")
+    t = request.POST.get("t")
+
+    print("x:{x}".format(x=x))
+    print("y:{y}".format(y=y))
+    print("t:{t}".format(t=t))
 
     experiment_id = request.session.get("experiment_id", None)
     if experiment_id and page_text:

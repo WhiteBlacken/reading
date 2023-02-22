@@ -36,10 +36,10 @@ html,body{
     width: auto;
     height: auto;
     text-align: center;
-    padding: 10px 20px;
-    /*border: 1px solid red;*/
-    border-radius: 5px;
-    font-size: 17pt;
+    padding: 8px 8px;
+    border: 2px solid black;
+    /*border-radius: 5px;*/
+    font-size: 15pt;
     background-color: white;
 }
 
@@ -50,10 +50,10 @@ html,body{
     width: auto;
     height: auto;
     text-align: center;
-    padding: 10px 20px;
-    /*border: 1px solid red;*/
-    border-radius: 5px;
-    font-size: 17pt;
+    padding: 8px 8px;
+    border: 2px solid black;
+    /*border-radius: 5px;*/
+    font-size: 15pt;
     background-color: white;
 }
 
@@ -117,10 +117,10 @@ html,body{
     transform: translate(-50%, -50%);
     width: 320px;
     padding: 25px;
-    /*border: 1px solid transparent;*/
+    border: 2px solid black;
     /*border-radius: 10px;*/
     text-align: center;
-    font-size: 17pt;
+    font-size: 15pt;
     background-color: white;
 }
 
