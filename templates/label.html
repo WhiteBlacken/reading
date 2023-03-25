@@ -312,10 +312,11 @@
                 formdata.append("sentence", JSON.stringify(this.sentencesPerPage));
                 $.ajax({
                     type: 'POST',
-                    url: '/label/send/',
+                    url: '/collect_labels/',
                     data: formdata,
                     success: function () {
                         alert("完成实验！");
+                        window.location.href = "/";
 
                     },
                     error: function () {
