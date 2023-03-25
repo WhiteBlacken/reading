@@ -13,22 +13,12 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-
-from django.urls import include, path, re_path
+from django.urls import path
 
 from . import views
 
 urlpatterns = [
-    re_path(r"^$", views.go_login),
-    path("go_login/",views.go_login), # 进入登录页面
-    path("login/", views.login, name="login"), # 登录逻辑
-    path("choose/",views.choose_text), # 选择文章页面
-    path("reading/", views.reading), # 进入阅读页面
-    path("para/", views.get_para), # 加载文章及翻译
-    path("collect_page_data/", views.collect_page_data), # 收集该页数据
-    path("label/", views.go_label_page), # 进入打标签页面
-    path("collect_labels/", views.collect_labels), # 收集标签
-
-    path("analysis/", include("analysis.urls")),
-
+    # 最重要的两个接口，画图+生成数据集，不过依赖于很多tools
+    # 画图：按照时间画图
+    path("all_time_pic/",views.get_all_time_pic)
 ]
