@@ -7,15 +7,6 @@ from loguru import logger
 from analysis.models import Text, Paragraph, Translation, Dictionary, Experiment, PageData
 from tools import login_required, translate, Timer
 
-
-@login_required
-def index(request):
-    """
-    首页，应该是选择阅读哪篇文章
-    """
-    return render(request, "onlineReading.html")
-
-
 def go_login(request):
     """
     跳转去登录页面
@@ -53,7 +44,6 @@ def reading(request):
     """
     reading_type = request.GET.get('type','1')
 
-    request.session['page_info'] = None
     if reading_type == '1':
         return render(request, "reading_for_data.html")
     else:
@@ -138,13 +128,11 @@ def collect_page_data(request):
     x = request.POST.get("x")  # str类型
     y = request.POST.get("y")  # str类型
     t = request.POST.get("t")  # str类型
-    interventions = request.session.get("interventions")
     texts = request.POST.get("text")
     page = request.POST.get("page")
 
     location = request.POST.get("location")
 
-    print(f"interventions:{interventions}")
     if experiment_id := request.session.get("experiment_id", None):
         pagedata = PageData.objects.create(
             gaze_x=str(x),
@@ -158,11 +146,9 @@ def collect_page_data(request):
             is_test=0,
         )
         logger.info(f"第{page}页数据已存储,id为{str(pagedata.id)}")
-        request.session['intervention'] = None
     return HttpResponse(1)
 
 def go_label_page(request):
-    request.session['page_info'] = None
     return render(request, "label.html")
 
 def collect_labels(request):
@@ -184,4 +170,6 @@ def collect_labels(request):
             )
         Experiment.objects.filter(id=experiment_id).update(is_finish=1)
     logger.info("已获得所有页标签,实验结束")
+    # 提交后清空缓存
+    request.session.flush()
     return HttpResponse(1)
