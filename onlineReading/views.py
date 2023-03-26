@@ -159,16 +159,12 @@ def collect_labels(request):
     labels = request.POST.get("labels")
     labels = json.loads(labels)
 
-    # paras = request.POST.get("sentence")
-    # paras = json.loads(paras)
-
     if experiment_id := request.session.get("experiment_id", None):
-        for i, label in enumerate(labels):
+        for label in labels:
             PageData.objects.filter(experiment_id=experiment_id).filter(page=label["page"]).update(
                 wordLabels=label["wordLabels"],
                 sentenceLabels=label["sentenceLabels"],
                 wanderLabels=label["wanderLabels"],
-                # para=paras[i],
             )
         Experiment.objects.filter(id=experiment_id).update(is_finish=1)
     logger.info("已获得所有页标签,实验结束")

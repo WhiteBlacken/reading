@@ -91,7 +91,8 @@ def dataset_of_timestamp(request):
     now = datetime.now().strftime("%Y%m%d")
 
     exp_path = f"{base_path}exp_info.csv"
-    hand_feature_path = f"{base_path}handcraft-feature-{now}.csv"
+    word_feature_path = f"{base_path}word-feature-{now}.csv"
+    sent_feature_path = f"{base_path}sent-feature-{now}.csv"
     cnn_feature_path = f"{base_path}cnn-feature-{now}.csv"
     # 获取需要生成的实验
     experiment_list_select = [1011]
@@ -118,11 +119,17 @@ def dataset_of_timestamp(request):
             # sentence_level
             sentFeature = SentFeature(len(sentence_list))
             sentFeature.sentence = [sentence[0] for sentence in sentence_list]
+            sentFeature.sentence_id = list(range(len(sentence_list))) # 记录id
+            # todo 句子标签的生成
+            sent_feature_list.append(sentFeature)
 
 
 
         for p,page_data in enumerate(page_data_list):
-            wordFeature = word_feature_list[p] # 获取当前的特征
+            wordFeature = word_feature_list[p] # 获取单词特征
+            sentFeature = sent_feature_list[p] # 获取句子特征
+
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
 
             gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
             result_fixations, row_sequence, row_level_fix, sequence_fixations = generate_fixations(
@@ -134,28 +141,42 @@ def dataset_of_timestamp(request):
                 if g == 0:
                     continue
                 if gaze[-1] - gaze_points[pre_gaze][-1] > interval: # 按照interval切割gaze
-                    # 把当前页的数据清空，因为要重新算一遍特征
+                    # 把当前页的特征清空，因为要重新算一遍特征
                     wordFeature.clean()
+                    sentFeature.clean()
                     # 目的是为了拿到gaze的时间，来切割fixation，为什么不直接gaze->fixation,会不准 todo 实时处理
                     fixations_before = get_fix_by_time(result_fixations, start=0,end=gaze[-1])
                     fixations_now = get_fix_by_time(result_fixations, gaze_points[pre_gaze][-1], gaze[-1])
                     # 计算特征
-                    pre_gaze = g
+                    pre_gaze = g # todo important
                     pre_word_index = -1
                     for fixation in fixations_before:
                         word_index, isAdjust = get_item_index_x_y(json.loads(page_data.location), fixation[0], fixation[1])
                         if word_index != -1:
                             wordFeature.number_of_fixation[word_index] += 1
                             wordFeature.total_fixation_duration[word_index] += fixation[2]
-
                             if word_index != pre_word_index: # todo reading times的计算
                                 wordFeature.reading_times[word_index] += 1
+
+                            sent_index = get_sentence_by_word(word_index, sentence_list)
+                            if sent_index != -1:
+                                sentFeature.total_dwell_time[sent_index] += fixation[2]
+                                sentFeature.saccade_times[sent_index] += 1 # 将两个fixation之间都作为saccade
+
+                                if pre_word_index - word_index > 1: # 往后看,阈值暂时设为1个单词
+                                    sentFeature.backward_saccade_times[sent_index] += 1
+                                if pre_word_index - word_index < -1: # 往前阅读（正常阅读顺序)
+                                    sentFeature.forward_saccade_times[sent_index] += 1
+
+                            pre_word_index = word_index # todo important
                     # 计算need prediction
                     wordFeature.need_prediction = is_watching(fixations_now,json.loads(page_data.location),wordFeature.num)
                     # 生成数据
                     for feature in word_feature_list:
-                        feature.to_csv(hand_feature_path, experiment.id, page_data.id, time)
+                        feature.to_csv(word_feature_path, experiment.id, page_data.id, time)
 
+                    for feature in sent_feature_list:
+                        feature.to_csv(sent_feature_path, experiment.id, page_data.id, time)
                     time += 1
 
 
