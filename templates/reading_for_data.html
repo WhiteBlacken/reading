@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reading</title>
+    <script src="/static/plugins/jquery/jquery.min.js"></script>
+    <script src="/static/plugins/vue@2/vue@2.6.10.js"></script>
+    <script src="/static/js/axios@0.18.0.min.js"></script>
+    <script src="/static/plugins/element@vue2/index.js"></script>
+    <link href="/static/plugins/element@vue2/index.css" type="text/css" rel="stylesheet" charset="utf-8">
+    <link href="/static/css/onlineReading.css" type="text/css" rel="stylesheet" charset="utf-8">
+    <!--bp5 css文件-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div id="app">
+
+{#    <div id="markers">#}
+{#        #}
+{#        <img class="marker" id="leftBottom" src="">#}
+{#        <img class="marker" id="leftBottom" src="">#}
+{#    </div>#}
+    <div id="tips_begin">
+        <div class="px-4 py-5 my-5 text-center">
+            <h1 class="display-5 fw-bold">MemX4Edu数据搜集</h1>
+            <div class="col-lg-6 mx-auto mt-3">
+                <p class="lead mb-4">
+                    点击下方的“<strong>开始使用</strong>”按钮，即可使用本阅读软件。请注意：软件将以全屏模式运行，你可以使用方向键“<strong>←</strong>”和“<strong>→</strong>”进行上下翻页，“<strong>空格</strong>”键来结束使用。
+                </p>
+                <p class="lead mb-4">
+                    阅读期间，请尽量<strong>鼠标跟随</strong>你正在看的内容。
+                </p>
+                <p class="lead mb-4">
+                    阅读期间，请留意自己在阅读某一句或多句时是否存在“<strong>走神</strong>”的情况，即<strong>在阅读过程中的某些时候，你完全不知道自己刚才读了什么。或者说，你心里想的和你读内容的没任何关系</strong>。
+                </p>
+                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                    <button type="button" class="btn btn-primary btn-lg px-4 gap-3" onclick="get_start()">开始使用
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="tips_end" style="display: none">
+        <div class="px-4 py-5 my-5 text-center">
+            <h1 class="display-5 fw-bold">MemXEdu</h1>
+            <div class="col-lg-6 mx-auto mt-3">
+                <p class="lead mb-4">
+                    标注完成！
+                </p>
+            </div>
+        </div>
+    </div>
+    <div id="mainContent">
+        <div id="markers-top">
+            <img class="marker" id="left" src="/static/images/left-top.png">
+            <img class="marker" id="right" src="/static/images/right-top.png">
+        </div>
+        <div id="markers-bottom">
+            <img class="marker" id="left" src="/static/images/left-bottom.png">
+            <img class="marker" id="right" src="/static/images/right-bottom.png">
+        </div>
+        <div id="reading">
+            <div id="readArea">
+                <div id="para">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<!--bp5 js集成文件-->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!--webgazer-->
+<script src="/static/js/webgazer.js"></script>
+<!--截图相关-->
+<script src="/static/js/canvas2image.js"></script>
+<script src="/static/js/html2canvas.js"></script>
+<!--自己写的js工具包-->
+<script src="/static/js/utils.js"></script>
+
+
+<script>
+    var app = new Vue({
+        el: '#app',
+        delimiters: ["[[", "]]"],
+        data: {
+            content: [],
+            contentCurPage: "",
+            paras: [],
+            sentences: [],
+            contentPerPage: [],
+            transPerPage: [],
+            buttonLocPerPage: [],
+            buttonCurLoc: [],
+            wordTextLocPerPage: [],
+            words: [],
+            page: 1,
+            totalPage: 1,
+            translation: [],
+            rereading: [],
+            wordLocation: 0,
+            showBox: false,
+            selectNode: null,
+            currentTransWord: -1,
+            currentTransBox: [],
+            currentTransSentenceBox: [],
+            readSequel: [],
+            //每段末尾词的索引
+            paraLoc: [],
+            labels: [],
+        },
+        methods: {
+
+            getWordLocation: function (num) {
+                return {
+                    left: document.getElementsByClassName('word')[num].getBoundingClientRect().left,
+                    top: document.getElementsByClassName('word')[num].getBoundingClientRect().top,
+                    right: document.getElementsByClassName('word')[num].getBoundingClientRect().right,
+                    bottom: document.getElementsByClassName('word')[num].getBoundingClientRect().bottom,
+                };
+            },
+
+            changeWordSelect: function (num) {
+                for (let i = 0 ; i < this.labels[this.page-1].wordLabels.length; i++) {
+                    if(this.labels[this.page-1].wordLabels[i] == num) {
+                        this.labels[this.page-1].wordLabels.splice(i, 1);
+                        for(let j = 0; j < this.labels[this.page-1].sentenceLabels.length; j++) {
+                            if(num >= this.labels[this.page-1].sentenceLabels[j][0] && num <= this.labels[this.page-1].sentenceLabels[j][1]) {
+                                $('.word:eq(' + num + ')').css('text-decoration', 'underline');
+                                $('.word:eq(' + num + ')').css('color', "red");
+                                return;
+                            }
+                        }
+                        for(let k = 0; k < this.labels[this.page-1].wanderLabels.length; k++) {
+                            if(num >= this.labels[this.page-1].wanderLabels[k][0] && num <= this.labels[this.page-1].wanderLabels[k][1]) {
+                                $('.word:eq(' + num + ')').css('text-decoration', 'underline');
+                                $('.word:eq(' + num + ')').css('color', "purple");
+                                return;
+                            }
+                        }
+                        $('.word:eq(' + num + ')').css('text-decoration', 'none solid rgb(51, 51, 51)');
+                        $('.word:eq(' + num + ')').css('color', "black");
+
+                        return;
+                    }
+                }
+                $('.word:eq(' + num + ')').css('text-decoration', "underline");
+                $('.word:eq(' + num + ')').css('color', "blue");
+                this.labels[this.page-1].wordLabels.push(num);
+            },
+
+            changeSentenceSelect: async function (num) {
+                let start = 0;
+                let end = 0;
+                for(let i = 0; i < this.sentences.length; i++){
+                    let w = this.sentences[i].split(' ');
+                    for(let j = 0; j < w.length; j++)
+                        if(w[j] == '')
+                            w.splice(j,1);
+                    if(start + w.length <= num){
+                        start += w.length;
+                    }else{
+                        end = start + w.length;
+                        break;
+                    }
+                }
+                let temp = start;
+                for (let p = 0; p < this.labels[this.page - 1].sentenceLabels.length; p++) {
+                    if (this.labels[this.page - 1].sentenceLabels[p][0] == start && this.labels[this.page - 1].sentenceLabels[p][1] == end) {
+                        this.labels[this.page - 1].sentenceLabels.splice(p, 1);
+                        console.log(this.labels);
+                        for(let i = start; i < end; i++) {
+                            if(this.labels[this.page-1].wordLabels.indexOf(i) == -1) {
+                                $('.word:eq(' + i + ')').css('text-decoration', 'none solid rgb(51, 51, 51)');
+                                $('.word:eq(' + i + ')').css('color', "black");
+                            }
+                        }
+
+                        return;
+                    }
+                }
+                for (let j = start; j < end; j++) {
+                    if (this.labels[this.page-1].wordLabels.indexOf(j) == -1) {
+                        $('.word:eq(' + j + ')').css('text-decoration', 'underline');
+                        $('.word:eq(' + j + ')').css('color', "red");
+                    }
+                }
+                this.labels[this.page - 1].sentenceLabels.push(new Array(start, end));
+                console.log(this.labels);
+            },
+
+            changeWanderSelect: function (num) {
+                let start = this.sentencesCurPage[num-1][0];
+                let end = this.sentencesCurPage[num-1][1];
+                for(let i = 0; i < this.labels[this.page-1].wanderLabels.length; i++) {
+                    if(this.labels[this.page-1].wanderLabels[i][0] == start && this.labels[this.page-1].wanderLabels[i][1] == end) {
+                        this.labels[this.page-1].wanderLabels[num-1] = [];
+                        document.getElementsByClassName('wander')[num-1].style.borderColor = "black";
+                        document.getElementsByClassName('wander')[num-1].style.color = "black";
+                        console.log(this.labels);
+                        return;
+                    }
+                 }
+                document.getElementsByClassName('wander')[num-1].style.borderColor = "orange";
+                document.getElementsByClassName('wander')[num-1].style.color = "orange";
+                this.labels[this.page-1].wanderLabels[num-1] = new Array(start, end);
+                console.log(this.labels);
+                {#this.labels[this.page-1].wanderLabels = this.radio;#}
+                {#console.log(this.labels[this.page-1].wanderLabels)#}
+            },
+
+            rememberLabels:function () {
+                for(let i = 0; i < this.labels[this.page-1].sentenceLabels.length; i++) {
+                    let sentence = this.labels[this.page-1].sentenceLabels[i];
+                    for(let j = sentence[0]; j < sentence[1]; j++) {
+                        $('.word:eq(' + j + ')').css('text-decoration', 'underline');
+                        $('.word:eq(' + j + ')').css('color', "red");
+                    }
+                }
+                for(let i = 0; i < this.labels[this.page-1].wordLabels.length; i++) {
+                    let num = this.labels[this.page-1].wordLabels[i];
+                    $('.word:eq(' + num + ')').css('text-decoration', "underline");
+                    $('.word:eq(' + num + ')').css('color', "blue");
+                }
+                for(let i = 0; i < this.labels[this.page-1].wanderLabels.length;i++) {
+                    if(this.labels[this.page-1].wanderLabels[i].length > 0) {
+                        $('.wander:eq(' + i +')').css('border-color', 'orange');
+                        $('.wander:eq(' + i +')').css('color', 'orange');
+                    }
+                }
+            },
+
+            getWordTextLocation: function (num) {
+                return {
+                    left: document.getElementsByClassName('word')[num].getBoundingClientRect().left + document.getElementsByClassName('word')[num].style.paddingLeft.match(/\d+/g),
+                    top: document.getElementsByClassName('word')[num].getBoundingClientRect().top + document.getElementsByClassName('word')[num].style.paddingTop.match(/\d+/g),
+                    right: document.getElementsByClassName('word')[num].getBoundingClientRect().right - document.getElementsByClassName('word')[num].style.paddingRight.match(/\d+/g),
+                    bottom: document.getElementsByClassName('word')[num].getBoundingClientRect().bottom - document.getElementsByClassName('word')[num].style.paddingBottom.match(/\d+/g),
+                }
+            },
+
+            getTransLocation: function (num) {
+                if (this.isWordTranslated(num)) {
+                    let i = this.getTransNum(num);
+                    return {
+                        left: document.getElementsByClassName('word')[i].getBoundingClientRect().left,
+                        top: document.getElementsByClassName('word')[num].getBoundingClientRect().top,
+                        right: document.getElementsByClassName('word')[num].getBoundingClientRect().right,
+                        bottom: document.getElementsByClassName('word')[num].getBoundingClientRect().bottom,
+                    }
+                } else {
+                    return null;
+                }
+            },
+
+            getTransNum: function (num) {
+                for (let i = 0; i < this.currentTransBox.length; i++) {
+                    if (this.currentTransBox[i] == num)
+                        return i;
+                }
+                return -1;
+            },
+
+            isWordTranslated: function (num) {
+                for (let i = 0; i < this.currentTransBox.length; i++) {
+                    if (this.currentTransBox[i] == num)
+                        return true;
+                }
+                return false;
+            },
+
+            isSentenceTranslated: function (num) {
+                let start = 0;
+                let end = 0;
+                for (let i = 0; i < this.sentences.length; i++) {
+                    let w = this.sentences[i].split(' ');
+                    for (let j = 0; j < w.length; j++)
+                        if (w[j] == '')
+                            w.splice(j, 1);
+                    if (start + w.length <= num) {
+                        start += w.length;
+                    } else {
+                        end = start + w.length;
+                        break;
+                    }
+                }
+                for (let i = 0; i < this.currentTransSentenceBox.length; i++) {
+                    if (this.currentTransSentenceBox[i][0] == start && this.currentTransSentenceBox[i][1] == end)
+                        return true;
+                }
+                return false;
+            },
+
+            getWordTranslation: function (num) {
+                if (!this.isWordTranslated(num)) {
+                    {#if($('#trans').css('display') == "none")#}
+                    {#    $('#trans').css('display','');#}
+                    {#else if($('#trans').css('display') != "none" && this.currentTransWord == num)#}
+                    {#    $('#trans').css('display','none');#}
+                    this.changeTextStyle(num, num + 1, 1);
+                    this.wordLocation = this.getWordLocation(num);
+                    {#let el = document.createElement('div');#}
+                    {#el.className = "trans";#}
+                    {##}
+                    {#el.innerHTML = this.transPerPage[this.page - 1][num].zh;#}
+                    {##}
+                    {#el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";#}
+                    {##}
+                    {#el.style.top = this.wordLocation.top - 20 + "px";#}
+                    {#let e = document.getElementById('readArea');#}
+                    {#e.appendChild(el);#}
+                    this.currentTransBox.push(num);
+                    this.currentTransWord = num;
+                    $('<div>')
+                        .appendTo('#readArea')
+                        .addClass('trans')
+                        .attr('id', 'transWord' + num)
+                        .css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px")
+                        .css('top', this.wordLocation.top - 40 + "px")
+                        .html(this.transPerPage[this.page - 1][num].zh)
+                        .fadeIn('fast', function () {
+                            setTimeout(function () {
+                                $('#transWord' + num).fadeOut('fast', function () {
+                                    app.changeTextStyle(num, num + 1, 0);
+                                    let ind = app._data.currentTransBox.indexOf(num);
+                                    app._data.currentTransBox.splice(ind, 1);
+                                    $('#transWord' + num).remove();
+                                })
+                            }, 1500);
+                        });
+                } else {
+                    this.currentTransBox.splice(this.currentTransBox.indexOf(num), 1);
+                    $('#transWord' + num).remove();
+                }
+                {#else {#}
+                {#    this.changeTextStyle(num, num+1, 0);#}
+                {#    let ind = this.currentTransBox.indexOf(num);#}
+                {#    this.currentTransBox.splice(ind, 1);#}
+                {#    document.getElementsByClassName('trans')[ind].remove();#}
+                {# }#}
+
+            },
+
+            getSentenceTranslation: function (num) {
+                let start = 0;
+                let end = 0;
+                for (let i = 0; i < this.sentences.length; i++) {
+                    let w = this.sentences[i].split(' ');
+                    for (let j = 0; j < w.length; j++)
+                        if (w[j] == '')
+                            w.splice(j, 1);
+                    if (start + w.length <= num) {
+                        start += w.length;
+                    } else {
+                        end = start + w.length;
+                        break;
+                    }
+                }
+                if (!this.isSentenceTranslated(num)) {
+                    this.changeTextStyle(start, end, 1);
+                    this.wordLocation = this.getWordLocation(num);
+                    {#let el = document.createElement('div');#}
+                    {#el.className = "transSentence";#}
+                    {##}
+                    {#el.innerHTML = this.transPerPage[this.page - 1][num].sentence_zh;#}
+                    {##}
+                    {#el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";#}
+                    {##}
+                    {#el.style.top = this.wordLocation.top - 20 + "px";#}
+                    {#let e = document.getElementById('readArea');#}
+                    {#e.appendChild(el);#}
+                    this.currentTransSentenceBox.push(new Array(start, end));
+
+                    $('<div>')
+                        .appendTo('#readArea')
+                        .addClass('transSentence')
+                        .attr('id', 'transSentence' + start);
+                    if (this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 < 840)
+                        $('#transSentence' + start).css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px");
+                    else
+                        $('#transSentence' + start).css('right', "130px");
+                    $('#transSentence' + start)
+                        .css('top', this.wordLocation.top - 20 + "px")
+                        .html(this.transPerPage[this.page - 1][num].sentence_zh)
+                        .fadeIn('fast', function () {
+                            setTimeout(function () {
+                                $('#transSentence' + start).fadeOut('fast', function () {
+                                    app.changeTextStyle(start, end, 0);
+                                    let ind = 0;
+                                    for (let i = 0; i < app._data.currentTransSentenceBox.length; i++) {
+                                        if (app._data.currentTransSentenceBox[i][0] == start && app._data.currentTransSentenceBox[i][1] == end) {
+                                            ind = i;
+                                            break;
+                                        }
+                                    }
+                                    app._data.currentTransSentenceBox.splice(ind, 1);
+                                    $('#transSentence' + start).remove();
+                                })
+                            }, 2500);
+                        });
+                }
+                {#else {#}
+                {#this.changeTextStyle(start, end, 0);#}
+                {#let ind = 0;#}
+                {#for(let i = 0; i < this.currentTransSentenceBox.length; i++) {#}
+                {#    if(this.currentTransSentenceBox[i][0] == start && this.currentTransSentenceBox[i][1] == end){#}
+                {#        ind = i;#}
+                {#        break;#}
+                {#    }#}
+                {# }#}
+                {#this.currentTransSentenceBox.splice(ind, 1);#}
+                {#document.getElementsByClassName('transSentence')[ind].remove();#}
+                {# }#}
+
+            },
+
+            getWanderRemind: function () {
+                let style = 'alert-warning';
+                let time = 1200;
+                $('<div>')
+                    .appendTo('body')
+                    .addClass('alert ' + style)
+                    .html("你刚刚走神了，请重新认真阅读错过的内容！")
+                    .fadeIn('fast', function () {
+                        setTimeout(function () {
+                            $('.alert').fadeOut('fast', function () {
+
+                            });
+                        }, 2000)
+                    });
+
+            },
+
+            changeTextStyle: function (start, end, isHighlight) {
+                if (isHighlight == 1) {
+                    for (let i = start; i < end; i++) {
+                        if ($('.word:eq(' + i + ')').css('text-decoration') == 'none solid rgb(51, 51, 51)') {
+                            $('.word:eq(' + i + ')').css('text-decoration', "underline");
+                            $('.word:eq(' + i + ')').css('color', "blue");
+                        }
+                    }
+                } else {
+                    for (let i = start; i < end; i++) {
+                        if ($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)') {
+                            $('.word:eq(' + i + ')').css('text-decoration', "none solid rgb(51, 51, 51)");
+                            $('.word:eq(' + i + ')').css('color', "black");
+                        }
+                    }
+                }
+            },
+
+            catchCurrentWord: function () {
+                let gaze_x = x[x.length - 1];
+                let gaze_y = y[y.length - 1];
+                let i = 0;
+
+                for (; i < this.translation.length; i++) {
+                    let word = this.getWordTextLocation(i);
+                    if (word.top < gaze_y) {
+                        if (word.bottom > gaze_y) {
+                            if (word.left < gaze_x) {
+                                if (word.right > gaze_x) {
+                                    return i;
+                                }
+                            }
+                        }
+                    }
+                }
+                return i;
+            },
+
+            catchCurrentTrans: function () {
+                let gaze_x = x[x.length - 1];
+                let gaze_y = y[y.length - 1];
+                let i = 0;
+                for (; i < this.currentTransBox.length; i++) {
+                    let trans = this.getTransLocation(i);
+                    if (trans && trans.top < gaze_y && trans.bottom > gaze_y && trans.left < gaze_x && trans.right > gaze_x) {
+                        return i;
+                    }
+                }
+                return i;
+            },
+
+            autoRandomTranslation: function () {
+                let num = this.catchCurrentWord();
+                if (num < this.translation.length)
+                    this.getWordTranslation(num);
+                interventions.push(num);
+            },
+
+            isInArr: function (num, arr) {
+                for (let i = 0; i < arr.length; i++) {
+                    if (arr[i] == num)
+                        return true;
+                }
+                return false;
+            },
+
+            getContent_2: async function () {
+                let maxLine = 16;
+                let article_id = getCookie('article_id');
+                let request = "/para";
+                if (article_id.length > 0)
+                    request += "?article_id=" + article_id;
+                await axios.get(request).then((response) => {
+                    this.content = response.data;
+                });
+                this.content = Object.values(this.content);
+                console.log(this.content)
+                for (let i = 0; i < this.content.length; i++)
+                    this.paras.push(this.content[i][0]);
+                let p = "";
+                let tr = [];
+                for (let i = 0; i < this.content.length; i++) {
+                    p += this.content[i][0] + ' 、 ';
+                    let j = 1;
+                    while (this.content[i][j]) {
+                        tr.push(this.content[i][j]);
+                        j++;
+                    }
+                }
+                {#console.log(tr[0].zh)#}
+                {#console.log(p)#}
+                var e = document.getElementById('para');
+
+                let num = 0;
+                //分割出该段落的所有句子
+                var sentences = p.split('.');
+                if (sentences[sentences.length - 1] != '" 、 ')
+                    sentences.splice(sentences.length - 1, 1);
+                console.log(sentences[sentences.length - 1])
+                for (let i = 0; i < sentences.length; i++)
+                    sentences[i].replace('  ', ' ');
+                let sentenceNum = 0;
+                let conPerPage = [];
+                let transPerPage = [];
+                let locPerPage = [];
+                let wordLength = 0;
+                while (sentenceNum < sentences.length) {
+                    this.paraLoc.push(new Array());
+                    num = 0;
+                    conPerPage = [];
+                    transPerPage = [];
+                    locPerPage = [];
+
+                    for (; sentenceNum < sentences.length; sentenceNum++) {
+                        var words = sentences[sentenceNum].split(' ');
+
+                        for (let p = 0; p < words.length; p++) {
+                            if (words[p].length == 0)
+                                words.splice(p, 1);
+                        }
+                        let k = 0;
+                        while (k < words.length) {
+                            var el = document.createElement("button");
+                            if (words[k] == '、' && document.getElementById(num + k - 1 + '')) {
+                                el.className = "fillLine";
+                                let width = e.getBoundingClientRect().right - document.getElementById(num + k - 1 + '').getBoundingClientRect().right - 17;
+                                let height = document.getElementById(num + k - 1 + '').getBoundingClientRect().bottom -
+                                    document.getElementById(num + k - 1 + '').getBoundingClientRect().top - 3;
+                                el.style.width = width + "px";
+                                el.style.height = height + "px";
+                                e.appendChild(el);
+                                words.splice(k, 1);
+                                this.paraLoc[this.contentPerPage.length].push(num + k - 1);
+                            } else if (words[k] == '、' && !document.getElementById(num + k - 1 + '')) {
+                                words.splice(k, 1);
+                            } else {
+                                el.className = "word";
+                                el.id = (num + k).toString();
+                                el.innerHTML = words[k];
+                                if (k == words.length - 1 && words[k].length > 1)
+                                    el.innerHTML = words[k] + '.';
+                                e.appendChild(el);
+                                k++;
+                            }
+                        }
+                        sentences[sentenceNum] = words.join(' ') + ".";
+                        let paraTop = document.getElementById('para').getBoundingClientRect().top;
+                        let buttonTop = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;
+                        let buttonHeight = document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().bottom - document.getElementById((num + words.length - 1).toString()).getBoundingClientRect().top;
+                        if (Math.trunc((buttonTop - paraTop) / buttonHeight) >= maxLine) {
+                            for (let re = 0; re < words.length; re++)
+                                e.removeChild(e.lastChild);
+                            if (this.paraLoc[this.contentPerPage.length] && parseInt(e.children[e.children.length - 1].id) < this.paraLoc[this.contentPerPage.length][this.paraLoc[this.contentPerPage.length].length - 1])
+                                this.paraLoc[this.contentPerPage.length].splice(this.paraLoc[this.contentPerPage.length].length - 1, 1);
+                            while (e.children[0]) {
+                                e.removeChild(e.children[0]);
+                            }
+                            break;
+                        } else {
+                            //这里要改遍历条件
+                            conPerPage.push(sentences[sentenceNum]);
+                            for (let k = wordLength; k < wordLength + words.length; k++) {
+                                if (tr[k]) {
+                                    transPerPage.push(tr[k]);
+                                }
+                            }
+                            num += words.length;
+                            wordLength += words.length;
+
+                        }
+
+                    }
+                    {#console.log(this.paraLoc)#}
+                    if (this.paraLoc[this.contentPerPage.length].length == 0 || this.paraLoc[this.contentPerPage.length][this.paraLoc[this.contentPerPage.length].length - 1] < num - 1)
+                        this.paraLoc[this.contentPerPage.length].push(num - 1);
+                    this.transPerPage.push(transPerPage);
+                    this.contentPerPage.push(conPerPage.join(''));
+                    console.log(this.contentPerPage)
+                }
+
+                while (e.children[0])
+                    e.removeChild(e.children[0])
+                for (let i = 0; i < this.contentPerPage.length; i++) {
+                    if (this.contentPerPage[i] == ".")
+                        this.contentPerPage.splice(i, 1);
+                    if (this.transPerPage[i].length == 0)
+                        this.transPerPage.splice(i, 1);
+                }
+                this.totalPage = this.contentPerPage.length;
+                let tmp = this.contentPerPage;
+                let tmp_ = tmp.join('-.');
+                setCookie('contentPerPage', tmp_);
+                let k = "";
+                for (let i = 0; i < this.paraLoc.length; i++) {
+                    k += this.paraLoc[i].join(',');
+                    if (i != this.paraLoc.length - 1)
+                        k += "|";
+                }
+                setCookie('paraLoc', k);
+            },
+
+            getPage: function () {
+                let num = 0;
+                let e = document.getElementById('para');
+                var Content = this.contentPerPage[this.page - 1];
+
+                this.contentCurPage = Content;
+                this.buttonCurLoc = this.buttonLocPerPage[this.page - 1];
+                if(!this.labels[this.page-1]){
+                    this.labels.push({page: this.page, wordLabels: new Array(), sentenceLabels: new Array(), wanderLabels: new Array()});
+                }
+                let sentences = Content.split('.');
+                sentences.splice(sentences.length - 1, 1);
+                this.sentences = sentences;
+                for (let i = 0; i < sentences.length; i++) {
+                    var words = sentences[i].split(' ');
+                    for (let j = 0; j < words.length; j++) {
+                        if (words[j] != "") {
+                            let el = document.createElement("button");
+                            el.className = "word";
+                            el.id = num.toString();
+                            el.innerHTML = words[j];
+                            el.setAttribute("onclick", "changeWordSelect(" + num + ")");
+                            el.setAttribute("ondblclick", "changeSentenceSelect(" + num + ")");
+                            if (j == words.length - 1 && words[j].length > 1) {
+                                el.innerHTML = words[j] + '.';
+                                let ele = document.createElement('button');
+                                ele.className = "wander";
+                                ele.innerHTML = (i+1).toString();
+                                ele.setAttribute("onclick", "changeWanderSelect("+ (i+1) + ")");
+                                ele.style.left = el.getBoundingClientRect().right - 10 + "px";
+                                ele.style.top = el.getBoundingClientRect().top - 10 + "px";
+                                document.getElementById('readArea').appendChild(ele);
+                                this.labels[this.page-1].wanderLabels.push([]);
+                            }
+
+                            num += 1;
+                            e.appendChild(el);
+                            if (this.isInArr(num - 1, this.paraLoc[this.page - 1])) {
+
+                                el = document.createElement("button");
+                                el.className = "fillLine";
+                                let width = e.getBoundingClientRect().right - document.getElementById(num - 1 + '').getBoundingClientRect().right - 1;
+                                let height = document.getElementById(num - 1 + '').getBoundingClientRect().bottom -
+                                    document.getElementById(num - 1 + '').getBoundingClientRect().top - 17;
+                                el.style.width = width + "px";
+                                el.style.height = height + "px";
+                                e.appendChild(el);
+                            }
+                        }
+                    }
+                }
+                let i = 0;
+                let buttonLocCurPage = [];
+                let wordTextLocCurPage = [];
+                while (document.getElementsByClassName('word')[i]) {
+                    if (document.getElementsByClassName('word')[i].innerHTML != '"' && document.getElementsByClassName('word')[i].innerHTML != '“')
+                        buttonLocCurPage.push(this.getWordLocation(i));
+                    wordTextLocCurPage.push(this.getWordTextLocation(i));
+                    i++;
+                }
+                this.rememberLabels();
+                this.buttonCurLoc = buttonLocCurPage;
+                if (!this.buttonLocPerPage[this.page - 1])
+                    this.buttonLocPerPage.push(buttonLocCurPage);
+                if (!this.wordTextLocPerPage[this.page - 1])
+                    this.wordTextLocPerPage.push(wordTextLocCurPage);
+            },
+
+            listen: function () {
+                document.addEventListener("mouseup", function (e) {
+                    if (window.getSelection().rangeCount === 0 || this.showBox) {
+                        return false;
+                    }
+                    // 获取选中
+                    const range = window.getSelection().getRangeAt(0);
+                    const comNode = range.commonAncestorContainer;
+                    const start = {
+                        node: range.startContainer,
+                        offset: range.startOffset
+                    };
+                    const end = {
+                        node: range.startContainer,
+                        offset: range.endOffset
+                    };
+                })
+            },
+
+            clearPageWords: function () {
+                let e = document.getElementById('para');
+                while (e.hasChildNodes()) {
+                    e.removeChild(e.children[0]);
+                }
+                e = document.getElementById('readArea');
+                while (e.children.length > 1) {
+                    e.removeChild(e.children[1]);
+                }
+                this.content = "";
+                this.words = [];
+                this.sentences = [];
+                this.translation = [];
+                this.rereading = [];
+                this.currentTransWord = -1;
+                this.currentTransSentenceBox = [];
+                this.currentTransBox = [];
+                this.readSequel = [];
+                this.buttonCurLoc = [];
+
+            },
+
+            autoIntervention: function () {
+                if (stop === false) {
+                    setInterval(function () {
+                        get_base64_gaze_and_intervention(0);
+                    }, 5000);
+                }
+
+            },
+
+            //把labels发送给后端存储,并更新word_level_data
+            collect_labels: function () {
+                for(let i = 0; i < this.labels.length; i++) {
+                    let j = 0;
+                    while(j < this.labels[i].wanderLabels.length) {
+                        if(this.labels[i].wanderLabels[j].length == 0) {
+                            this.labels[i].wanderLabels.splice(j,1);
+                        }
+                        else j++;
+                    }
+                }
+                console.log(this.labels);
+                let formdata = new FormData();
+                formdata.append('labels',JSON.stringify(this.labels));
+                formdata.append("sentence", JSON.stringify(this.sentencesPerPage));
+                $.ajax({
+                    type: 'POST',
+                    url: '/collect_labels/',
+                    data: formdata,
+                    success: function () {
+                        alert("完成实验！");
+                        window.location.href = "/";
+
+                    },
+                    error: function () {
+                        console.log("error");
+                    },
+                    contentType: false,
+                    processData: false,
+                })
+            },
+        },
+        created() {
+
+        },
+        mounted() {
+            window["getWordTranslation"] = (num) => {
+                this.getWordTranslation(num);
+            }
+            window["getSentenceTranslation"] = (num) => {
+                this.getSentenceTranslation(num);
+            }
+        },
+    })
+
+    //开始使用
+    async function get_start() {
+
+        //全屏
+        full_screen();
+
+        //隐藏提示
+        document.getElementById("tips_begin").style.display = "none";
+
+        await app.getContent_2();
+
+        //开启webgazer
+        //眼动数据监听--放在getContent前面会采集很多无效数据
+        webgazer.setGazeListener(function (data, elapsedTime) {
+            if (data == null) {
+                return;
+            }
+            x.push(data.x);
+            y.push(data.y);
+            t.push(elapsedTime);
+
+            let num = app.catchCurrentWord();
+            if (num < app._data.words.length) {
+                if (app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num) {
+                    app._data.readSequel[app._data.readSequel.length - 1][2].push(new Array(data.x, data.y, elapsedTime));
+                } else {
+                    app._data.readSequel.push(new Array(num, app._data.words[num], new Array(new Array(data.x, data.y, elapsedTime))));
+                }
+            } else {
+                num = app.catchCurrentTrans();
+                if(num < this.currentTransBox);
+            }
+
+         }).begin();
+
+        app.getPage();
+    }
+
+    //监听空格事件
+    $(document).keyup(function (event) {
+
+        switch (event.keyCode) {
+            case 37: {
+                if (app._data.page > 1) {
+                    get_base64_gaze_and_intervention(-1);
+                }
+                break;
+            }
+            case 39: {
+                if (app._data.page <= app._data.totalPage) {
+                    get_base64_gaze_and_intervention(1);
+                    break;
+                }
+            }
+            case 32: {
+                stop = true;
+                webgazer.pause();
+                {#window.location.href = '/label';#}
+                //之后的可以不写
+                document.getElementById("mainContent").style.display = "none";
+                document.getElementById("tips_end").style.display = "inline";
+                app.collect_labels();
+                esc_full_screen();
+                break;
+            }
+        }
+    });
+
+    //记录过程中的眼动坐标
+    let x = [];
+    let y = [];
+    let t = [];
+    let interventions = [];
+    //记录停止
+    let stop = false;
+
+
+    function setCookie(cname, cvalue) {
+        cvalue = cvalue.replace(new RegExp(";", 'g'), ':}');
+        document.cookie = cname + "=" + cvalue + "; path=/";
+    }
+
+    function getCookie(cname) {
+        let name = cname + "=";
+        let ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i].trim();
+            if (c.indexOf(name) == 0)
+                return c.substring(name.length, c.length);
+        }
+        return "";
+    }
+
+    function get_word_level_gaze_data() {
+
+        $.ajax({
+            type: 'POST',
+            url: '/word_level_data/',
+            data: JSON.stringify(app._data.readSequel),
+            dataType: "JSON",
+            async: false,
+            success: function () {
+                console.log("success");
+                if (app._data.page == app._data.totalPage)
+                    window.location.href = 'http://127.0.0.1:8000/label';
+            },
+            error: function () {
+                console.log("error");
+            },
+            processData: false,
+            contentType: false
+
+        })
+    }
+
+    //截图
+    function get_base64_gaze_and_intervention(page) {
+        let opts = {
+            //scale: scale, // 添加的scale 参数
+            //canvas: canvas, //自定义 canvas
+            //logging: false, //日志开关，便于查看html2canvas的内部执行流程
+            //width: width, //dom 原始宽度
+            //height: height,
+            useCORS: true // 【重要】开启跨域配置
+        };
+        html2canvas($('body')[0], opts).then(canvas => {
+            //document.body.appendChild(canvas);
+
+            // 调用Canvas2Image插件
+            // let img = Canvas2Image.convertToImage(canvas, canvasWidth, canvasHeight);
+            // let image_data = $(img).attr('src');
+
+            let url = canvas.toDataURL();
+
+            let formdata = new FormData();
+            formdata.append("image", url.toString());
+            formdata.append("x", x.toString());
+            formdata.append("y", y.toString());
+            formdata.append("t", t.toString());
+            formdata.append("interventions", interventions.toString());
+            formdata.append("page", app._data.page);
+            formdata.append("text", app._data.contentCurPage);
+            formdata.append("location", JSON.stringify(app._data.buttonCurLoc));
+            formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page - 1]));
+
+            $.ajax({
+                type: 'POST',
+                url: '/collect_page_data/',
+                data: formdata,
+                async: false,
+                success: function () {
+                    //执行完毕后再换页
+                    app.clearPageWords();
+
+                    x = [];
+                    y = [];
+                    t = [];
+                    app._data.page = app._data.page + page;
+                    app.getPage();
+                },
+                error: function () {
+                    console.log("error");
+                },
+                processData: false,
+                contentType: false
+            })
+        });
+    }
+
+</script>
+</html>

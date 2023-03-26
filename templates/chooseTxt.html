@@ -13,76 +13,51 @@
     <title>Choose Text</title>
 </head>
 <body>
-    <div id="app">
-        <div id="tips_begin" style="position: absolute; width: 40%;left: 30%">
-            <div class="px-4 py-5 my-5">
-                <div class="col-lg-6 mx-auto mt-3">
-                    <p class="lead mb-4 text-center">
-                        请输入要阅读的文章id
-                    </p>
-                    <div class="col-sm" style="margin-bottom: 30px">
-                        <input type="text" class="form-control" id="article_id" placeholder value required>
-                        <div class="invalid-feedback">文章ID不能为空</div>
-                    </div>
-                    <div id="article_list" style="margin-bottom: 30px">
-
-                    </div>
-                    <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-                        <button type="button" class="btn btn-primary btn-lg px-4 gap-3" onclick="get_start()">进入阅读</button>
-                    </div>
+<div id="app">
+    <div id="tips_begin" style="position: absolute; width: 40%;left: 30%">
+        <div class="px-4 py-5 my-5">
+            <div class="col-lg-6 mx-auto mt-3">
+                <p class="lead mb-4 text-center">
+                    使用目的
+                </p>
+                <div class="text-center">
+                    <el-radio v-model="radio" label="1">数据收集</el-radio>
+                    <el-radio v-model="radio" label="2">阅读工具</el-radio>
+                </div>
+                <hr>
+                <p class="lead mb-4 text-center">
+                    请选择需要阅读的文章
+                </p>
+                <div id="article_list" style="margin-bottom: 30px">
+                    <ul>
+                        {% for text in texts %}
+                            <li style="margin-bottom: 10px;pointer-events: auto;cursor: pointer;" onclick="get_start({{ text.id }})">{{ text.id }}
+                                : {{ text.title }}</li>
+                        {% endfor %}
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
+</div>
 </body>
 <script>
-    var app = new Vue({
+    let app = new Vue({
         el: "#app",
-        data: {
-            articles: [],
-        },
-        methods: {
-            showArticles: function () {
-                axios.get("/text").then((response) => {
-                    this.articles = response.data;
-                    this.articles = Object.values(this.articles);
-                    let e = document.getElementById('article_list');
-                    let ul = document.createElement('ul');
-                    ul.id = "articles";
-                    e.appendChild(ul);
-                    e = ul;
-                    for(let i = 0; i < this.articles.length; i++) {
-                        let el = document.createElement('li');
-                        el.className = "article";
-                        el.innerHTML = (i+1).toString() + ": " + this.articles[i];
-                        e.appendChild(el);
-                    }
-                });
-            },
-        },
-        created () {
-            this.showArticles();
+        data:{
+            radio:'1'
         }
     })
+
     function setCookie(cname, cvalue) {
         document.cookie = cname + "=" + cvalue + "; path=/";
     }
 
-    function getCookie(cname) {
-        let name = cname + "=";
-        let ca = document.cookie.split(';');
-        for (let i = 0; i < ca.length; i++) {
-            let c = ca[i].trim();
-            if (c.indexOf(name) == 0)
-                return c.substring(name.length, c.length);
-        }
-        return "";
-    }
 
-    function get_start () {
-        let article_id = document.getElementById('article_id').value;
+    function get_start(article_id) {
         setCookie("article_id", article_id);
-        window.location.href = "/reading/";
+        let url = "/reading/?type="+app.$data.radio;
+        window.location.href = url;
     }
 </script>
 </html>

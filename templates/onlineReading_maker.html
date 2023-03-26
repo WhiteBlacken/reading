@@ -851,28 +851,6 @@
         return "";
     }
 
-    function get_word_level_gaze_data() {
-
-        $.ajax({
-            type: 'POST',
-            url: '/word_level_data/',
-            data: JSON.stringify(app._data.readSequel),
-            dataType: "JSON",
-            async: false,
-            success: function () {
-                console.log("success");
-                if (app._data.page == app._data.totalPage)
-                    window.location.href = 'http://127.0.0.1:8000/label';
-            },
-            error: function () {
-                console.log("error");
-            },
-            processData: false,
-            contentType: false
-
-        })
-    }
-
     //截图
     function get_base64_gaze_and_intervention(page) {
         let opts = {
@@ -905,7 +883,7 @@
 
             $.ajax({
                 type: 'POST',
-                url: '/data/',
+                url: '/collect_page_data/',
                 data: formdata,
                 async: false,
                 success: function () {
