@@ -36,10 +36,10 @@ html,body{
     width: auto;
     height: auto;
     text-align: center;
-    padding: 10px 20px;
-    border: 1px solid red;
-    border-radius: 5px;
-    font-size: 17pt;
+    padding: 8px 8px;
+    border: 2px solid black;
+    /*border-radius: 5px;*/
+    font-size: 15pt;
     background-color: white;
 }
 
@@ -50,17 +50,16 @@ html,body{
     width: auto;
     height: auto;
     text-align: center;
-    padding: 10px 20px;
-    border: 1px solid red;
-    border-radius: 5px;
-    font-size: 17pt;
+    padding: 8px 8px;
+    border: 2px solid black;
+    /*border-radius: 5px;*/
+    font-size: 15pt;
     background-color: white;
 }
 
 #para{
     width: 100%;
     height: auto;
-    vertical-align: middle;
 }
 
 
@@ -80,7 +79,6 @@ html,body{
     display: inline;
     background: rgba(0,0,0,0);
     cursor: pointer;
-    margin: 0;
     /*font-family: Arial;*/
 }
 
@@ -90,17 +88,19 @@ html,body{
     color: rgba(0,0,0,0);
     border-width: 0;
 }
-/*.wordTranslation{*/
-/*    height: 197px;*/
-/*    display: inline;*/
-/*    font-size: 8pt;*/
-/*    border-width: 0;*/
-/*    background: rgba(0,0,0,0);*/
-/*}*/
 
-/*.sentenceTranslation{*/
+.wander{
+    height: 24px;
+    width: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    background: rgba(0,0,0,0);
+    position: absolute;
+    font-size: 5px;
+    border: 1px solid black;
+}
 
-/*}*/
+
 
 #pageBox{
     height: 70px;
@@ -112,21 +112,24 @@ html,body{
 .alert {
     display: none;
     position: absolute !important;
-    top: 50%;
-    left: 50%;
+    top: 40%;
+    left: 54%;
     transform: translate(-50%, -50%);
     width: 320px;
     padding: 25px;
-    border: 1px solid transparent;
-    border-radius: 10px;
+    border: 2px solid black !important;
+    /*border-radius: 10px;*/
     text-align: center;
+    font-size: 15pt;
+    background-color: white;
 }
 
-.alert-warning {
-    color: #8a6d3b;
-    background-color: #fcf8e3;
-    border-color: #faebcc;
-}
+/*.alert-warning {*/
+/*    !*color: #8a6d3b;*!*/
+/*    border: 2px solid black;*/
+/*    background-color: white;*/
+/*    !*border-color: #faebcc;*!*/
+/*}*/
 
 #markers-top {
     width: 100%;

@@ -42,19 +42,13 @@
             <div id="para">
 
             </div>
-{#                <div id="wanderLabeling">#}
-{#                    <div style="font-size: 14pt">你在这一页是否走神了？</div>#}
-{#                    <el-radio-group v-model="radio" @change="changeWanderSelect">#}
-{#                        <el-radio :label="1">是</el-radio>#}
-{#                        <el-radio :label="0">不是</el-radio>#}
-{#                    </el-radio-group>#}
-{#                </div>#}
-            </div>
         </div>
-        <el-button type="primary" style="position: fixed;bottom: 1.8rem;right: 1.8rem;" v-if="page == totalPage"
+        <el-button type="primary" style="position: fixed;bottom: 1.8rem;right: 1.8rem;"
                        v-on:click="collect_labels">标注完成
         </el-button>
+{#    v-if="page == totalPage"#}
     </div>
+</div>
 </body>
 <script>
     var app = new Vue({
@@ -199,13 +193,11 @@
                 var Content = this.content[this.page-1].split('.');
                 Content.splice(Content.length-1, 1);
                 this.sentences = Content;
-                console.log(Content)
                 for(let i = 0 ; i < Content.length; i++)
                     if(Content[i].length == 0)
                         Content.splice(i,1);
                 for (let i = 0; i < Content.length; i++) {
                     var sentence = Content[i].replace(".", "").split(' ');
-                    console.log(sentence);
                     for (let j = 0; j < sentence.length; j++) {
                         if (sentence[j] != "") {
                             this.words.push(sentence[j].split(',')[0]);
@@ -230,14 +222,6 @@
                                 document.getElementById('labelArea').appendChild(ele);
                                 this.labels[this.page-1].wanderLabels.push([]);
                             }
-                            {#if(lastWord) {#}
-                            {#    if(el.getBoundingClientRect().top > lastWord.getBoundingClientRect().top || num == this.paraLoc[this.page-1][this.paraLoc[this.page-1].length-1]) {#}
-                            {#        end = num - 1;#}
-                            {#        this.linesCurPage.push(new Array(start, end));#}
-                            {#        start = num;#}
-                            {#    }#}
-                            {# }#}
-                            {#lastWord = el;#}
                             num += 1;
                             if(this.isInArr(num - 1,this.paraLoc[this.page-1])) {
                                 el = document.createElement("button");
@@ -252,42 +236,6 @@
                         }
                     }
                 }
-                {#for(let i = 0; i < this.linesCurPage.length; i++) {#}
-                {#    let el = document.createElement('button');#}
-                {#    el.className = "wander";#}
-                {#    el.innerHTML = (i+1).toString();#}
-                {#    el.setAttribute("onclick", "changeWanderSelect("+ (i+1) + ")");#}
-                {#    start = document.getElementsByClassName('word')[this.linesCurPage[i][0]].getBoundingClientRect().top;#}
-                {#    let end = document.getElementsByClassName('word')[this.linesCurPage[i][1]].getBoundingClientRect().bottom;#}
-                {#    el.style.top = (end - start) / 2 + start - 17 + "px";#}
-                {#    document.getElementById('labelArea').appendChild(el);#}
-                {#    this.labels[this.page-1].wanderLabels.push([]);#}
-                {# }#}
-                {#let buttonNum = 0;#}
-                {#for (; e.children[buttonNum]; buttonNum++) {#}
-                {#    if(buttonNum > 1 && e.children[buttonNum].getBoundingClientRect().top > e.children[buttonNum-1].getBoundingClientRect().top) {#}
-                {#        if(this.lines == "") {#}
-                {#            this.lines = [];#}
-                {#            this.lines.push(new Array(0, buttonNum));#}
-                {#        }else {#}
-                {#            this.lines.push(new Array(this.lines[this.lines.length-1][1], buttonNum));#}
-                {#        }#}
-                {#    }#}
-                {# }#}
-                {#this.lines.push(new Array(this.lines[this.lines.length-1][1], buttonNum));#}
-                {#let buttonBottom = e.children[e.children.length-1].getBoundingClientRect().bottom;#}
-                {#let offset = e.getBoundingClientRect().top;#}
-                {#let buttonHeight = buttonBottom - e.children[e.children.length-1].getBoundingClientRect().top;#}
-                {#let lineNum = Math.trunc((buttonBottom - offset) / buttonHeight);#}
-                {#for(let i = 0; i < lineNum; i++) {#}
-                {#    var lab = document.createElement("button");#}
-                {#    lab.className = "wander";#}
-                {#    lab.innerHTML = (i+1).toString();#}
-                {#    lab.style.left = "93%";#}
-                {#    lab.style.top = offset + buttonHeight / 2 + i * buttonHeight - 12 + "px";#}
-                {#    lab.setAttribute("onclick", "changeWanderSelect("+ (i+1) + ")");#}
-                {#    document.getElementById('labelArea').appendChild(lab);#}
-                {# }#}
                 this.rememberLabels();
                 if(!this.sentencesPerPage[this.page - 1]) {
                     this.sentencesPerPage.push(this.sentencesCurPage);

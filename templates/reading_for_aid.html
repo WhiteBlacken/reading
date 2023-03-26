@@ -11,7 +11,7 @@
     <link href="/static/plugins/element@vue2/index.css" type="text/css" rel="stylesheet" charset="utf-8">
     <link href="/static/css/onlineReading.css" type="text/css" rel="stylesheet" charset="utf-8">
     <!--bp5 css文件-->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/plugins/bootstrap-5.1.3-dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
 <div id="app">
@@ -67,8 +67,8 @@
 </div>
 </body>
 <!--bp5 js集成文件-->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-<!--webgazer-->
+<script src="/static/plugins/bootstrap-5.1.3-dist/js/bootstrap.bundle.min.js"></script>
+{#<!--webgazer-->#}
 <script src="/static/js/webgazer.js"></script>
 <!--截图相关-->
 <script src="/static/js/canvas2image.js"></script>
@@ -102,6 +102,7 @@
             currentTransWord: -1,
             currentTransBox: [],
             currentTransSentenceBox: [],
+            currentMindWanderBox: [],
             readSequel: [],
             //每段末尾词的索引
             paraLoc: [],
@@ -179,18 +180,41 @@
                 return false;
             },
 
+            isMindwandered: function (num) {
+                let start = 0;
+                let end = 0;
+                for (let i = 0; i < this.sentences.length; i++) {
+                    let w = this.sentences[i].split(' ');
+                    for (let j = 0; j < w.length; j++)
+                        if (w[j] == '')
+                            w.splice(j, 1);
+                    if (start + w.length <= num) {
+                        start += w.length;
+                    } else {
+                        end = start + w.length;
+                        break;
+                    }
+                }
+                for (let i = 0; i < this.currentMindWanderBox.length; i++) {
+                    if (this.currentMindWanderBox[i][0] == start && this.currentMindWanderBox[i][1] == end)
+                        return true;
+                }
+                return false;
+            },
+
             getWordTranslation: function (num) {
                 if (!this.isWordTranslated(num)) {
-                    this.changeTextStyle(num, num + 1, 1);
-                    this.wordLocation = this.getWordLocation(num);
+                    this.changeTextStyle(num, num + 1, 'word');
+                    let wordLocation = this.getWordLocation(num);
                     this.currentTransBox.push(num);
                     this.currentTransWord = num;
                     $('<div>')
                         .appendTo('#readArea')
                         .addClass('trans')
                         .attr('id', 'transWord' + num)
-                        .css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px")
-                        .css('bottom',  window.screen.availHeight - this.wordLocation.bottom - 15 + "px")
+                        .css('left', (wordLocation.left + wordLocation.right) / 2 + "px")
+                        .css('transform', "translate(-50%, 0)")
+                        .css('bottom',  $('#reading').height() - wordLocation.top + "px")
                         .html(this.transPerPage[this.page - 1][num].zh)
                         .fadeIn('fast', function () {
                             webgazer.pause();
@@ -210,7 +234,7 @@
                             {# }, 1600);#}
                         });
                 } else {
-                    {#this.changeTextStyle(num, num + 1, 0);#}
+                    this.changeTextStyle(num, num + 1, 'word');
                     let ind = this.currentTransBox.indexOf(num);
                     this.currentTransBox.splice(ind, 1);
                     $('#transWord' + num).remove();
@@ -219,6 +243,7 @@
                         autoInterClass.MyAutoRun();
                     }
                 }
+
             },
 
             getSentenceTranslation: function (num) {
@@ -237,20 +262,24 @@
                     }
                 }
                 if (!this.isSentenceTranslated(num)) {
-                    this.changeTextStyle(start, end, 1);
-                    this.wordLocation = this.getWordLocation(num);
+                    this.changeTextStyle(start, end, 'sentence');
+                    let wordLocation = this.getWordLocation(start);
                     this.currentTransSentenceBox.push(new Array(start, end));
-
                     $('<div>')
                         .appendTo('#readArea')
                         .addClass('transSentence')
                         .attr('id', 'transSentence' + start);
-                    if (this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 < 840)
-                        $('#transSentence' + start).css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px");
-                    else
-                        $('#transSentence' + start).css('right', "130px");
+                    {#if (this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 < 840) {#}
+                        {#$('#transSentence' + start).css('left', this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px");#}
+                    {#    $('#transSentence' + start).css('left', "330px");#}
+                    {#    $('#transSentence' + start).css('right', "130px");#}
+                    {# }#}
+                    {#else#}
+                    {#    $('#transSentence' + start).css('right', "130px");#}
+                    $('#transSentence' + start).css('left', "330px");
+                    $('#transSentence' + start).css('right', "130px");
                     $('#transSentence' + start)
-                        .css('bottom',  window.screen.availHeight - this.wordLocation.bottom - 15 + "px")
+                        .css('bottom', $('#reading').height() - wordLocation.top + "px")
                         .html(this.transPerPage[this.page - 1][num].sentence_zh)
                         .fadeIn('fast', function () {
                             webgazer.pause();
@@ -273,7 +302,7 @@
                             {# }, 3300);#}
                         });
                 }else {
-                    {#app.changeTextStyle(start, end, 0);#}
+                    this.changeTextStyle(start, end, 'sentence');
                     let ind = 0;
                     for (let i = 0; i < this.currentTransSentenceBox.length; i++) {
                         if (this.currentTransSentenceBox[i][0] == start && this.currentTransSentenceBox[i][1] == end) {
@@ -281,6 +310,7 @@
                             break;
                         }
                     }
+
                     this.currentTransSentenceBox.splice(ind, 1);
                     $('#transSentence' + start).remove();
                     if (this.currentTransSentenceBox.length == 0 && this.currentTransBox.length == 0) {
@@ -303,38 +333,81 @@
 
             },
 
-            getWanderRemind: function () {
-                let style = 'alert-warning';
-                $('<div>')
+            getWanderRemind: function (num) {
+                {#let style = 'alert-warning';#}
+                let start = 0;
+                let end = 0;
+                for (let i = 0; i < this.sentences.length; i++) {
+                    let w = this.sentences[i].split(' ');
+                    for (let j = 0; j < w.length; j++)
+                        if (w[j] == '')
+                            w.splice(j, 1);
+                    if (start + w.length <= num) {
+                        start += w.length;
+                    } else {
+                        end = start + w.length;
+                        break;
+                    }
+                }
+                if (!this.isMindwandered(num)) {
+                    this.changeTextStyle(start, end, 'mind');
+                    this.currentMindWanderBox.push(new Array(start, end));
+                }
+                if(this.currentMindWanderBox.length == 1) {
+                    $('<div>')
                     .appendTo('body')
-                    .addClass('alert ' + style)
+                    .addClass('alert')
                     .html("你刚刚走神了，请重新认真阅读错过的内容！")
                     .fadeIn('fast', function () {
                         webgazer.pause();
                         {#autoInterClass.MyAutoRunSuspend();#}
                         setTimeout(function () {
                             $('.alert').fadeOut('fast', function () {
+                                for (let i = 0; i < app._data.currentMindWanderBox.length; i++) {
+                                    let start = app._data.currentMindWanderBox[i][0];
+                                    let end = app._data.currentMindWanderBox[i][1];
+                                    app._data.changeTextStyle(start, end, 'mind');
+                                }
+                                app._data.currentMindWanderBox = [];
                             });
-                        }, 800)
+                        }, 80000)
                         webgazer.resume();
                         {#autoInterClass.MyAutoRun();#}
                     });
+                }
             },
 
-            changeTextStyle: function (start, end, isHighlight) {
-                if (isHighlight == 1) {
-                    for (let i = start; i < end; i++) {
-                        if ($('.word:eq(' + i + ')').css('text-decoration') == 'none solid rgb(51, 51, 51)') {
-                            $('.word:eq(' + i + ')').css('text-decoration', "underline");
-                            $('.word:eq(' + i + ')').css('color', "blue");
+            changeTextStyle: function (start, end, inter_type) {
+                switch(inter_type) {
+                    case 'word': {
+                        for (let i = start; i < end; i++) {
+                            if (!this.isWordTranslated(i)) {
+                                $('.word:eq(' + i + ')').css('background-color', "#32B4EF");
+                            }else {
+                                $('.word:eq(' + i + ')').css('background-color', "white");
+                            }
                         }
+                        break;
                     }
-                } else {
-                    for (let i = start; i < end; i++) {
-                        if ($('.word:eq(' + i + ')').css('text-decoration') == 'underline solid rgb(0, 0, 255)') {
-                            $('.word:eq(' + i + ')').css('text-decoration', "none solid rgb(51, 51, 51)");
-                            $('.word:eq(' + i + ')').css('color', "black");
+                    case 'sentence': {
+                        for (let i = start; i < end; i++) {
+                            if (!this.isSentenceTranslated(i)) {
+                                $('.word:eq(' + i + ')').css('background-color', "#EB5354");
+                            }else {
+                                $('.word:eq(' + i + ')').css('background-color', "white");
+                            }
                         }
+                        break;
+                    }
+                    case 'mind': {
+                        for (let i = start; i < end; i++) {
+                            if (!this.isMindwandered(i)) {
+                                $('.word:eq(' + i + ')').css('background-color', "#FBCB0C");
+                            }else {
+                                $('.word:eq(' + i + ')').css('background-color', "white");
+                            }
+                        }
+                        break;
                     }
                 }
             },
@@ -390,7 +463,9 @@
                         let sentence_inter = res['sentence'];
                         let wander_inter = res['wander'];
                         if(wander_inter && wander_inter.length > 0) {
-                            app.getWanderRemind();
+                            for(let i = 0; i < wander_inter.length; i++) {
+                                app.getWanderRemind(wander_inter[i][0], wander_inter[i][1], 'mind');
+                            }
                         }else {
                             for(let i = 0; i < sentence_inter.length; i++){
                                 let start = sentence_inter[i][0];
@@ -464,18 +539,17 @@
                         this.sentenceTranslations.push(tr[s].sentence_zh);
                     }
                 }
-                console.log(this.sentenceTranslations)
-                for(let s = 0; s < tr.length; s++){
-                    for(let t = 0; t < this.sentenceTranslations.length ; t++) {
-                        if (this.sentenceTranslations[t] == tr[s].sentence_zh) {
-                            let str = "";
-                            for(let q = (t - 3 >= 0 ? t-3:0); q < t; q++) {
-                                str += this.sentenceTranslations[q];
-                            }
-                            tr[s].sentence_zh = str + tr[s].sentence_zh;
-                        }
-                    }
-                }
+                {#for(let s = 0; s < tr.length; s++){#}
+                {#    for(let t = 0; t < this.sentenceTranslations.length ; t++) {#}
+                {#        if (this.sentenceTranslations[t] == tr[s].sentence_zh) {#}
+                {#            let str = "";#}
+                {#            for(let q = (t - 3 >= 0 ? t-3:0); q < t; q++) {#}
+                {#                str += this.sentenceTranslations[q] + "。";#}
+                {#            }#}
+                {#            tr[s].sentence_zh = str + tr[s].sentence_zh + "。";#}
+                {#        }#}
+                {#    }#}
+                {# }#}
                 {#console.log(tr[0].zh)#}
                 {#console.log(p)#}
                 var e = document.getElementById('para');
@@ -587,7 +661,7 @@
             },
 
             getPage: function () {
-                {#this.getWanderRemind();#}
+                {#this.getWanderRemind(100);#}
                 this.clearPageWords();
                 let num = 0;
                 let e = document.getElementById('para');
@@ -618,6 +692,15 @@
                             el.className = "word";
                             el.id = num.toString();
                             el.innerHTML = words[j];
+                            {#if (num >= 209 && num <= 224){#}
+                            {#    el.style.backgroundColor='#EB5354';#}
+                            {# }#}
+                            {#if (num >= 82 && num < 103){#}
+                            {#    el.style.backgroundColor='#FBCB0C';#}
+                            {# }#}
+                            {#if (num >= 149 && num <= 155){#}
+                            {#     el.style.backgroundColor='#32B4EF';#}
+                            {# }#}
                             el.setAttribute("onclick", "getWordTranslation(" + num + ")");
                             el.setAttribute("ondblclick", "getSentenceTranslation(" + num + ")");
                             if (j == words.length - 1 && words[j].length > 1)
@@ -659,6 +742,9 @@
                 formdata.append("page", this.page);
                 formdata.append("page_text", this.contentCurPage);
                 formdata.append("location", JSON.stringify(this.buttonCurLoc));
+                formdata.append("x",x.toString());
+                formdata.append("y",y.toString());
+                formdata.append("t",t.toString());
                 {#formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page - 1]));#}
 
                 $.ajax({
@@ -800,18 +886,18 @@
 
         //开启webgazer
         //眼动数据监听--放在getContent前面会采集很多无效数据
-        webgazer.setGazeListener(function (data, elapsedTime) {
-            if (data == null) {
-                return;
-            }
-            x.push(data.x);
-            y.push(data.y);
-            t.push(elapsedTime);
-
-         }).begin()
+        {#webgazer.setGazeListener(function (data, elapsedTime) {#}
+        {#    if (data == null) {#}
+        {#        return;#}
+        {#    }#}
+        {#    x.push(data.x);#}
+        {#    y.push(data.y);#}
+        {#    t.push(elapsedTime);#}
+        {##}
+        {# }).begin()#}
 
         app.getPage();
-        autoInterClass.MyAutoRun();
+        {#autoInterClass.MyAutoRun();#}
     }
 
     //监听空格事件
@@ -834,27 +920,27 @@
             }
             case 32: {
                 stop = true;
-                autoInterClass.MyAutoRunSuspend();
-                webgazer.pause();
-                let formdata = new FormData();
+                {#autoInterClass.MyAutoRunSuspend();#}
+                {#webgazer.pause();#}
+                {#let formdata = new FormData();#}
                 {#formdata.append("interventions", interventions.toString());#}
-                formdata.append("is_end", '1');
+                {#formdata.append("is_end", '1');#}
                 {#formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page - 1]));#}
-                $.ajax({
-                    type: 'POST',
-                    url: '/page_info/',
-                    data: formdata,
-                    async: false,
-                    success: function () {
-                        console.log("finish reading");
-                    },
-                    error: function () {
-                        console.log("finish error");
-                    },
-                    processData: false,
-                    contentType: false
-                })
-                {#window.location.href = '/label';#}
+                {#$.ajax({#}
+                {#    type: 'POST',#}
+                {#    url: '/page_info/',#}
+                {#    data: formdata,#}
+                {#    async: false,#}
+                {#    success: function () {#}
+                {#        console.log("finish reading");#}
+                {#    },#}
+                {#    error: function () {#}
+                {#        console.log("finish error");#}
+                {#    },#}
+                {#    processData: false,#}
+                {#    contentType: false#}
+                {# })#}
+                window.location.href = '/label';
                 //之后的可以不写
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";

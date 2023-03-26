@@ -3,9 +3,9 @@ import json
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from loguru import logger
-
 from analysis.models import Text, Paragraph, Translation, Dictionary, Experiment, PageData
 from tools import login_required, translate, Timer
+
 
 def go_login(request):
     """
@@ -42,12 +42,12 @@ def reading(request):
     """
     进入阅读页面,分为数据收集/阅读辅助两种
     """
-    reading_type = request.GET.get('type','1')
+    reading_type = request.GET.get('type', '1')
 
     if reading_type == '1':
         return render(request, "reading_for_data.html")
     else:
-        return render(request,"reading_for_aid.html")
+        return render(request, "reading_for_aid.html")
 
 
 def get_para(request):
@@ -75,9 +75,9 @@ def get_para(request):
                 sentence = sentence.strip()
                 if len(sentence) > 3:
                     if translations := (
-                        Translation.objects.filter(article_id=article_id)
-                        .filter(para_id=para)
-                        .filter(sentence_id=sentence_id)
+                            Translation.objects.filter(article_id=article_id)
+                                    .filter(para_id=para)
+                                    .filter(sentence_id=sentence_id)
                     ):
                         sentence_zh = translations.first().txt
                     else:
@@ -97,7 +97,7 @@ def get_para(request):
                     for word in words:
                         word = word.strip().replace(",", "")
                         if dictionaries := Dictionary.objects.filter(
-                            en=word.lower()
+                                en=word.lower()
                         ):
                             # 如果字典查得到，就从数据库中取，减少接口使用（要付费呀）
                             zh = dictionaries.first().zh
@@ -148,8 +148,10 @@ def collect_page_data(request):
         logger.info(f"第{page}页数据已存储,id为{str(pagedata.id)}")
     return HttpResponse(1)
 
+
 def go_label_page(request):
     return render(request, "label.html")
+
 
 def collect_labels(request):
     """一次性获得所有页的label，分页存储"""
@@ -157,8 +159,8 @@ def collect_labels(request):
     labels = request.POST.get("labels")
     labels = json.loads(labels)
 
-    paras = request.POST.get("sentence")
-    paras = json.loads(paras)
+    # paras = request.POST.get("sentence")
+    # paras = json.loads(paras)
 
     if experiment_id := request.session.get("experiment_id", None):
         for i, label in enumerate(labels):
@@ -166,7 +168,7 @@ def collect_labels(request):
                 wordLabels=label["wordLabels"],
                 sentenceLabels=label["sentenceLabels"],
                 wanderLabels=label["wanderLabels"],
-                para=paras[i],
+                # para=paras[i],
             )
         Experiment.objects.filter(id=experiment_id).update(is_finish=1)
     logger.info("已获得所有页标签,实验结束")
