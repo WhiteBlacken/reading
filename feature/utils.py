@@ -238,7 +238,7 @@ def paint_line_on_fixations(fixations: list, lines: list, background: str):
 
 
 def paint_fixations(image, fixations, interval=1, label=1, line=True):
-    save_path = "pic\\pilot_study\\1065\\fix.png"
+    # save_path = "pic\\pilot_study\\1065\\fix.png"
     canvas = image
     fixations = [x for i, x in enumerate(fixations) if i % interval == 0]
     # for i in range(len(fixations)):
@@ -259,20 +259,20 @@ def paint_fixations(image, fixations, interval=1, label=1, line=True):
         cv2.circle(
             canvas,
             (x, y),
-            l,
+            4,
             (0, 0, 255),
-            2,
+            -1,
         )
-        # if i % label == 0:
-        #     cv2.putText(
-        #         canvas,
-        #         str(i),
-        #         (x, y),
-        #         cv2.FONT_HERSHEY_SIMPLEX,
-        #         0.7,
-        #         (0, 0, 0),
-        #         2,
-        #     )
+        if i % label == 0:
+            cv2.putText(
+                canvas,
+                str(i),
+                (x, y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 0, 0),
+                2,
+            )
         if i > 0 and line:
             cv2.line(
                 canvas,
@@ -294,64 +294,64 @@ def paint_fixations(image, fixations, interval=1, label=1, line=True):
     #             (0, 0, 0),
     #             2,
     #         )
-    cv2.imwrite(save_path, canvas, [int(cv2.IMWRITE_PNG_COMPRESSION), 0])
-    img = canvas
-    img = plt.imread(save_path)
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    ax.imshow(img)
-    plt.axis("off")
-    for i, fix in enumerate(key_fixations):
-        #     # if i % 3 == 0:
-        #     #     if i == 3 or i == 6:
-        #     #         ax.text(coordinate[0],
-        #     #                 coordinate[1] - cal_fix_radius(coordinate[2]) - 20, str(i),
-        #     #                 family='Times New Roman', fontsize=7, verticalalignment='center',
-        #     #                 horizontalalignment='center', color="black")
-        #     #     elif i == 9 or i == 12:
-        #     #         ax.text(coordinate[0],
-        #     #                 coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
-        #     #                 family='Times New Roman', fontsize=7, verticalalignment='center',
-        #     #                 horizontalalignment='center', color="black")
-        #     #     else:
-        if fix[0] == 37:
-            ax.text(
-                fix[1][0] - 10,
-                fix[1][1] - 20,
-                str(fix[0]),
-                family="Times New Roman",
-                fontsize=7,
-                verticalalignment="center",
-                horizontalalignment="center",
-                color="black",
-            )
-        elif fix[0] == 17 or fix[0] == 18:
-            ax.text(
-                fix[1][0] + 10,
-                fix[1][1] - 20,
-                str(fix[0]),
-                family="Times New Roman",
-                fontsize=7,
-                verticalalignment="center",
-                horizontalalignment="center",
-                color="black",
-            )
-        else:
-            ax.text(
-                fix[1][0],
-                fix[1][1]-20,
-                str(fix[0]),
-                family="Times New Roman",
-                fontsize=7,
-                verticalalignment="center",
-                horizontalalignment="center",
-                color="black",
-            )
-    # else:
-    #     ax.text(coordinate[0], coordinate[1], str(i + 1), fontsize=5, verticalalignment='center',
-    #             horizontalalignment='center', color="tomato")
-    # plt.show()
-    fig.savefig(save_path, bbox_inches='tight', pad_inches=-0.1, dpi=300)
+    # cv2.imwrite(save_path, canvas, [int(cv2.IMWRITE_PNG_COMPRESSION), 0])
+    # img = canvas
+    # img = plt.imread(save_path)
+    # fig = plt.figure()
+    # ax = fig.add_subplot()
+    # ax.imshow(img)
+    # plt.axis("off")
+    # for i, fix in enumerate(key_fixations):
+    #     #     # if i % 3 == 0:
+    #     #     #     if i == 3 or i == 6:
+    #     #     #         ax.text(coordinate[0],
+    #     #     #                 coordinate[1] - cal_fix_radius(coordinate[2]) - 20, str(i),
+    #     #     #                 family='Times New Roman', fontsize=7, verticalalignment='center',
+    #     #     #                 horizontalalignment='center', color="black")
+    #     #     #     elif i == 9 or i == 12:
+    #     #     #         ax.text(coordinate[0],
+    #     #     #                 coordinate[1] + cal_fix_radius(coordinate[2]) + 20, str(i),
+    #     #     #                 family='Times New Roman', fontsize=7, verticalalignment='center',
+    #     #     #                 horizontalalignment='center', color="black")
+    #     #     #     else:
+    #     if fix[0] == 37:
+    #         ax.text(
+    #             fix[1][0] - 10,
+    #             fix[1][1] - 20,
+    #             str(fix[0]),
+    #             family="Times New Roman",
+    #             fontsize=7,
+    #             verticalalignment="center",
+    #             horizontalalignment="center",
+    #             color="black",
+    #         )
+    #     elif fix[0] == 17 or fix[0] == 18:
+    #         ax.text(
+    #             fix[1][0] + 10,
+    #             fix[1][1] - 20,
+    #             str(fix[0]),
+    #             family="Times New Roman",
+    #             fontsize=7,
+    #             verticalalignment="center",
+    #             horizontalalignment="center",
+    #             color="black",
+    #         )
+    #     else:
+    #         ax.text(
+    #             fix[1][0],
+    #             fix[1][1]-20,
+    #             str(fix[0]),
+    #             family="Times New Roman",
+    #             fontsize=7,
+    #             verticalalignment="center",
+    #             horizontalalignment="center",
+    #             color="black",
+    #         )
+    # # else:
+    # #     ax.text(coordinate[0], coordinate[1], str(i + 1), fontsize=5, verticalalignment='center',
+    # #             horizontalalignment='center', color="tomato")
+    # # plt.show()
+    # fig.savefig(save_path, bbox_inches='tight', pad_inches=-0.1, dpi=300)
 
     return canvas
 
