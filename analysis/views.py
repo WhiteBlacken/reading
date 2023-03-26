@@ -5,18 +5,18 @@ import os
 from django.http import HttpResponse
 from django.shortcuts import render
 
+from analysis.feature import WordFeature, SentFeature
 from analysis.models import PageData, Experiment
 from pyheatmap import myHeatmap
 from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_fixations, get_word_location, \
-    paint_on_word
+    paint_on_word, get_word_and_sentence_from_text, compute_label, textarea, get_fix_by_time, \
+    get_item_index_x_y, is_watching, get_sentence_by_word, generate_exp_csv
 import cv2
 
 # Create your views here.
 
 
 def get_all_time_pic(request):
-
-
     exp_id = request.GET.get("exp_id")
     page_data_ls = PageData.objects.filter(experiment_id=exp_id)
     exp = Experiment.objects.get(id=exp_id)
@@ -78,3 +78,87 @@ def get_all_time_pic(request):
     return HttpResponse(1)
 
 
+def dataset_of_timestamp(request):
+    """按照时间切割数据集"""
+    # 获取切割的窗口大小
+    interval = request.GET.get("interval",8)
+    interval = interval * 1000
+    # 确定文件路径
+    base_path = "data\\dataset\\"
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+    from datetime import datetime
+    now = datetime.now().strftime("%Y%m%d")
+
+    exp_path = f"{base_path}exp_info.csv"
+    hand_feature_path = f"{base_path}handcraft-feature-{now}.csv"
+    cnn_feature_path = f"{base_path}cnn-feature-{now}.csv"
+    # 获取需要生成的实验
+    experiment_list_select = [1011]
+    experiments = Experiment.objects.filter(id__in=experiment_list_select)
+
+    for experiment in experiments:
+        time = 0 # 记录当前的时间
+        page_data_list = PageData.objects.filter(experiment_id=experiment.id)
+        # 创建不同页的信息
+        word_feature_list = []
+        sent_feature_list = []
+        for page_data in page_data_list:
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            # word_level
+            wordFeature = WordFeature(len(word_list))
+            wordFeature.word_list = word_list # 填充单词
+            wordFeature.word_understand, wordFeature.sentence_understand, wordFeature.mind_wandering = compute_label(
+                page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
+            ) # 填充标签
+            for i, word in enumerate(word_list):
+                sent_index = get_sentence_by_word(i, sentence_list)
+                wordFeature.sentence_id[i] = sent_index # 使用page_id,time,sentence_id可以区分
+            word_feature_list.append(wordFeature)
+            # sentence_level
+            sentFeature = SentFeature(len(sentence_list))
+            sentFeature.sentence = [sentence[0] for sentence in sentence_list]
+
+
+
+        for p,page_data in enumerate(page_data_list):
+            wordFeature = word_feature_list[p] # 获取当前的特征
+
+            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+            result_fixations, row_sequence, row_level_fix, sequence_fixations = generate_fixations(
+                gaze_points, page_data.texts, page_data.location
+            )
+
+            pre_gaze = 0
+            for g,gaze in enumerate(gaze_points):
+                if g == 0:
+                    continue
+                if gaze[-1] - gaze_points[pre_gaze][-1] > interval: # 按照interval切割gaze
+                    # 把当前页的数据清空，因为要重新算一遍特征
+                    wordFeature.clean()
+                    # 目的是为了拿到gaze的时间，来切割fixation，为什么不直接gaze->fixation,会不准 todo 实时处理
+                    fixations_before = get_fix_by_time(result_fixations, start=0,end=gaze[-1])
+                    fixations_now = get_fix_by_time(result_fixations, gaze_points[pre_gaze][-1], gaze[-1])
+                    # 计算特征
+                    pre_gaze = g
+                    pre_word_index = -1
+                    for fixation in fixations_before:
+                        word_index, isAdjust = get_item_index_x_y(json.loads(page_data.location), fixation[0], fixation[1])
+                        if word_index != -1:
+                            wordFeature.number_of_fixation[word_index] += 1
+                            wordFeature.total_fixation_duration[word_index] += fixation[2]
+
+                            if word_index != pre_word_index: # todo reading times的计算
+                                wordFeature.reading_times[word_index] += 1
+                    # 计算need prediction
+                    wordFeature.need_prediction = is_watching(fixations_now,json.loads(page_data.location),wordFeature.num)
+                    # 生成数据
+                    for feature in word_feature_list:
+                        feature.to_csv(hand_feature_path, experiment.id, page_data.id, time)
+
+                    time += 1
+
+
+    # 生成exp相关信息
+    generate_exp_csv(exp_path,experiments)
+    return HttpResponse(1)
