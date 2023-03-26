@@ -50,7 +50,6 @@ body{
     position: absolute;
     font-size: 5px;
     border: 1px solid black;
-
 }
 
 #pageBox{
@@ -60,8 +59,3 @@ body{
     align-items:center;
 }
 
-#wanderLabeling{
-    position: fixed;
-    top: 10%;
-    left: 20px;
-}

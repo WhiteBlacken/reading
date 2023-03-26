@@ -60,7 +60,6 @@ html,body{
 #para{
     width: 100%;
     height: auto;
-    vertical-align: middle;
 }
 
 
@@ -80,7 +79,6 @@ html,body{
     display: inline;
     background: rgba(0,0,0,0);
     cursor: pointer;
-    margin: 0;
     /*font-family: Arial;*/
 }
 
@@ -90,17 +88,19 @@ html,body{
     color: rgba(0,0,0,0);
     border-width: 0;
 }
-/*.wordTranslation{*/
-/*    height: 197px;*/
-/*    display: inline;*/
-/*    font-size: 8pt;*/
-/*    border-width: 0;*/
-/*    background: rgba(0,0,0,0);*/
-/*}*/
 
-/*.sentenceTranslation{*/
+.wander{
+    height: 24px;
+    width: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    background: rgba(0,0,0,0);
+    position: absolute;
+    font-size: 5px;
+    border: 1px solid black;
+}
 
-/*}*/
+
 
 #pageBox{
     height: 70px;
