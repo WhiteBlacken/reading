@@ -109,6 +109,11 @@
             //每段末尾词的索引
             paraLoc: [],
             labels: [],
+<<<<<<< HEAD
+=======
+            sentencesPerPage: [],
+            sentencesCurPage: [],
+>>>>>>> 2ef03b09aa175117906b9d9522c5c1ca3b702052
         },
         methods: {
 
@@ -191,8 +196,25 @@
             },
 
             changeWanderSelect: function (num) {
+<<<<<<< HEAD
                 let start = this.sentencesCurPage[num-1][0];
                 let end = this.sentencesCurPage[num-1][1];
+=======
+                let start = 0;
+                let end = 0;
+                for(let i = 0; i < num - 1; i++) {
+                    let w = this.sentences[i].split(' ');
+                    for (let j = 0; j < w.length; j++)
+                        if (w[j] == '')
+                            w.splice(j, 1);
+                    start += w.length;
+                }
+                let w = this.sentences[num-1].split(' ');
+                for (let j = 0; j < w.length; j++)
+                    if (w[j] == '')
+                        w.splice(j, 1);
+                end = start + w.length - 1;
+>>>>>>> 2ef03b09aa175117906b9d9522c5c1ca3b702052
                 for(let i = 0; i < this.labels[this.page-1].wanderLabels.length; i++) {
                     if(this.labels[this.page-1].wanderLabels[i][0] == start && this.labels[this.page-1].wanderLabels[i][1] == end) {
                         this.labels[this.page-1].wanderLabels[num-1] = [];
@@ -201,13 +223,20 @@
                         console.log(this.labels);
                         return;
                     }
+<<<<<<< HEAD
                  }
+=======
+                }
+>>>>>>> 2ef03b09aa175117906b9d9522c5c1ca3b702052
                 document.getElementsByClassName('wander')[num-1].style.borderColor = "orange";
                 document.getElementsByClassName('wander')[num-1].style.color = "orange";
                 this.labels[this.page-1].wanderLabels[num-1] = new Array(start, end);
                 console.log(this.labels);
+<<<<<<< HEAD
                 {#this.labels[this.page-1].wanderLabels = this.radio;#}
                 {#console.log(this.labels[this.page-1].wanderLabels)#}
+=======
+>>>>>>> 2ef03b09aa175117906b9d9522c5c1ca3b702052
             },
 
             rememberLabels:function () {
@@ -508,7 +537,6 @@
                     this.content = response.data;
                 });
                 this.content = Object.values(this.content);
-                console.log(this.content)
                 for (let i = 0; i < this.content.length; i++)
                     this.paras.push(this.content[i][0]);
                 let p = "";
@@ -600,16 +628,13 @@
                             }
                             num += words.length;
                             wordLength += words.length;
-
                         }
-
                     }
                     {#console.log(this.paraLoc)#}
                     if (this.paraLoc[this.contentPerPage.length].length == 0 || this.paraLoc[this.contentPerPage.length][this.paraLoc[this.contentPerPage.length].length - 1] < num - 1)
                         this.paraLoc[this.contentPerPage.length].push(num - 1);
                     this.transPerPage.push(transPerPage);
                     this.contentPerPage.push(conPerPage.join(''));
-                    console.log(this.contentPerPage)
                 }
 
                 while (e.children[0])
@@ -621,6 +646,7 @@
                         this.transPerPage.splice(i, 1);
                 }
                 this.totalPage = this.contentPerPage.length;
+                console.log("totalPage: " + this.totalPage);
                 let tmp = this.contentPerPage;
                 let tmp_ = tmp.join('-.');
                 setCookie('contentPerPage', tmp_);
@@ -635,9 +661,11 @@
 
             getPage: function () {
                 let num = 0;
+                let start = 0;
+                let end = 0;
                 let e = document.getElementById('para');
                 var Content = this.contentPerPage[this.page - 1];
-
+                console.log("curPage: " + this.page);
                 this.contentCurPage = Content;
                 this.buttonCurLoc = this.buttonLocPerPage[this.page - 1];
                 if(!this.labels[this.page-1]){
@@ -645,11 +673,18 @@
                 }
                 let sentences = Content.split('.');
                 sentences.splice(sentences.length - 1, 1);
+                for(let i = 0; i < sentences.length; i++) {
+                    if(sentences[i].length == 0)
+                        sentences.splice(i,1);
+                }
                 this.sentences = sentences;
+                {#console.log("sentences:" + sentences);#}
                 for (let i = 0; i < sentences.length; i++) {
-                    var words = sentences[i].split(' ');
+                    let words = sentences[i].split(' ');
+                    {#console.log("words:" + words);#}
                     for (let j = 0; j < words.length; j++) {
                         if (words[j] != "") {
+
                             let el = document.createElement("button");
                             el.className = "word";
                             el.id = num.toString();
@@ -657,6 +692,14 @@
                             el.setAttribute("onclick", "changeWordSelect(" + num + ")");
                             el.setAttribute("ondblclick", "changeSentenceSelect(" + num + ")");
                             if (j == words.length - 1 && words[j].length > 1) {
+
+                            e.appendChild(el);
+                            if (j == words.length - 1) {
+
+                                end = num;
+                                this.sentencesCurPage.push(new Array(start, end));
+                                start = num + 1;
+
                                 el.innerHTML = words[j] + '.';
                                 let ele = document.createElement('button');
                                 ele.className = "wander";
@@ -669,7 +712,6 @@
                             }
 
                             num += 1;
-                            e.appendChild(el);
                             if (this.isInArr(num - 1, this.paraLoc[this.page - 1])) {
 
                                 el = document.createElement("button");
@@ -699,6 +741,12 @@
                     this.buttonLocPerPage.push(buttonLocCurPage);
                 if (!this.wordTextLocPerPage[this.page - 1])
                     this.wordTextLocPerPage.push(wordTextLocCurPage);
+
+                if(!this.sentencesPerPage[this.page - 1]) {
+                    this.sentencesPerPage.push(this.sentencesCurPage);
+                }
+                console.log(this.sentencesPerPage);
+
             },
 
             listen: function () {
@@ -726,7 +774,7 @@
                     e.removeChild(e.children[0]);
                 }
                 e = document.getElementById('readArea');
-                while (e.children.length > 1) {
+                while (e.children[1]) {
                     e.removeChild(e.children[1]);
                 }
                 this.content = "";
@@ -739,7 +787,11 @@
                 this.currentTransBox = [];
                 this.readSequel = [];
                 this.buttonCurLoc = [];
+<<<<<<< HEAD
 
+=======
+                this.sentencesCurPage = [];
+>>>>>>> 2ef03b09aa175117906b9d9522c5c1ca3b702052
             },
 
             autoIntervention: function () {
@@ -762,18 +814,27 @@
                         else j++;
                     }
                 }
+<<<<<<< HEAD
                 console.log(this.labels);
                 let formdata = new FormData();
                 formdata.append('labels',JSON.stringify(this.labels));
                 formdata.append("sentence", JSON.stringify(this.sentencesPerPage));
+=======
+                let formdata = new FormData();
+                formdata.append('labels',JSON.stringify(this.labels));
+>>>>>>> 2ef03b09aa175117906b9d9522c5c1ca3b702052
                 $.ajax({
                     type: 'POST',
                     url: '/collect_labels/',
                     data: formdata,
                     success: function () {
+<<<<<<< HEAD
                         alert("完成实验！");
                         window.location.href = "/";
 
+=======
+                        window.location.href = "/";
+>>>>>>> 2ef03b09aa175117906b9d9522c5c1ca3b702052
                     },
                     error: function () {
                         console.log("error");
@@ -792,6 +853,16 @@
             }
             window["getSentenceTranslation"] = (num) => {
                 this.getSentenceTranslation(num);
+            }
+
+            window["changeWordSelect"] = (num) => {
+                this.changeWordSelect(num);
+            }
+            window["changeSentenceSelect"] = (num) => {
+                this.changeSentenceSelect(num);
+            }
+            window["changeWanderSelect"] = (num) => {
+                this.changeWanderSelect(num);
             }
         },
     })
@@ -852,7 +923,11 @@
             }
             case 32: {
                 stop = true;
+<<<<<<< HEAD
                 webgazer.pause();
+=======
+                {#webgazer.pause();#}
+>>>>>>> 2ef03b09aa175117906b9d9522c5c1ca3b702052
                 {#window.location.href = '/label';#}
                 //之后的可以不写
                 document.getElementById("mainContent").style.display = "none";

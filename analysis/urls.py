@@ -20,5 +20,6 @@ from . import views
 urlpatterns = [
     # 最重要的两个接口，画图+生成数据集，不过依赖于很多tools
     # 画图：按照时间画图
-    path("all_time_pic/",views.get_all_time_pic)
+    path("all_time_pic/",views.get_all_time_pic),
+    path("dataset/",views.dataset_of_timestamp)
 ]

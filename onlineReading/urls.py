@@ -62,6 +62,6 @@ urlpatterns = [
     path("label/", views.go_label_page), # 进入打标签页面
     path("collect_labels/", views.collect_labels), # 收集标签
 
-    path("analysis/", include("analysis.urls")),
+    path("analysis/", include("analysis.urls")), # 数据分析及生成相关操作
 
 ]
