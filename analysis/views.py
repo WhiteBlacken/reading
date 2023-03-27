@@ -5,12 +5,12 @@ import os
 from django.http import HttpResponse
 from django.shortcuts import render
 
-from analysis.feature import WordFeature, SentFeature
+from analysis.feature import WordFeature, SentFeature, CNNFeature
 from analysis.models import PageData, Experiment
 from pyheatmap import myHeatmap
 from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_fixations, get_word_location, \
     paint_on_word, get_word_and_sentence_from_text, compute_label, textarea, get_fix_by_time, \
-    get_item_index_x_y, is_watching, get_sentence_by_word, generate_exp_csv
+    get_item_index_x_y, is_watching, get_sentence_by_word, generate_exp_csv, compute_sentence_label, coor_to_input
 import cv2
 
 # Create your views here.
@@ -44,7 +44,9 @@ def get_all_time_pic(request):
             page_data.image, f"{path}background.png"
         )
         # 生成调整后的fixation图
+        print(f"len of fixations:{len(result_fixations)}")
         fix_img = show_fixations(result_fixations, background)
+
         cv2.imwrite(f"{path}fix-adjust.png", fix_img)
         # 画热点图
         gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
@@ -95,9 +97,10 @@ def dataset_of_timestamp(request):
     sent_feature_path = f"{base_path}sent-feature-{now}.csv"
     cnn_feature_path = f"{base_path}cnn-feature-{now}.csv"
     # 获取需要生成的实验
-    experiment_list_select = [1011]
+    experiment_list_select = [1011,1792]
     experiments = Experiment.objects.filter(id__in=experiment_list_select)
 
+    cnnFeature = CNNFeature()
     for experiment in experiments:
         time = 0 # 记录当前的时间
         page_data_list = PageData.objects.filter(experiment_id=experiment.id)
@@ -121,6 +124,7 @@ def dataset_of_timestamp(request):
             sentFeature.sentence = [sentence[0] for sentence in sentence_list]
             sentFeature.sentence_id = list(range(len(sentence_list))) # 记录id
             # todo 句子标签的生成
+            sentFeature.sentence_understand,sentFeature.mind_wandering = compute_sentence_label(page_data.sentenceLabels, page_data.wanderLabels,sentence_list)
             sent_feature_list.append(sentFeature)
 
 
@@ -148,7 +152,7 @@ def dataset_of_timestamp(request):
                     fixations_before = get_fix_by_time(result_fixations, start=0,end=gaze[-1])
                     fixations_now = get_fix_by_time(result_fixations, gaze_points[pre_gaze][-1], gaze[-1])
                     # 计算特征
-                    pre_gaze = g # todo important
+
                     pre_word_index = -1
                     for fixation in fixations_before:
                         word_index, isAdjust = get_item_index_x_y(json.loads(page_data.location), fixation[0], fixation[1])
@@ -173,13 +177,39 @@ def dataset_of_timestamp(request):
                     wordFeature.need_prediction = is_watching(fixations_now,json.loads(page_data.location),wordFeature.num)
                     # 生成数据
                     for feature in word_feature_list:
-                        feature.to_csv(word_feature_path, experiment.id, page_data.id, time)
+                        feature.to_csv(word_feature_path, experiment.id, page_data.id, time, experiment.user)
 
                     for feature in sent_feature_list:
-                        feature.to_csv(sent_feature_path, experiment.id, page_data.id, time)
+                        feature.to_csv(sent_feature_path, experiment.id, page_data.id, time, experiment.user)
+
+
+                    # cnn feature的生成 todo 暂时不变，之后修改
+                    gazes = gaze_points[pre_gaze:g]
+
+                    fix_of_x = [x[0] for x in fixations_now]
+                    fix_of_y = [x[1] for x in fixations_now]
+                    cnnFeature.fix_x.append(fix_of_x)
+                    cnnFeature.fix_y.append(fix_of_y)
+
+                    gaze_of_x = [x[0] for x in gazes]
+                    gaze_of_y = [x[1] for x in gazes]
+                    gaze_of_t = [x[2] for x in gazes]
+                    speed_now, direction_now, acc_now = coor_to_input(gazes, 8)
+                    assert len(gaze_of_x) == len(gaze_of_y) == len(speed_now) == len(direction_now) == len(acc_now)
+                    cnnFeature.gaze_x.append(gaze_of_x)
+                    cnnFeature.gaze_y.append(gaze_of_y)
+                    cnnFeature.gaze_t.append(gaze_of_t)
+                    cnnFeature.speed.append(speed_now)
+                    cnnFeature.direction.append(direction_now)
+                    cnnFeature.acc.append(acc_now)
+
                     time += 1
+                    pre_gaze = g  # todo important
+
+
 
 
     # 生成exp相关信息
+    cnnFeature.to_csv(cnn_feature_path)
     generate_exp_csv(exp_path,experiments)
     return HttpResponse(1)
