@@ -71,8 +71,8 @@
 </body>
 <!--bp5 js集成文件-->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-{#<!--webgazer-->#}
-{#<script src="/static/js/webgazer.js"></script>#}
+<!--webgazer-->
+<script src="/static/js/webgazer.js"></script>
 <!--截图相关-->
 <script src="/static/js/canvas2image.js"></script>
 <script src="/static/js/html2canvas.js"></script>
@@ -840,27 +840,27 @@
 
         //开启webgazer
         //眼动数据监听--放在getContent前面会采集很多无效数据
-        {#webgazer.setGazeListener(function (data, elapsedTime) {#}
-        {#    if (data == null) {#}
-        {#        return;#}
-        {#    }#}
-        {#    x.push(data.x);#}
-        {#    y.push(data.y);#}
-        {#    t.push(elapsedTime);#}
-        {##}
-        {#    let num = app.catchCurrentWord();#}
-        {#    if (num < app._data.words.length) {#}
-        {#        if (app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num) {#}
-        {#            app._data.readSequel[app._data.readSequel.length - 1][2].push(new Array(data.x, data.y, elapsedTime));#}
-        {#        } else {#}
-        {#            app._data.readSequel.push(new Array(num, app._data.words[num], new Array(new Array(data.x, data.y, elapsedTime))));#}
-        {#        }#}
-        {#    } else {#}
-        {#        num = app.catchCurrentTrans();#}
-        {#        if(num < this.currentTransBox);#}
-        {#    }#}
-        {##}
-        {# }).begin();#}
+        webgazer.setGazeListener(function (data, elapsedTime) {
+            if (data == null) {
+                return;
+            }
+            x.push(data.x);
+            y.push(data.y);
+            t.push(elapsedTime);
+
+            let num = app.catchCurrentWord();
+            if (num < app._data.words.length) {
+                if (app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num) {
+                    app._data.readSequel[app._data.readSequel.length - 1][2].push(new Array(data.x, data.y, elapsedTime));
+                } else {
+                    app._data.readSequel.push(new Array(num, app._data.words[num], new Array(new Array(data.x, data.y, elapsedTime))));
+                }
+            } else {
+                num = app.catchCurrentTrans();
+                if(num < this.currentTransBox);
+            }
+
+         }).begin();
 
         app.getPage();
     }
