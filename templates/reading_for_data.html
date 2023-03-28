@@ -123,6 +123,126 @@
                 };
             },
 
+            changeWordSelect: function (num) {
+                for (let i = 0 ; i < this.labels[this.page-1].wordLabels.length; i++) {
+                    if(this.labels[this.page-1].wordLabels[i] == num) {
+                        this.labels[this.page-1].wordLabels.splice(i, 1);
+                        for(let j = 0; j < this.labels[this.page-1].sentenceLabels.length; j++) {
+                            if(num >= this.labels[this.page-1].sentenceLabels[j][0] && num <= this.labels[this.page-1].sentenceLabels[j][1]) {
+                                $('.word:eq(' + num + ')').css('text-decoration', 'underline');
+                                $('.word:eq(' + num + ')').css('color', "red");
+                                return;
+                            }
+                        }
+                        for(let k = 0; k < this.labels[this.page-1].wanderLabels.length; k++) {
+                            if(num >= this.labels[this.page-1].wanderLabels[k][0] && num <= this.labels[this.page-1].wanderLabels[k][1]) {
+                                $('.word:eq(' + num + ')').css('text-decoration', 'underline');
+                                $('.word:eq(' + num + ')').css('color', "purple");
+                                return;
+                            }
+                        }
+                        $('.word:eq(' + num + ')').css('text-decoration', 'none solid rgb(51, 51, 51)');
+                        $('.word:eq(' + num + ')').css('color', "black");
+
+                        return;
+                    }
+                }
+                $('.word:eq(' + num + ')').css('text-decoration', "underline");
+                $('.word:eq(' + num + ')').css('color', "blue");
+                this.labels[this.page-1].wordLabels.push(num);
+            },
+
+            changeSentenceSelect: async function (num) {
+                let start = 0;
+                let end = 0;
+                for(let i = 0; i < this.sentences.length; i++){
+                    let w = this.sentences[i].split(' ');
+                    for(let j = 0; j < w.length; j++)
+                        if(w[j] == '')
+                            w.splice(j,1);
+                    if(start + w.length <= num){
+                        start += w.length;
+                    }else{
+                        end = start + w.length;
+                        break;
+                    }
+                }
+                let temp = start;
+                for (let p = 0; p < this.labels[this.page - 1].sentenceLabels.length; p++) {
+                    if (this.labels[this.page - 1].sentenceLabels[p][0] == start && this.labels[this.page - 1].sentenceLabels[p][1] == end) {
+                        this.labels[this.page - 1].sentenceLabels.splice(p, 1);
+                        console.log(this.labels);
+                        for(let i = start; i < end; i++) {
+                            if(this.labels[this.page-1].wordLabels.indexOf(i) == -1) {
+                                $('.word:eq(' + i + ')').css('text-decoration', 'none solid rgb(51, 51, 51)');
+                                $('.word:eq(' + i + ')').css('color', "black");
+                            }
+                        }
+
+                        return;
+                    }
+                }
+                for (let j = start; j < end; j++) {
+                    if (this.labels[this.page-1].wordLabels.indexOf(j) == -1) {
+                        $('.word:eq(' + j + ')').css('text-decoration', 'underline');
+                        $('.word:eq(' + j + ')').css('color', "red");
+                    }
+                }
+                this.labels[this.page - 1].sentenceLabels.push(new Array(start, end));
+                console.log(this.labels);
+            },
+
+            changeWanderSelect: function (num) {
+                let start = 0;
+                let end = 0;
+                for(let i = 0; i < num - 1; i++) {
+                    let w = this.sentences[i].split(' ');
+                    for (let j = 0; j < w.length; j++)
+                        if (w[j] == '')
+                            w.splice(j, 1);
+                    start += w.length;
+                }
+                let w = this.sentences[num-1].split(' ');
+                for (let j = 0; j < w.length; j++)
+                    if (w[j] == '')
+                        w.splice(j, 1);
+                end = start + w.length - 1;
+                for(let i = 0; i < this.labels[this.page-1].wanderLabels.length; i++) {
+                    if(this.labels[this.page-1].wanderLabels[i][0] == start && this.labels[this.page-1].wanderLabels[i][1] == end) {
+                        this.labels[this.page-1].wanderLabels[num-1] = [];
+                        document.getElementsByClassName('wander')[num-1].style.borderColor = "black";
+                        document.getElementsByClassName('wander')[num-1].style.color = "black";
+                        console.log(this.labels);
+                        return;
+                    }
+                }
+                document.getElementsByClassName('wander')[num-1].style.borderColor = "orange";
+                document.getElementsByClassName('wander')[num-1].style.color = "orange";
+                this.labels[this.page-1].wanderLabels[num-1] = new Array(start, end);
+                console.log(this.labels);
+            },
+
+            rememberLabels:function () {
+                for(let i = 0; i < this.labels[this.page-1].sentenceLabels.length; i++) {
+                    let sentence = this.labels[this.page-1].sentenceLabels[i];
+                    for(let j = sentence[0]; j < sentence[1]; j++) {
+                        $('.word:eq(' + j + ')').css('text-decoration', 'underline');
+                        $('.word:eq(' + j + ')').css('color', "red");
+                    }
+                }
+                for(let i = 0; i < this.labels[this.page-1].wordLabels.length; i++) {
+                    let num = this.labels[this.page-1].wordLabels[i];
+                    $('.word:eq(' + num + ')').css('text-decoration', "underline");
+                    $('.word:eq(' + num + ')').css('color', "blue");
+                }
+                for(let i = 0; i < this.labels[this.page-1].wanderLabels.length;i++) {
+                    if(this.labels[this.page-1].wanderLabels[i].length > 0) {
+                        $('.wander:eq(' + i +')').css('border-color', 'orange');
+                        $('.wander:eq(' + i +')').css('color', 'orange');
+                    }
+                }
+            },
+
             getWordTextLocation: function (num) {
                 return {
                     left: document.getElementsByClassName('word')[num].getBoundingClientRect().left + document.getElementsByClassName('word')[num].style.paddingLeft.match(/\d+/g),
@@ -519,10 +639,13 @@
                         sentences.splice(i,1);
                 }
                 this.sentences = sentences;
+                {#console.log("sentences:" + sentences);#}
                 for (let i = 0; i < sentences.length; i++) {
                     let words = sentences[i].split(' ');
+
                     for (let j = 0; j < words.length; j++) {
                         if (words[j] != "") {
+
                             let el = document.createElement("button");
                             el.className = "word";
                             el.id = num.toString();
@@ -619,6 +742,16 @@
             window["getSentenceTranslation"] = (num) => {
                 this.getSentenceTranslation(num);
             }
+
+            window["changeWordSelect"] = (num) => {
+                this.changeWordSelect(num);
+            }
+            window["changeSentenceSelect"] = (num) => {
+                this.changeSentenceSelect(num);
+            }
+            window["changeWanderSelect"] = (num) => {
+                this.changeWanderSelect(num);
+            }
         },
     })
 
@@ -678,8 +811,8 @@
             }
             case 32: {
                 stop = true;
-                webgazer.pause();
-                window.location.href = '/label';
+                {#webgazer.pause();#}
+                {#window.location.href = '/label';#}
                 //之后的可以不写
                 document.getElementById("mainContent").style.display = "none";
                 document.getElementById("tips_end").style.display = "inline";

@@ -298,7 +298,7 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
     return result_fixations, result_rows, row_level_fix
 
 
-def generate_fixations(gaze_points, texts, location, use_not_blank_assumption=True, use_nlp_assumption=False):
+def generate_fixations(gaze_points, texts, location):
     """生成fixation"""
     # 根据gaze点生成fixation，未校准
     fixations = detect_fixations(gaze_points)
@@ -439,23 +439,23 @@ def get_item_index_x_y(location, x, y):
             return index, False
 
     # 如果不在范围内,找最近的单词
-    min_dist = 100
+    min_dist = 50
 
-    for i, word in enumerate(location):
-        point = np.array([x, y])
-        segments = [
-            [np.array([word["left"], word["top"]]), np.array([word["left"], word["bottom"]])],  # 左上 左下
-            [np.array([word["left"], word["top"]]), np.array([word["right"], word["top"]])],  # 左上 右上
-            [np.array([word["left"], word["bottom"]]), np.array([word["right"], word["bottom"]])],  # 左下 右下
-            [np.array([word["right"], word["top"]]), np.array([word["right"], word["bottom"]])],  # 右上 右下
-        ]
-        dis_list = [point_to_segment_distance(point, segment[0], segment[1]) for segment in segments]
-        distance = min(dis_list)
-        if distance < min_dist:
-            min_dist = distance
-            index = i
-            flag = True
-
+    # for i, word in enumerate(location):
+    #     point = np.array([x, y])
+    #     segments = [
+    #         [np.array([word["left"], word["top"]]), np.array([word["left"], word["bottom"]])],  # 左上 左下
+    #         [np.array([word["left"], word["top"]]), np.array([word["right"], word["top"]])],  # 左上 右上
+    #         [np.array([word["left"], word["bottom"]]), np.array([word["right"], word["bottom"]])],  # 左下 右下
+    #         [np.array([word["right"], word["top"]]), np.array([word["right"], word["bottom"]])],  # 右上 右下
+    #     ]
+    #     dis_list = [point_to_segment_distance(point, segment[0], segment[1]) for segment in segments]
+    #     distance = min(dis_list)
+    #     if distance < min_dist:
+    #         min_dist = distance
+    #         index = i
+    #         flag = True
+    print(f"min_dist:{min_dist}")
     return index, flag
 
 
@@ -708,6 +708,301 @@ def set_title(blk, title):
         (189, 252, 201),
         2,
     )
+
+
+
+
+class FeatureSet(object):
+
+    def __init__(self, num):
+        self.num = num
+        # word level
+        self.total_fixation_duration = [0 for _ in range(num)]
+        self.number_of_fixation = [0 for _ in range(num)]
+        self.reading_times = [0 for _ in range(num)]
+        # sentence level
+        self.total_dwell_time = [0 for _ in range(num)]
+        self.saccade_times = [0 for _ in range(num)]
+        self.forward_saccade_times = [0 for _ in range(num)]
+        self.backward_saccade_times = [0 for _ in range(num)]
+
+
+        # 句子长度
+        self.sentence_length = [0 for _ in range(num)]
+
+        # label
+        self.word_understand = []
+        self.sentence_understand = []
+        self.mind_wandering = []
+
+        self.page_data = [0 for _ in range(num)]
+        self.sentence_index = [0 for _ in range(num)]
+
+        # word_list
+        self.word_list = []
+
+        # watching
+        self.is_watching = [0 for _ in range(num)]
+
+    def clean(self):
+        self.total_fixation_duration = [0 for _ in range(self.num)]
+        self.number_of_fixation = [0 for _ in range(self.num)]
+        self.reading_times = [0 for _ in range(self.num)]
+
+        self.total_dwell_time = [0 for _ in range(self.num)]
+        self.saccade_times = [0 for _ in range(self.num)]
+        self.forward_saccade_times = [0 for _ in range(self.num)]
+        self.backward_saccade_times = [0 for _ in range(self.num)]
+
+
+    def clean_watching(self):
+        self.is_watching = [0 for _ in range(self.num)]
+
+    def setLabel(self, label1, label2, label3):
+        self.word_understand = label1
+        self.sentence_understand = label2
+        self.mind_wandering = label3
+
+    def setWordList(self, word_list):
+        self.word_list = word_list
+
+    def get_list_div(self, list_a, list_b):
+        div_list = [0 for _ in range(self.num)]
+        for i in range(len(list_b)):
+            if list_b[i] != 0:
+                div_list[i] = list_a[i] / list_b[i]
+
+        return div_list
+
+    def list_log(self, list_a):
+        log_list = [0 for _ in range(self.num)]
+        for i in range(len(list_a)):
+            log_list[i] = math.log(list_a[i] + 1)
+        return log_list
+
+    def to_csv(self, filename, exp_id, user, article_id, page_id, time):
+        df = pd.DataFrame(
+            {
+                # 1. 实验信息相关
+                "experiment_id": [exp_id for _ in range(self.num)],
+                "user": [user for _ in range(self.num)],
+                "article_id": [article_id for _ in range(self.num)],
+                "time": [time for _ in range(self.num)],
+                "word": self.word_list,
+
+                "page_id": [page_id for _ in range(self.num)],
+                "sentence": self.sentence_index,
+                "word_watching": self.is_watching,
+
+                # # 2. label相关
+                "word_understand": self.word_understand,
+                "sentence_understand": self.sentence_understand,
+                "mind_wandering": self.mind_wandering,
+                # 3. 特征相关
+                # word level
+                "reading_times": self.reading_times,
+                "number_of_fixations": self.number_of_fixation,
+                "fixation_duration": self.total_fixation_duration,
+                # sentence_level_raw
+                "total_dwell_time_of_sentence": self.total_dwell_time,
+                "saccade_times_of_sentence": self.saccade_times,
+                "forward_times_of_sentence": self.forward_saccade_times,
+                "backward_times_of_sentence": self.backward_saccade_times,
+
+
+
+                # sentence_level_div_length
+                "total_dwell_time_of_sentence_div_length": self.get_list_div(self.total_dwell_time,
+                                                                             self.sentence_length),
+                "saccade_times_of_sentence_div_length": self.get_list_div(self.saccade_times, self.sentence_length),
+                "forward_times_of_sentence_div_length": self.get_list_div(self.forward_saccade_times,
+                                                                          self.sentence_length),
+                "backward_times_of_sentence_div_length": self.get_list_div(self.backward_saccade_times,
+                                                                           self.sentence_length),
+
+                # sentence_level_div_log
+                "total_dwell_time_of_sentence_div_log": self.get_list_div(self.total_dwell_time,
+                                                                          self.list_log(self.sentence_length)),
+                "saccade_times_of_sentence_div_log": self.get_list_div(self.saccade_times,
+                                                                       self.list_log(self.sentence_length)),
+                "forward_times_of_sentence_div_log": self.get_list_div(self.forward_saccade_times,
+                                                                       self.list_log(self.sentence_length)),
+                "backward_times_of_sentence_div_log": self.get_list_div(self.backward_saccade_times,
+                                                                        self.list_log(self.sentence_length)),
+
+
+
+            }
+        )
+
+        if os.path.exists(filename):
+            df.to_csv(filename, index=False, mode="a", header=False)
+        else:
+            df.to_csv(filename, index=False, mode="a")
+
+def compute_label(wordLabels, sentenceLabels, wanderLabels, word_list):
+    """
+    计算单词的标签
+    """
+    word_understand = [1 for _ in word_list]
+    if wordLabels:
+        wordLabels = json.loads(wordLabels)
+        for label in wordLabels:
+            word_understand[label] = 0
+
+    sentence_understand = [1 for _ in word_list]
+    if sentenceLabels:
+        sentenceLabels = json.loads(sentenceLabels)
+        for label in sentenceLabels:
+            for i in range(label[0], label[1]):
+                sentence_understand[i] = 0
+
+    mind_wandering = [1 for _ in word_list]
+    if wanderLabels:
+        wanderLabels = json.loads(wanderLabels)
+        for label in wanderLabels:
+            for i in range(label[0], label[1] + 1):
+                mind_wandering[i] = 0
+
+    return word_understand, sentence_understand, mind_wandering
+
+def compute_sentence_label(sentenceLabels, wanderLabels, sentence_list):
+    """
+    计算单词的标签
+    """
+
+    sentence_understand = [1 for _ in sentence_list]
+    if sentenceLabels:
+        sentenceLabels = json.loads(sentenceLabels)
+        for label in sentenceLabels:
+            for i,sentence in enumerate(sentence_list):
+                if label[0] == sentence[1] and label[1] == sentence[2]:
+                    sentence_understand[i] = 0
+
+    mind_wandering = [1 for _ in sentence_list]
+    if wanderLabels:
+        wanderLabels = json.loads(wanderLabels)
+        for label in wanderLabels:
+            for i, sentence in enumerate(sentence_list):
+                if label[0] == sentence[1] and label[1]+1 == sentence[2]:
+                    mind_wandering[i] = 0
+
+    return sentence_understand, mind_wandering
+
+def get_fix_by_time(fixations, start,end):
+    """获取在某个时间内的fixation点"""
+    fixs = []
+    for fix in fixations:
+        if start<= fix[-1] <= end:
+            fixs.append(fix)
+        if fix[-1] > end: # fix是按照时间顺序，减少遍历的内容
+            break
+    return fixs
+def is_watching(fixations, location, num):
+    """计算哪些单词正在被关注"""
+    watching = [0 for _ in range(num)]
+    for fix in fixations:
+        index, isAdjust = get_item_index_x_y(location, fix[0], fix[1])
+        if index != -1:
+            watching[index] = 1
+    return watching
+def get_sentence_by_word(word_index, sentence_list):
+    """查询单词所在的句子"""
+    if word_index == -1:
+        return -1
+    return next(
+        (
+            i
+            for i, sentence in enumerate(sentence_list)
+            if sentence[2] > word_index >= sentence[1]
+        ),
+        -1,
+    )
+
+def generate_exp_csv(filename,experiments):
+    """生成exp的信息"""
+    pd.DataFrame({
+        'exp_id':[exp.id for exp in experiments],
+        'user':[exp.user for exp in experiments],
+        'article_id':[exp.article_id for exp in experiments]
+    }).to_csv(filename, index=False)
+
+def round_list(a,num):
+    return list(np.round(np.array(a),num))
+
+def div_list(list_a, list_b):
+    assert len(list_a) == len(list_b)
+    div_list = [0 for _ in range(len(list_a))]
+    for i in range(len(list_b)):
+        if list_b[i] != 0:
+            div_list[i] = list_a[i] / list_b[i]
+    return div_list
+
+def coor_to_input(coordinates, window):
+    """
+    将每个gaze点赋值上标签
+    :param gaze_x:
+    :param gaze_y:
+    :param gaze_t:
+    :param window:
+    :return:
+    """
+    for i, coordinate in enumerate(coordinates):
+        # 确定计算的窗口
+        begin = i
+        end = i
+        for _ in range(int(window / 2)):
+            if begin == 0:
+                break
+            begin -= 1
+
+        for _ in range(int(window / 2)):
+            if end == len(coordinates) - 1:
+                break
+            end += 1
+
+        assert begin >= 0
+        assert end <= len(coordinates) - 1
+
+        # 计算速度、方向，作为模型输入
+        time = (coordinates[end][2] - coordinates[begin][2]) / 100
+        speed = 0
+        if time != 0:
+            speed = (
+                    get_euclid_distance((coordinates[begin][0],coordinates[begin][1]),(coordinates[end][0],
+                                        coordinates[end][1]))
+                    / time
+            )
+        else:
+            speed = 0
+
+        direction = math.atan2(coordinates[end][1] - coordinates[begin][1], coordinates[end][0] - coordinates[begin][0])
+        coordinate.append(speed)
+        coordinate.append(direction)
+    # 计算加速度
+    for i, coordinate in enumerate(coordinates):
+        begin = i
+        end = i
+        for _ in range(int(window / 2)):
+            if begin == 0:
+                break
+            begin -= 1
+
+        for _ in range(int(window / 2)):
+            if end == len(coordinates) - 1:
+                break
+            end += 1
+
+        assert begin >= 0
+        assert end <= len(coordinates) - 1
+        time = (coordinates[end][2] - coordinates[begin][2]) / 100
+        acc = (coordinates[end][3] - coordinates[begin][3]) / time if time != 0 else 0
+        coordinate.append(acc * acc)
+
+    speed = [x[3] for x in coordinates]
+    direction = [x[4] for x in coordinates]
+    acc = [x[5] for x in coordinates]
+    return speed, direction, acc
 
 if __name__ == '__main__':
     point = np.array([5, 4])
