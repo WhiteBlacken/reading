@@ -153,22 +153,21 @@ def go_label_page(request):
     return render(request, "label_1.html")
 
 
+
 def collect_labels(request):
     """一次性获得所有页的label，分页存储"""
     # 示例：labels:[{"page":1,"wordLabels":[],"sentenceLabels":[[27,57]],"wanderLabels":[[0,27]]},{"page":2,"wordLabels":[36],"sentenceLabels":[],"wanderLabels":[]},{"page":3,"wordLabels":[],"sentenceLabels":[],"wanderLabels":[[0,34]]}]
     labels = request.POST.get("labels")
     labels = json.loads(labels)
 
-    # paras = request.POST.get("sentence")
-    # paras = json.loads(paras)
 
     if experiment_id := request.session.get("experiment_id", None):
-        for i, label in enumerate(labels):
+        for label in labels:
             PageData.objects.filter(experiment_id=experiment_id).filter(page=label["page"]).update(
                 wordLabels=label["wordLabels"],
                 sentenceLabels=label["sentenceLabels"],
                 wanderLabels=label["wanderLabels"],
-                # para=paras[i],
+
             )
         Experiment.objects.filter(id=experiment_id).update(is_finish=1)
     logger.info("已获得所有页标签,实验结束")
