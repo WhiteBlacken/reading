@@ -221,26 +221,37 @@ def dataset_of_timestamp(request):
 
 
 def get_part_time_pic(request):
-    # time = request.GET.get('time')
-    # exp_id = request.GET.get('exp_id')
-    # base_path = f"data\\pic\\part_time\\{exp_id}\\"
-    #
-    # from datetime import datetime
-    # now = datetime.now().strftime("%Y%m%d")
-    # page_csv = pd.read_csv(f'data\\dataset\\{{now}}\\fixation-map-{{now}}.csv')
-    #
-    # page_row = page_csv[(page_cs['exp_id']==exp_id)&(page_csv['time']==time)][0]
-    #
-    # page_id = page_row['page_id']
-    # fixations = json.loads(page_row['fixation'])
-    #
-    # page
-    # background = generate_pic_by_base64(
-    #     page_data.image, f"{base_path}background.png"
-    # )
-    # # 生成调整后的fixation图
-    # print(f"len of fixations:{len(result_fixations)}")
-    # fix_img = show_fixations(result_fixations, background)
-    #
-    # cv2.imwrite(f"{path}fix-adjust.png", fix_img)
-    pass
+    time = request.GET.get('time')
+    exp_id = request.GET.get('exp_id')
+    base_path = f"data\\pic\\part_time\\{exp_id}\\"
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+
+    from datetime import datetime
+    now = datetime.now().strftime("%Y%m%d")
+    page_csv = pd.read_csv(f'results\\{now}\\fixation-map-{now}.csv')
+
+    page_row = page_csv[(page_csv['exp_id']==int(exp_id))&(page_csv['time']==int(time))]
+    print(page_row)
+    page_id = page_row['page_id'].iloc[0]
+    fixations = json.loads(page_row['fixation'].iloc[0])
+
+    base_path = f"{base_path}\\{page_id}\\"
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+
+    print(page_row)
+    print(page_id)
+
+    print(f"{base_path}background.png")
+    if page_datas := PageData.objects.filter(id=page_id):
+        page_data = page_datas.first()
+        background = generate_pic_by_base64(
+            page_data.image, f"{base_path}background.png"
+        )
+
+        fix_img = show_fixations(fixations, background)
+
+        cv2.imwrite(f"{base_path}fix-{time}.png", fix_img)
+
+    return HttpResponse(1)
