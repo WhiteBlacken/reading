@@ -650,7 +650,6 @@
                             el.className = "word";
                             el.id = num.toString();
                             el.innerHTML = words[j];
-
                             e.appendChild(el);
                             if (j == words.length - 1) {
                                 end = num;
@@ -690,7 +689,6 @@
                 if(!this.sentencesPerPage[this.page - 1]) {
                     this.sentencesPerPage.push(this.sentencesCurPage);
                 }
-
             },
 
             listen: function () {
@@ -732,35 +730,6 @@
                 this.readSequel = [];
                 this.buttonCurLoc = [];
                 this.sentencesCurPage = [];
-
-            },
-
-            //把labels发送给后端存储,并更新word_level_data
-            collect_labels: function () {
-                for(let i = 0; i < this.labels.length; i++) {
-                    let j = 0;
-                    while(j < this.labels[i].wanderLabels.length) {
-                        if(this.labels[i].wanderLabels[j].length == 0) {
-                            this.labels[i].wanderLabels.splice(j,1);
-                        }
-                        else j++;
-                    }
-                }
-                let formdata = new FormData();
-                formdata.append('labels',JSON.stringify(this.labels));
-                $.ajax({
-                    type: 'POST',
-                    url: '/collect_labels/',
-                    data: formdata,
-                    success: function () {
-                        window.location.href = "/";
-                    },
-                    error: function () {
-                        console.log("error");
-                    },
-                    contentType: false,
-                    processData: false,
-                })
             },
         },
         created() {

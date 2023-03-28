@@ -130,7 +130,9 @@
                     let word_y = (this.buttonLocPerPage[this.page - 1][i].top + this.buttonLocPerPage[this.page - 1][i].bottom) / 2;
                     distances.push(Math.sqrt(Math.pow((word_x - x),2)+Math.pow((word_y - y),2)));
                 }
-                let tmp = distances;
+
+                let tmp = $.extend(true,[],distances);
+
                 for(let i = 0; i < num; i++) {
                     let min = Math.min(...tmp);
                     for(let j = 0; j < tmp.length; j++) {
@@ -161,48 +163,84 @@
             changeSentenceSelect: async function (num) {
                 let start = 0;
                 let end = 0;
+                let preStart = -1;
+                let preEnd = -1;
+
                 for(let i = 0; i < this.sentences.length; i++){
                     let w = this.sentences[i].split(' ');
                     for(let j = 0; j < w.length; j++)
                         if(w[j] == '')
                             w.splice(j,1);
                     if(start + w.length <= num){
+                        preStart = start;
                         start += w.length;
+                        preEnd = start;
                     }else{
                         end = start + w.length;
                         break;
                     }
                 }
+                let flag1 = true;
+                let flag2 = true;
                 for (let p = 0; p < this.labels[this.page - 1].sentenceLabels.length; p++) {
+                    if(this.labels[this.page - 1].sentenceLabels[p][0] == preStart && this.labels[this.page - 1].sentenceLabels[p][1] == preEnd) {
+                        flag1 = false;
+                    }
                     if (this.labels[this.page - 1].sentenceLabels[p][0] == start && this.labels[this.page - 1].sentenceLabels[p][1] == end) {
+                        flag2 = false;
+                    }
+                    if(!flag1 && !flag2) {
                         return;
                     }
                 }
-                this.labels[this.page - 1].sentenceLabels.push(new Array(start, end));
+                if(flag1 && preStart != -1) {
+                    this.labels[this.page - 1].sentenceLabels.push(new Array(preStart, preEnd));
+                }
+                if(flag2) {
+                    this.labels[this.page - 1].sentenceLabels.push(new Array(start, end));
+                }
                 console.log(this.labels);
             },
 
             changeWanderSelect: function (num) {
                 let start = 0;
                 let end = 0;
+                let preStart = -1;
+                let preEnd = -1;
+
                 for(let i = 0; i < this.sentences.length; i++){
                     let w = this.sentences[i].split(' ');
                     for(let j = 0; j < w.length; j++)
                         if(w[j] == '')
                             w.splice(j,1);
                     if(start + w.length <= num){
+                        preStart = start;
                         start += w.length;
+                        preEnd = start - 1;
                     }else{
                         end = start + w.length - 1;
                         break;
                     }
                 }
+                let flag1 = true;
+                let flag2 = true;
                 for(let i = 0; i < this.labels[this.page-1].wanderLabels.length; i++) {
+                    if(this.labels[this.page-1].wanderLabels[i][0] == preStart && this.labels[this.page-1].wanderLabels[i][1] == preEnd) {
+                        flag1 = false;
+                    }
                     if(this.labels[this.page-1].wanderLabels[i][0] == start && this.labels[this.page-1].wanderLabels[i][1] == end) {
+                        flag2 = false;
+                    }
+                    if(!flag1 && !flag2) {
                         return;
                     }
                 }
-                this.labels[this.page-1].wanderLabels.push(new Array(start, end));
+                if(flag1 && preStart != -1) {
+                    this.labels[this.page-1].wanderLabels.push(new Array(preStart, preEnd));
+                }
+                if(flag2) {
+                    this.labels[this.page-1].wanderLabels.push(new Array(start, end));
+                }
                 console.log(this.labels);
             },
 
@@ -594,7 +632,6 @@
                 let end = 0;
                 let e = document.getElementById('para');
                 var Content = this.contentPerPage[this.page - 1];
-                console.log("curPage: " + this.page);
                 this.contentCurPage = Content;
                 {#this.buttonCurLoc = this.buttonLocPerPage[this.page - 1];#}
                 if(!this.labels[this.page-1]){
@@ -759,9 +796,17 @@
         switch (event.keyCode) {
             case 49:{}
             case 97: {
-                let loc_x = x[x.length - 1];
-                let loc_y = y[y.length - 1];
-
+                let start;
+                let end = t.length - 1;
+                for(start = end; t[end] - t[start] < 500; start--);
+                let loc_x = 0;
+                let loc_y = 0;
+                for(let i = start; i < end; i++) {
+                    loc_x += x[i];
+                    loc_y += y[i];
+                }
+                loc_x /= (end - start + 1);
+                loc_y /= (end - start + 1);
                 let nums = app.getNearestWordIndex(loc_x, loc_y, 6);
                 for(let i = 0; i < nums.length; i++) {
                     app.changeWordSelect(nums[i]);
@@ -771,16 +816,34 @@
             }
             case 50: {}
             case 98: {
-                let loc_x = x[x.length - 1];
-                let loc_y = y[y.length - 1];
+                let start;
+                let end = t.length - 1;
+                for(start = end; t[end] - t[start] < 1000; start--);
+                let loc_x = 0;
+                let loc_y = 0;
+                for(let i = start; i < end; i++) {
+                    loc_x += x[i];
+                    loc_y += y[i];
+                }
+                loc_x /= (end - start + 1);
+                loc_y /= (end - start + 1);
                 let num = app.getNearestWordIndex(loc_x, loc_y, 1);
                 app.changeSentenceSelect(num[0]);
                 break;
             }
             case 51: {}
             case 99: {
-                let loc_x = x[x.length - 1];
-                let loc_y = y[y.length - 1];
+                let start;
+                let end = t.length - 1;
+                for(start = end; t[end] - t[start] < 1000; start--);
+                let loc_x = 0;
+                let loc_y = 0;
+                for(let i = start; i < end; i++) {
+                    loc_x += x[i];
+                    loc_y += y[i];
+                }
+                loc_x /= (end - start + 1);
+                loc_y /= (end - start + 1);
                 let num = app.getNearestWordIndex(loc_x, loc_y, 1);
                 app.changeWanderSelect(num[0]);
                 break;
