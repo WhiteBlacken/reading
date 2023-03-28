@@ -159,6 +159,14 @@ class CNNFeature(object):
 
 
     def to_csv(self, filename):
+        print(f"exeriment:{len(self.experiment_ids)}")
+        print(f"time:{len(self.times)}")
+        print(f"gaze_x:{len(self.gaze_x)}")
+        print(f"gaze_x:{len(self.gaze_y)}")
+        print(f"gaze_x:{len(self.gaze_t)}")
+        print(f"gaze_x:{len(self.speed)}")
+        print(f"gaze_x:{len(self.direction)}")
+        print(f"gaze_x:{len(self.acc)}")
 
         df = pd.DataFrame(
             {

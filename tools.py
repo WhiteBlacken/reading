@@ -884,7 +884,7 @@ def compute_sentence_label(sentenceLabels, wanderLabels, sentence_list):
         wanderLabels = json.loads(wanderLabels)
         for label in wanderLabels:
             for i, sentence in enumerate(sentence_list):
-                if label[0] == sentence[1] and label[1] == sentence[2]:
+                if label[0] == sentence[1] and label[1]+1 == sentence[2]:
                     mind_wandering[i] = 0
 
     return sentence_understand, mind_wandering
