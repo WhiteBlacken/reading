@@ -71,7 +71,7 @@
 </body>
 <!--bp5 js集成文件-->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-{#<!--webgazer-->#}
+<!--webgazer-->
 <script src="/static/js/webgazer.js"></script>
 <!--截图相关-->
 <script src="/static/js/canvas2image.js"></script>
@@ -372,6 +372,16 @@
                 if (!this.isSentenceTranslated(num)) {
                     this.changeTextStyle(start, end, 1);
                     this.wordLocation = this.getWordLocation(num);
+                    {#let el = document.createElement('div');#}
+                    {#el.className = "transSentence";#}
+                    {##}
+                    {#el.innerHTML = this.transPerPage[this.page - 1][num].sentence_zh;#}
+                    {##}
+                    {#el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";#}
+                    {##}
+                    {#el.style.top = this.wordLocation.top - 20 + "px";#}
+                    {#let e = document.getElementById('readArea');#}
+                    {#e.appendChild(el);#}
                     this.currentTransSentenceBox.push(new Array(start, end));
 
                     $('<div>')
@@ -402,6 +412,18 @@
                             }, 2500);
                         });
                 }
+                {#else {#}
+                {#this.changeTextStyle(start, end, 0);#}
+                {#let ind = 0;#}
+                {#for(let i = 0; i < this.currentTransSentenceBox.length; i++) {#}
+                {#    if(this.currentTransSentenceBox[i][0] == start && this.currentTransSentenceBox[i][1] == end){#}
+                {#        ind = i;#}
+                {#        break;#}
+                {#    }#}
+                {# }#}
+                {#this.currentTransSentenceBox.splice(ind, 1);#}
+                {#document.getElementsByClassName('transSentence')[ind].remove();#}
+                {# }#}
 
             },
 
@@ -642,7 +664,7 @@
                 {#console.log("sentences:" + sentences);#}
                 for (let i = 0; i < sentences.length; i++) {
                     let words = sentences[i].split(' ');
-
+                    {#console.log("words:" + words);#}
                     for (let j = 0; j < words.length; j++) {
                         if (words[j] != "") {
 
@@ -650,16 +672,27 @@
                             el.className = "word";
                             el.id = num.toString();
                             el.innerHTML = words[j];
-
+                            el.setAttribute("onclick", "changeWordSelect(" + num + ")");
+                            el.setAttribute("ondblclick", "changeSentenceSelect(" + num + ")");
                             e.appendChild(el);
                             if (j == words.length - 1) {
+
                                 end = num;
                                 this.sentencesCurPage.push(new Array(start, end));
                                 start = num + 1;
                                 el.innerHTML = words[j] + '.';
+                                let ele = document.createElement('button');
+                                ele.className = "wander";
+                                ele.innerHTML = (i+1).toString();
+                                ele.setAttribute("onclick", "changeWanderSelect("+ (i+1) + ")");
+                                ele.style.left = el.getBoundingClientRect().right - 10 + "px";
+                                ele.style.top = el.getBoundingClientRect().top - 10 + "px";
+                                document.getElementById('readArea').appendChild(ele);
+                                this.labels[this.page-1].wanderLabels.push([]);
                             }
                             num += 1;
                             if (this.isInArr(num - 1, this.paraLoc[this.page - 1])) {
+
                                 el = document.createElement("button");
                                 el.className = "fillLine";
                                 let width = e.getBoundingClientRect().right - document.getElementById(num - 1 + '').getBoundingClientRect().right - 1;
@@ -690,7 +723,7 @@
                 if(!this.sentencesPerPage[this.page - 1]) {
                     this.sentencesPerPage.push(this.sentencesCurPage);
                 }
-
+                console.log(this.sentencesPerPage);
             },
 
             listen: function () {
@@ -732,6 +765,14 @@
                 this.readSequel = [];
                 this.buttonCurLoc = [];
                 this.sentencesCurPage = [];
+            },
+
+            autoIntervention: function () {
+                if (stop === false) {
+                    setInterval(function () {
+                        get_base64_gaze_and_intervention(0);
+                    }, 5000);
+                }
 
             },
 
@@ -880,6 +921,7 @@
     }
 
     function get_word_level_gaze_data() {
+
         $.ajax({
             type: 'POST',
             url: '/word_level_data/',
