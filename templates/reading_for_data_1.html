@@ -130,7 +130,7 @@
                     let word_y = (this.buttonLocPerPage[this.page - 1][i].top + this.buttonLocPerPage[this.page - 1][i].bottom) / 2;
                     distances.push(Math.sqrt(Math.pow((word_x - x),2)+Math.pow((word_y - y),2)));
                 }
-                let tmp = distances;
+                let tmp = $.extend(true,[],distances);
                 for(let i = 0; i < num; i++) {
                     let min = Math.min(...tmp);
                     for(let j = 0; j < tmp.length; j++) {
@@ -803,7 +803,7 @@
                 }
                 loc_x /= (end - start + 1);
                 loc_y /= (end - start + 1);
-                let nums = app.getNearestWordIndex(loc_x, loc_y, 8);
+                let nums = app.getNearestWordIndex(loc_x, loc_y, 6);
                 for(let i = 0; i < nums.length; i++) {
                     app.changeWordSelect(nums[i]);
                 }
