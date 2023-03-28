@@ -45,7 +45,7 @@ def reading(request):
     reading_type = request.GET.get('type', '1')
 
     if reading_type == '1':
-        return render(request, "reading_for_data.html")
+        return render(request, "reading_for_data_1.html")
     else:
         return render(request, "reading_for_aid.html")
 
@@ -150,7 +150,7 @@ def collect_page_data(request):
 
 
 def go_label_page(request):
-    return render(request, "label.html")
+    return render(request, "label_1.html")
 
 
 def collect_labels(request):
