@@ -45,7 +45,7 @@ def reading(request):
     reading_type = request.GET.get('type', '1')
 
     if reading_type == '1':
-        return render(request, "reading_for_data.html")
+        return render(request, "reading_for_data_1.html")
     else:
         return render(request, "reading_for_aid.html")
 
@@ -150,7 +150,8 @@ def collect_page_data(request):
 
 
 def go_label_page(request):
-    return render(request, "label.html")
+    return render(request, "label_1.html")
+
 
 
 def collect_labels(request):
@@ -159,12 +160,14 @@ def collect_labels(request):
     labels = request.POST.get("labels")
     labels = json.loads(labels)
 
+
     if experiment_id := request.session.get("experiment_id", None):
         for label in labels:
             PageData.objects.filter(experiment_id=experiment_id).filter(page=label["page"]).update(
                 wordLabels=label["wordLabels"],
                 sentenceLabels=label["sentenceLabels"],
                 wanderLabels=label["wanderLabels"],
+
             )
         Experiment.objects.filter(id=experiment_id).update(is_finish=1)
     logger.info("已获得所有页标签,实验结束")
