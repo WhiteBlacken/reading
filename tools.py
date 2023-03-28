@@ -439,23 +439,23 @@ def get_item_index_x_y(location, x, y):
             return index, False
 
     # 如果不在范围内,找最近的单词
-    min_dist = 100
+    min_dist = 50
 
-    for i, word in enumerate(location):
-        point = np.array([x, y])
-        segments = [
-            [np.array([word["left"], word["top"]]), np.array([word["left"], word["bottom"]])],  # 左上 左下
-            [np.array([word["left"], word["top"]]), np.array([word["right"], word["top"]])],  # 左上 右上
-            [np.array([word["left"], word["bottom"]]), np.array([word["right"], word["bottom"]])],  # 左下 右下
-            [np.array([word["right"], word["top"]]), np.array([word["right"], word["bottom"]])],  # 右上 右下
-        ]
-        dis_list = [point_to_segment_distance(point, segment[0], segment[1]) for segment in segments]
-        distance = min(dis_list)
-        if distance < min_dist:
-            min_dist = distance
-            index = i
-            flag = True
-
+    # for i, word in enumerate(location):
+    #     point = np.array([x, y])
+    #     segments = [
+    #         [np.array([word["left"], word["top"]]), np.array([word["left"], word["bottom"]])],  # 左上 左下
+    #         [np.array([word["left"], word["top"]]), np.array([word["right"], word["top"]])],  # 左上 右上
+    #         [np.array([word["left"], word["bottom"]]), np.array([word["right"], word["bottom"]])],  # 左下 右下
+    #         [np.array([word["right"], word["top"]]), np.array([word["right"], word["bottom"]])],  # 右上 右下
+    #     ]
+    #     dis_list = [point_to_segment_distance(point, segment[0], segment[1]) for segment in segments]
+    #     distance = min(dis_list)
+    #     if distance < min_dist:
+    #         min_dist = distance
+    #         index = i
+    #         flag = True
+    print(f"min_dist:{min_dist}")
     return index, flag
 
 
@@ -841,6 +841,9 @@ class FeatureSet(object):
             df.to_csv(filename, index=False, mode="a")
 
 def compute_label(wordLabels, sentenceLabels, wanderLabels, word_list):
+    """
+    计算单词的标签
+    """
     word_understand = [1 for _ in word_list]
     if wordLabels:
         wordLabels = json.loads(wordLabels)
@@ -862,6 +865,29 @@ def compute_label(wordLabels, sentenceLabels, wanderLabels, word_list):
                 mind_wandering[i] = 0
 
     return word_understand, sentence_understand, mind_wandering
+
+def compute_sentence_label(sentenceLabels, wanderLabels, sentence_list):
+    """
+    计算单词的标签
+    """
+
+    sentence_understand = [1 for _ in sentence_list]
+    if sentenceLabels:
+        sentenceLabels = json.loads(sentenceLabels)
+        for label in sentenceLabels:
+            for i,sentence in enumerate(sentence_list):
+                if label[0] == sentence[1] and label[1] == sentence[2]:
+                    sentence_understand[i] = 0
+
+    mind_wandering = [1 for _ in sentence_list]
+    if wanderLabels:
+        wanderLabels = json.loads(wanderLabels)
+        for label in wanderLabels:
+            for i, sentence in enumerate(sentence_list):
+                if label[0] == sentence[1] and label[1]+1 == sentence[2]:
+                    mind_wandering[i] = 0
+
+    return sentence_understand, mind_wandering
 
 def get_fix_by_time(fixations, start,end):
     """获取在某个时间内的fixation点"""
@@ -901,6 +927,82 @@ def generate_exp_csv(filename,experiments):
         'article_id':[exp.article_id for exp in experiments]
     }).to_csv(filename, index=False)
 
+def round_list(a,num):
+    return list(np.round(np.array(a),num))
+
+def div_list(list_a, list_b):
+    assert len(list_a) == len(list_b)
+    div_list = [0 for _ in range(len(list_a))]
+    for i in range(len(list_b)):
+        if list_b[i] != 0:
+            div_list[i] = list_a[i] / list_b[i]
+    return div_list
+
+def coor_to_input(coordinates, window):
+    """
+    将每个gaze点赋值上标签
+    :param gaze_x:
+    :param gaze_y:
+    :param gaze_t:
+    :param window:
+    :return:
+    """
+    for i, coordinate in enumerate(coordinates):
+        # 确定计算的窗口
+        begin = i
+        end = i
+        for _ in range(int(window / 2)):
+            if begin == 0:
+                break
+            begin -= 1
+
+        for _ in range(int(window / 2)):
+            if end == len(coordinates) - 1:
+                break
+            end += 1
+
+        assert begin >= 0
+        assert end <= len(coordinates) - 1
+
+        # 计算速度、方向，作为模型输入
+        time = (coordinates[end][2] - coordinates[begin][2]) / 100
+        speed = 0
+        if time != 0:
+            speed = (
+                    get_euclid_distance((coordinates[begin][0],coordinates[begin][1]),(coordinates[end][0],
+                                        coordinates[end][1]))
+                    / time
+            )
+        else:
+            speed = 0
+
+        direction = math.atan2(coordinates[end][1] - coordinates[begin][1], coordinates[end][0] - coordinates[begin][0])
+        coordinate.append(speed)
+        coordinate.append(direction)
+    # 计算加速度
+    for i, coordinate in enumerate(coordinates):
+        begin = i
+        end = i
+        for _ in range(int(window / 2)):
+            if begin == 0:
+                break
+            begin -= 1
+
+        for _ in range(int(window / 2)):
+            if end == len(coordinates) - 1:
+                break
+            end += 1
+
+        assert begin >= 0
+        assert end <= len(coordinates) - 1
+        time = (coordinates[end][2] - coordinates[begin][2]) / 100
+        acc = (coordinates[end][3] - coordinates[begin][3]) / time if time != 0 else 0
+        coordinate.append(acc * acc)
+
+    speed = [x[3] for x in coordinates]
+    direction = [x[4] for x in coordinates]
+    acc = [x[5] for x in coordinates]
+    return speed, direction, acc
 
 if __name__ == '__main__':
     point = np.array([5, 4])
