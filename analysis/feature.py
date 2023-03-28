@@ -27,7 +27,7 @@ class WordFeature(object):
         self.number_of_fixation = [0 for _ in range(self.num)]
         self.reading_times = [0 for _ in range(self.num)]
 
-    def to_csv(self, filename, exp_id, page_id, time, user):
+    def to_csv(self, filename, exp_id, page_id, time, user, article_id):
         print(f"num:{self.num}")
         print(f"word_list:{len(self.word_list)}")
         print(f"sentence_id:{len(self.sentence_id)}")
@@ -38,6 +38,7 @@ class WordFeature(object):
             {
                 # 1. 实验信息相关
                 "exp_id": [exp_id for _ in range(self.num)],
+                "article_id": [article_id for _ in range(self.num)],
                 "time": [time for _ in range(self.num)],
                 "page_id": [page_id for _ in range(self.num)],
                 "user": [user for _ in range(self.num)],
@@ -94,7 +95,7 @@ class SentFeature(object):
                 syllable_len[i] += textstat.syllable_count(word)
         return syllable_len
 
-    def to_csv(self, filename, exp_id, page_id, time, user):
+    def to_csv(self, filename, exp_id, page_id, time, user,article_id):
         print(f"num:{self.num}")
         print(f"sentence_id:{len(self.sentence_id)}")
         print(f"sentence:{len(self.sentence)}")
@@ -113,6 +114,7 @@ class SentFeature(object):
             {
                 # 1. 实验信息相关
                 "exp_id": [exp_id for _ in range(self.num)],
+                "article_id": [article_id for _ in range(self.num)],
                 "user": [user for _ in range(self.num)],
                 "time": [time for _ in range(self.num)],
                 "page_id": [page_id for _ in range(self.num)],

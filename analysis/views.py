@@ -109,7 +109,7 @@ def dataset_of_timestamp(request):
     cnn_feature_path = f"{base_path}cnn-feature-{now}.csv"
     fixations_map_path = f"{base_path}fixation-map-{now}.csv"
     # 获取需要生成的实验
-    experiment_list_select = [1011,1792]
+    # experiment_list_select = [1011,1792]
     experiments = Experiment.objects.filter(id__in=experiment_list_select)
 
     cnnFeature = CNNFeature()
@@ -193,10 +193,10 @@ def dataset_of_timestamp(request):
                         wordFeature.need_prediction = is_watching(fixations_now,json.loads(page_data.location),wordFeature.num)
                         # 生成数据
                         for feature in word_feature_list:
-                            feature.to_csv(word_feature_path, experiment.id, page_data.id, time, experiment.user)
+                            feature.to_csv(word_feature_path, experiment.id, page_data.id, time, experiment.user, experiment.article_id)
 
                         for feature in sent_feature_list:
-                            feature.to_csv(sent_feature_path, experiment.id, page_data.id, time, experiment.user)
+                            feature.to_csv(sent_feature_path, experiment.id, page_data.id, time, experiment.user,experiment.article_id)
 
 
                         # cnn feature的生成 todo 暂时不变，之后修改
@@ -221,25 +221,26 @@ def dataset_of_timestamp(request):
 
 
 def get_part_time_pic(request):
-    time = request.GET.get('time')
-    exp_id = request.GET.get('exp_id')
-    base_path = f"data\\pic\\part_time\\{exp_id}\\"
-
-    from datetime import datetime
-    now = datetime.now().strftime("%Y%m%d")
-    page_csv = pd.read_csv(f'data\\dataset\\{{now}}\\fixation-map-{{now}}.csv')
-
-    page_row = page_csv[(page_cs['exp_id']==exp_id)&(page_csv['time']==time)][0]
-
-    page_id = page_row['page_id']
-    fixations = json.loads(page_row['fixation'])
-
-    page
-    background = generate_pic_by_base64(
-        page_data.image, f"{base_path}background.png"
-    )
-    # 生成调整后的fixation图
-    print(f"len of fixations:{len(result_fixations)}")
-    fix_img = show_fixations(result_fixations, background)
-
-    cv2.imwrite(f"{path}fix-adjust.png", fix_img)
+    # time = request.GET.get('time')
+    # exp_id = request.GET.get('exp_id')
+    # base_path = f"data\\pic\\part_time\\{exp_id}\\"
+    #
+    # from datetime import datetime
+    # now = datetime.now().strftime("%Y%m%d")
+    # page_csv = pd.read_csv(f'data\\dataset\\{{now}}\\fixation-map-{{now}}.csv')
+    #
+    # page_row = page_csv[(page_cs['exp_id']==exp_id)&(page_csv['time']==time)][0]
+    #
+    # page_id = page_row['page_id']
+    # fixations = json.loads(page_row['fixation'])
+    #
+    # page
+    # background = generate_pic_by_base64(
+    #     page_data.image, f"{base_path}background.png"
+    # )
+    # # 生成调整后的fixation图
+    # print(f"len of fixations:{len(result_fixations)}")
+    # fix_img = show_fixations(result_fixations, background)
+    #
+    # cv2.imwrite(f"{path}fix-adjust.png", fix_img)
+    pass
