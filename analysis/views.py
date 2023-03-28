@@ -35,6 +35,8 @@ def get_all_time_pic(request):
             gaze_points, page_data.texts, page_data.location
         )
 
+        # result_fixations = result_fixations[261:316]
+
         path = f"{base_path}{page_data.id}\\"
 
         # 如果目录不存在，则创建目录

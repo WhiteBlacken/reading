@@ -32,7 +32,7 @@
                     阅读期间，请尽量<strong>鼠标跟随</strong>你正在看的内容。
                 </p>
                 <p class="lead mb-4">
-                    阅读期间，请留意自己在阅读某一句或多句时是否存在“<strong>走神</strong>”的情况，即<strong>在阅读过程中的某些时候，你完全不知道自己刚才读了什么。或者说，你心里想的和你读内容的没任何关系</strong>。
+                    阅读期间，请留意自己在阅读某一句或多句时是否存在<strong>单词理解困难</strong>、<strong>句子理解困难</strong>或<strong>走神</strong>的情况，若存在，请<strong>分别点击数字键“1”、“2”或“3”</strong>来标记位置，方便后续标注时辅助回忆。
                 </p>
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
                     <button type="button" class="btn btn-primary btn-lg px-4 gap-3" onclick="get_start()">开始使用
@@ -46,20 +46,20 @@
             <h1 class="display-5 fw-bold">MemXEdu</h1>
             <div class="col-lg-6 mx-auto mt-3">
                 <p class="lead mb-4">
-                    标注完成！
+                    前往标注！
                 </p>
             </div>
         </div>
     </div>
     <div id="mainContent">
-        <div id="markers-top">
-            <img class="marker" id="left" src="/static/images/left-top.png">
-            <img class="marker" id="right" src="/static/images/right-top.png">
-        </div>
-        <div id="markers-bottom">
-            <img class="marker" id="left" src="/static/images/left-bottom.png">
-            <img class="marker" id="right" src="/static/images/right-bottom.png">
-        </div>
+{#        <div id="markers-top">#}
+{#            <img class="marker" id="left" src="/static/images/left-top.png">#}
+{#            <img class="marker" id="right" src="/static/images/right-top.png">#}
+{#        </div>#}
+{#        <div id="markers-bottom">#}
+{#            <img class="marker" id="left" src="/static/images/left-bottom.png">#}
+{#            <img class="marker" id="right" src="/static/images/right-bottom.png">#}
+{#        </div>#}
         <div id="reading">
             <div id="readArea">
                 <div id="para">
@@ -111,10 +111,8 @@
             labels: [],
             sentencesPerPage: [],
             sentencesCurPage: [],
-
         },
         methods: {
-
             getWordLocation: function (num) {
                 return {
                     left: document.getElementsByClassName('word')[num].getBoundingClientRect().left,
@@ -124,32 +122,39 @@
                 };
             },
 
+            getNearestWordIndex: function (x, y, num) {
+                let distances = [];
+                let inds = [];
+                for(let i = 0; i < this.buttonLocPerPage[this.page - 1].length - 1; i++) {
+                    let word_x = (this.buttonLocPerPage[this.page - 1][i].left + this.buttonLocPerPage[this.page - 1][i].right) / 2;
+                    let word_y = (this.buttonLocPerPage[this.page - 1][i].top + this.buttonLocPerPage[this.page - 1][i].bottom) / 2;
+                    distances.push(Math.sqrt(Math.pow((word_x - x),2)+Math.pow((word_y - y),2)));
+                }
+                let tmp = distances;
+                for(let i = 0; i < num; i++) {
+                    let min = Math.min(...tmp);
+                    for(let j = 0; j < tmp.length; j++) {
+                        if(min == tmp[j]) {
+                            for(let k = 0; k < distances.length; k++) {
+                                if(min == distances[k]) {
+                                    inds.push(k);
+                                    break;
+                                }
+                            }
+                            tmp.splice(j,1);
+                            break;
+                        }
+                    }
+                }
+                return inds;
+            },
+
             changeWordSelect: function (num) {
                 for (let i = 0 ; i < this.labels[this.page-1].wordLabels.length; i++) {
                     if(this.labels[this.page-1].wordLabels[i] == num) {
-                        this.labels[this.page-1].wordLabels.splice(i, 1);
-                        for(let j = 0; j < this.labels[this.page-1].sentenceLabels.length; j++) {
-                            if(num >= this.labels[this.page-1].sentenceLabels[j][0] && num <= this.labels[this.page-1].sentenceLabels[j][1]) {
-                                $('.word:eq(' + num + ')').css('text-decoration', 'underline');
-                                $('.word:eq(' + num + ')').css('color', "red");
-                                return;
-                            }
-                        }
-                        for(let k = 0; k < this.labels[this.page-1].wanderLabels.length; k++) {
-                            if(num >= this.labels[this.page-1].wanderLabels[k][0] && num <= this.labels[this.page-1].wanderLabels[k][1]) {
-                                $('.word:eq(' + num + ')').css('text-decoration', 'underline');
-                                $('.word:eq(' + num + ')').css('color', "purple");
-                                return;
-                            }
-                        }
-                        $('.word:eq(' + num + ')').css('text-decoration', 'none solid rgb(51, 51, 51)');
-                        $('.word:eq(' + num + ')').css('color', "black");
-
                         return;
                     }
                 }
-                $('.word:eq(' + num + ')').css('text-decoration', "underline");
-                $('.word:eq(' + num + ')').css('color', "blue");
                 this.labels[this.page-1].wordLabels.push(num);
             },
 
@@ -168,25 +173,9 @@
                         break;
                     }
                 }
-                let temp = start;
                 for (let p = 0; p < this.labels[this.page - 1].sentenceLabels.length; p++) {
                     if (this.labels[this.page - 1].sentenceLabels[p][0] == start && this.labels[this.page - 1].sentenceLabels[p][1] == end) {
-                        this.labels[this.page - 1].sentenceLabels.splice(p, 1);
-                        console.log(this.labels);
-                        for(let i = start; i < end; i++) {
-                            if(this.labels[this.page-1].wordLabels.indexOf(i) == -1) {
-                                $('.word:eq(' + i + ')').css('text-decoration', 'none solid rgb(51, 51, 51)');
-                                $('.word:eq(' + i + ')').css('color', "black");
-                            }
-                        }
-
                         return;
-                    }
-                }
-                for (let j = start; j < end; j++) {
-                    if (this.labels[this.page-1].wordLabels.indexOf(j) == -1) {
-                        $('.word:eq(' + j + ')').css('text-decoration', 'underline');
-                        $('.word:eq(' + j + ')').css('color', "red");
                     }
                 }
                 this.labels[this.page - 1].sentenceLabels.push(new Array(start, end));
@@ -194,43 +183,27 @@
             },
 
             changeWanderSelect: function (num) {
-                let start = this.sentencesCurPage[num-1][0];
-                let end = this.sentencesCurPage[num-1][1];
+                let start = 0;
+                let end = 0;
+                for(let i = 0; i < this.sentences.length; i++){
+                    let w = this.sentences[i].split(' ');
+                    for(let j = 0; j < w.length; j++)
+                        if(w[j] == '')
+                            w.splice(j,1);
+                    if(start + w.length <= num){
+                        start += w.length;
+                    }else{
+                        end = start + w.length - 1;
+                        break;
+                    }
+                }
                 for(let i = 0; i < this.labels[this.page-1].wanderLabels.length; i++) {
                     if(this.labels[this.page-1].wanderLabels[i][0] == start && this.labels[this.page-1].wanderLabels[i][1] == end) {
-                        this.labels[this.page-1].wanderLabels[num-1] = [];
-                        document.getElementsByClassName('wander')[num-1].style.borderColor = "black";
-                        document.getElementsByClassName('wander')[num-1].style.color = "black";
-                        console.log(this.labels);
                         return;
                     }
-
                 }
-                document.getElementsByClassName('wander')[num-1].style.borderColor = "orange";
-                document.getElementsByClassName('wander')[num-1].style.color = "orange";
-                this.labels[this.page-1].wanderLabels[num-1] = new Array(start, end);
+                this.labels[this.page-1].wanderLabels.push(new Array(start, end));
                 console.log(this.labels);
-            },
-
-            rememberLabels:function () {
-                for(let i = 0; i < this.labels[this.page-1].sentenceLabels.length; i++) {
-                    let sentence = this.labels[this.page-1].sentenceLabels[i];
-                    for(let j = sentence[0]; j < sentence[1]; j++) {
-                        $('.word:eq(' + j + ')').css('text-decoration', 'underline');
-                        $('.word:eq(' + j + ')').css('color', "red");
-                    }
-                }
-                for(let i = 0; i < this.labels[this.page-1].wordLabels.length; i++) {
-                    let num = this.labels[this.page-1].wordLabels[i];
-                    $('.word:eq(' + num + ')').css('text-decoration', "underline");
-                    $('.word:eq(' + num + ')').css('color', "blue");
-                }
-                for(let i = 0; i < this.labels[this.page-1].wanderLabels.length;i++) {
-                    if(this.labels[this.page-1].wanderLabels[i].length > 0) {
-                        $('.wander:eq(' + i +')').css('border-color', 'orange');
-                        $('.wander:eq(' + i +')').css('color', 'orange');
-                    }
-                }
             },
 
             getWordTextLocation: function (num) {
@@ -362,6 +335,16 @@
                 if (!this.isSentenceTranslated(num)) {
                     this.changeTextStyle(start, end, 1);
                     this.wordLocation = this.getWordLocation(num);
+                    {#let el = document.createElement('div');#}
+                    {#el.className = "transSentence";#}
+                    {##}
+                    {#el.innerHTML = this.transPerPage[this.page - 1][num].sentence_zh;#}
+                    {##}
+                    {#el.style.left = this.wordLocation.left + $('.word:eq(' + num + ')').width() / 2 - 13 + "px";#}
+                    {##}
+                    {#el.style.top = this.wordLocation.top - 20 + "px";#}
+                    {#let e = document.getElementById('readArea');#}
+                    {#e.appendChild(el);#}
                     this.currentTransSentenceBox.push(new Array(start, end));
 
                     $('<div>')
@@ -392,7 +375,6 @@
                             }, 2500);
                         });
                 }
-
             },
 
             getWanderRemind: function () {
@@ -500,8 +482,7 @@
                         j++;
                     }
                 }
-                {#console.log(tr[0].zh)#}
-                {#console.log(p)#}
+
                 var e = document.getElementById('para');
 
                 let num = 0;
@@ -509,7 +490,6 @@
                 var sentences = p.split('.');
                 if (sentences[sentences.length - 1] != '" 、 ')
                     sentences.splice(sentences.length - 1, 1);
-                console.log(sentences[sentences.length - 1])
                 for (let i = 0; i < sentences.length; i++)
                     sentences[i].replace('  ', ' ');
                 let sentenceNum = 0;
@@ -581,7 +561,6 @@
                             wordLength += words.length;
                         }
                     }
-                    {#console.log(this.paraLoc)#}
                     if (this.paraLoc[this.contentPerPage.length].length == 0 || this.paraLoc[this.contentPerPage.length][this.paraLoc[this.contentPerPage.length].length - 1] < num - 1)
                         this.paraLoc[this.contentPerPage.length].push(num - 1);
                     this.transPerPage.push(transPerPage);
@@ -597,7 +576,6 @@
                         this.transPerPage.splice(i, 1);
                 }
                 this.totalPage = this.contentPerPage.length;
-                console.log("totalPage: " + this.totalPage);
                 let tmp = this.contentPerPage;
                 let tmp_ = tmp.join('-.');
                 setCookie('contentPerPage', tmp_);
@@ -618,7 +596,7 @@
                 var Content = this.contentPerPage[this.page - 1];
                 console.log("curPage: " + this.page);
                 this.contentCurPage = Content;
-                this.buttonCurLoc = this.buttonLocPerPage[this.page - 1];
+                {#this.buttonCurLoc = this.buttonLocPerPage[this.page - 1];#}
                 if(!this.labels[this.page-1]){
                     this.labels.push({page: this.page, wordLabels: new Array(), sentenceLabels: new Array(), wanderLabels: new Array()});
                 }
@@ -629,27 +607,21 @@
                         sentences.splice(i,1);
                 }
                 this.sentences = sentences;
-                {#console.log("sentences:" + sentences);#}
                 for (let i = 0; i < sentences.length; i++) {
                     let words = sentences[i].split(' ');
-
                     for (let j = 0; j < words.length; j++) {
                         if (words[j] != "") {
-
                             let el = document.createElement("button");
                             el.className = "word";
                             el.id = num.toString();
                             el.innerHTML = words[j];
-
                             e.appendChild(el);
                             if (j == words.length - 1) {
                                 end = num;
                                 this.sentencesCurPage.push(new Array(start, end));
                                 start = num + 1;
-
                                 el.innerHTML = words[j] + '.';
                             }
-
                             num += 1;
                             if (this.isInArr(num - 1, this.paraLoc[this.page - 1])) {
                                 el = document.createElement("button");
@@ -673,17 +645,15 @@
                     wordTextLocCurPage.push(this.getWordTextLocation(i));
                     i++;
                 }
-                this.rememberLabels();
                 this.buttonCurLoc = buttonLocCurPage;
                 if (!this.buttonLocPerPage[this.page - 1])
                     this.buttonLocPerPage.push(buttonLocCurPage);
                 if (!this.wordTextLocPerPage[this.page - 1])
                     this.wordTextLocPerPage.push(wordTextLocCurPage);
-
                 if(!this.sentencesPerPage[this.page - 1]) {
                     this.sentencesPerPage.push(this.sentencesCurPage);
                 }
-
+                {#console.log(this.sentencesPerPage);#}
             },
 
             listen: function () {
@@ -725,47 +695,8 @@
                 this.readSequel = [];
                 this.buttonCurLoc = [];
                 this.sentencesCurPage = [];
-
             },
 
-            autoIntervention: function () {
-                if (stop === false) {
-                    setInterval(function () {
-                        get_base64_gaze_and_intervention(0);
-                    }, 5000);
-                }
-
-            },
-
-            //把labels发送给后端存储,并更新word_level_data
-            collect_labels: function () {
-                for(let i = 0; i < this.labels.length; i++) {
-                    let j = 0;
-                    while(j < this.labels[i].wanderLabels.length) {
-                        if(this.labels[i].wanderLabels[j].length == 0) {
-                            this.labels[i].wanderLabels.splice(j,1);
-                        }
-                        else j++;
-                    }
-                }
-                let formdata = new FormData();
-                formdata.append('labels',JSON.stringify(this.labels));
-
-                $.ajax({
-                    type: 'POST',
-                    url: '/collect_labels/',
-                    data: formdata,
-                    success: function () {
-                        alert("完成实验！");
-                        window.location.href = "/";
-                    },
-                    error: function () {
-                        console.log("error");
-                    },
-                    contentType: false,
-                    processData: false,
-                })
-            },
         },
         created() {
 
@@ -789,6 +720,14 @@
             }
         },
     })
+    //记录过程中的眼动坐标
+    let x = [];
+    let y = [];
+    let t = [];
+    let interventions = [];
+    //记录停止
+    let stop = false;
+
 
     //开始使用
     async function get_start() {
@@ -810,19 +749,6 @@
             x.push(data.x);
             y.push(data.y);
             t.push(elapsedTime);
-
-            let num = app.catchCurrentWord();
-            if (num < app._data.words.length) {
-                if (app._data.readSequel != [] && app._data.readSequel[app._data.readSequel.length - 1] && app._data.readSequel[app._data.readSequel.length - 1][0] == num) {
-                    app._data.readSequel[app._data.readSequel.length - 1][2].push(new Array(data.x, data.y, elapsedTime));
-                } else {
-                    app._data.readSequel.push(new Array(num, app._data.words[num], new Array(new Array(data.x, data.y, elapsedTime))));
-                }
-            } else {
-                num = app.catchCurrentTrans();
-                if(num < this.currentTransBox);
-            }
-
          }).begin();
 
         app.getPage();
@@ -830,8 +756,35 @@
 
     //监听空格事件
     $(document).keyup(function (event) {
-
         switch (event.keyCode) {
+            case 49:{}
+            case 97: {
+                let loc_x = x[x.length - 1];
+                let loc_y = y[y.length - 1];
+
+                let nums = app.getNearestWordIndex(loc_x, loc_y, 6);
+                for(let i = 0; i < nums.length; i++) {
+                    app.changeWordSelect(nums[i]);
+                }
+                console.log("word:" + nums);
+                break;
+            }
+            case 50: {}
+            case 98: {
+                let loc_x = x[x.length - 1];
+                let loc_y = y[y.length - 1];
+                let num = app.getNearestWordIndex(loc_x, loc_y, 1);
+                app.changeSentenceSelect(num[0]);
+                break;
+            }
+            case 51: {}
+            case 99: {
+                let loc_x = x[x.length - 1];
+                let loc_y = y[y.length - 1];
+                let num = app.getNearestWordIndex(loc_x, loc_y, 1);
+                app.changeWanderSelect(num[0]);
+                break;
+            }
             case 37: {
                 if (app._data.page > 1) {
                     get_base64_gaze_and_intervention(-1);
@@ -846,27 +799,23 @@
             }
             case 32: {
                 stop = true;
-
                 webgazer.pause();
-
-                {#window.location.href = '/label';#}
-                //之后的可以不写
-                document.getElementById("mainContent").style.display = "none";
-                document.getElementById("tips_end").style.display = "inline";
-                app.collect_labels();
-                esc_full_screen();
+                let wordLabels = "";
+                let sentenceLabels = "";
+                let wanderLabels = "";
+                for(let i = 0; i < app._data.totalPage; i++) {
+                     wordLabels += app._data.labels[i].wordLabels.toString() + "|";
+                     sentenceLabels += app._data.labels[i].sentenceLabels.toString() + "|";
+                     wanderLabels += app._data.labels[i].wanderLabels.toString() + "|";
+                }
+                setCookie("wordPrompts", wordLabels);
+                setCookie("sentencePrompts", sentenceLabels);
+                setCookie("wanderPrompts", wanderLabels);
+                window.location.href = '/label';
                 break;
             }
         }
     });
-
-    //记录过程中的眼动坐标
-    let x = [];
-    let y = [];
-    let t = [];
-    let interventions = [];
-    //记录停止
-    let stop = false;
 
 
     function setCookie(cname, cvalue) {
@@ -886,6 +835,7 @@
     }
 
     function get_word_level_gaze_data() {
+
         $.ajax({
             type: 'POST',
             url: '/word_level_data/',
