@@ -3,16 +3,18 @@ import logging
 import math
 import os
 
+import pandas as pd
 from django.http import HttpResponse
 from django.shortcuts import render
 from loguru import logger
 
-from analysis.feature import WordFeature, SentFeature, CNNFeature
+from analysis.feature import WordFeature, SentFeature, CNNFeature, FixationMap
 from analysis.models import PageData, Experiment
 from pyheatmap import myHeatmap
 from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_fixations, get_word_location, \
     paint_on_word, get_word_and_sentence_from_text, compute_label, textarea, get_fix_by_time, \
-    get_item_index_x_y, is_watching, get_sentence_by_word, generate_exp_csv, compute_sentence_label, coor_to_input
+    get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label, coor_to_input, \
+    get_cnn_feature
 import cv2
 
 # Create your views here.
@@ -95,21 +97,24 @@ def dataset_of_timestamp(request):
     interval = request.GET.get("interval",8)
     interval = interval * 1000
     # 确定文件路径
-    base_path = "data\\dataset\\"
-    if not os.path.exists(base_path):
-        os.mkdir(base_path)
     from datetime import datetime
     now = datetime.now().strftime("%Y%m%d")
 
-    exp_path = f"{base_path}exp_info.csv"
+    base_path = f"data\\dataset\\{now}\\"
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+
     word_feature_path = f"{base_path}word-feature-{now}.csv"
     sent_feature_path = f"{base_path}sent-feature-{now}.csv"
     cnn_feature_path = f"{base_path}cnn-feature-{now}.csv"
+    fixations_map_path = f"{base_path}fixation-map-{now}.csv"
     # 获取需要生成的实验
-    # experiment_list_select = [1011,1792]
+    experiment_list_select = [1011,1792]
     experiments = Experiment.objects.filter(id__in=experiment_list_select)
 
     cnnFeature = CNNFeature()
+    fixationMap = FixationMap() # 用来记录画时刻图的信息
+
     success = 0
     fail = 0
 
@@ -195,26 +200,10 @@ def dataset_of_timestamp(request):
 
 
                         # cnn feature的生成 todo 暂时不变，之后修改
-                        cnnFeature.experiment_ids.append(experiment.id)
-                        cnnFeature.times.append(time)
-                        gazes = gaze_points[pre_gaze:g]
+                        get_cnn_feature(time,cnnFeature,gaze_points[pre_gaze:g],experiment.id,fixations_now)
 
-                        fix_of_x = [x[0] for x in fixations_now]
-                        fix_of_y = [x[1] for x in fixations_now]
-                        cnnFeature.fix_x.append(fix_of_x)
-                        cnnFeature.fix_y.append(fix_of_y)
-
-                        gaze_of_x = [x[0] for x in gazes]
-                        gaze_of_y = [x[1] for x in gazes]
-                        gaze_of_t = [x[2] for x in gazes]
-                        speed_now, direction_now, acc_now = coor_to_input(gazes, 8)
-                        assert len(gaze_of_x) == len(gaze_of_y) == len(speed_now) == len(direction_now) == len(acc_now)
-                        cnnFeature.gaze_x.append(gaze_of_x)
-                        cnnFeature.gaze_y.append(gaze_of_y)
-                        cnnFeature.gaze_t.append(gaze_of_t)
-                        cnnFeature.speed.append(speed_now)
-                        cnnFeature.direction.append(direction_now)
-                        cnnFeature.acc.append(acc_now)
+                        # 记录每个时刻的眼动，用于画图
+                        fixationMap.update(time,experiment.id,page_data.id,fixations_now)
 
                         time += 1
                         pre_gaze = g  # todo important
@@ -223,7 +212,34 @@ def dataset_of_timestamp(request):
             logger.info(f"成功生成{success}条,失败{fail}条")
         except Exception:
             fail += 1
+
     # 生成exp相关信息
     cnnFeature.to_csv(cnn_feature_path)
-    generate_exp_csv(exp_path,experiments)
+    fixationMap.to_csv(fixations_map_path)
+
     return HttpResponse(1)
+
+
+def get_part_time_pic(request):
+    time = request.GET.get('time')
+    exp_id = request.GET.get('exp_id')
+    base_path = f"data\\pic\\part_time\\{exp_id}\\"
+
+    from datetime import datetime
+    now = datetime.now().strftime("%Y%m%d")
+    page_csv = pd.read_csv(f'data\\dataset\\{{now}}\\fixation-map-{{now}}.csv')
+
+    page_row = page_csv[(page_cs['exp_id']==exp_id)&(page_csv['time']==time)][0]
+
+    page_id = page_row['page_id']
+    fixations = json.loads(page_row['fixation'])
+
+    page
+    background = generate_pic_by_base64(
+        page_data.image, f"{base_path}background.png"
+    )
+    # 生成调整后的fixation图
+    print(f"len of fixations:{len(result_fixations)}")
+    fix_img = show_fixations(result_fixations, background)
+
+    cv2.imwrite(f"{path}fix-adjust.png", fix_img)

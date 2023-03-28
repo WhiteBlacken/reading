@@ -185,3 +185,31 @@ class CNNFeature(object):
             df.to_csv(filename, index=False, mode="a", header=False)
         else:
             df.to_csv(filename, index=False, mode="a")
+
+class FixationMap(object):
+    def __init__(self):
+        self.times = []
+        self.exp_ids = []
+        self.page_ids = []
+        self.fixations = []
+
+    def update(self,time,exp_id,page_id,fixation):
+        self.times.append(time)
+        self.exp_ids.append(exp_id)
+        self.page_ids.append(page_id)
+        self.fixations.append(fixation)
+
+    def to_csv(self,filename):
+        df = pd.DataFrame(
+            {
+                "exp_id": self.exp_ids,
+                "page_id": self.page_ids,
+                "time": self.times,
+                "fixation": self.fixations,
+            }
+        )
+
+        if os.path.exists(filename):
+            df.to_csv(filename, index=False, mode="a", header=False)
+        else:
+            df.to_csv(filename, index=False, mode="a")

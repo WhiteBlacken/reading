@@ -919,14 +919,6 @@ def get_sentence_by_word(word_index, sentence_list):
         -1,
     )
 
-def generate_exp_csv(filename,experiments):
-    """生成exp的信息"""
-    pd.DataFrame({
-        'exp_id':[exp.id for exp in experiments],
-        'user':[exp.user for exp in experiments],
-        'article_id':[exp.article_id for exp in experiments]
-    }).to_csv(filename, index=False)
-
 def round_list(a,num):
     return list(np.round(np.array(a),num))
 
@@ -1003,6 +995,27 @@ def coor_to_input(coordinates, window):
     direction = [x[4] for x in coordinates]
     acc = [x[5] for x in coordinates]
     return speed, direction, acc
+
+def get_cnn_feature(time,cnnFeature,gazes,exp_id,fixations):
+    cnnFeature.experiment_ids.append(exp_id)
+    cnnFeature.times.append(time)
+
+    fix_of_x = [x[0] for x in fixations]
+    fix_of_y = [x[1] for x in fixations]
+    cnnFeature.fix_x.append(fix_of_x)
+    cnnFeature.fix_y.append(fix_of_y)
+
+    gaze_of_x = [x[0] for x in gazes]
+    gaze_of_y = [x[1] for x in gazes]
+    gaze_of_t = [x[2] for x in gazes]
+    speed_now, direction_now, acc_now = coor_to_input(gazes, 8)
+    assert len(gaze_of_x) == len(gaze_of_y) == len(speed_now) == len(direction_now) == len(acc_now)
+    cnnFeature.gaze_x.append(gaze_of_x)
+    cnnFeature.gaze_y.append(gaze_of_y)
+    cnnFeature.gaze_t.append(gaze_of_t)
+    cnnFeature.speed.append(speed_now)
+    cnnFeature.direction.append(direction_now)
+    cnnFeature.acc.append(acc_now)
 
 if __name__ == '__main__':
     point = np.array([5, 4])
