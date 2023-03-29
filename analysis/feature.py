@@ -1,3 +1,4 @@
+import math
 import os
 
 import pandas as pd
@@ -9,10 +10,17 @@ from tools import div_list, round_list
 class WordFeature(object):
     def __init__(self, num):
         self.num = num
-        # 特征
+        # 特征1
         self.total_fixation_duration = [0 for _ in range(num)]
         self.number_of_fixation = [0 for _ in range(num)]
         self.reading_times = [0 for _ in range(num)]
+        # 特征2
+        self.fixation_duration_div_syllable = [0 for _ in range(num)]
+        self.fixation_duration_div_length = [0 for _ in range(num)]
+        # 特征3
+        self.fixation_duration_diff = [0 for _ in range(num)]
+        self.number_of_fixations_diff = [0 for _ in range(num)]
+        self.reading_times_diff = [0 for _ in range(num)]
         # 实验相关信息
         self.word_list = []  # 单词列表
         self.sentence_id = [0 for _ in range(num)]  # 不同时刻的同一个句子，为不同的句子
@@ -22,18 +30,36 @@ class WordFeature(object):
         self.sentence_understand = [0 for _ in range(num)]
         self.mind_wandering = [0 for _ in range(num)]
 
+
     def clean(self):
+        # 特征1
         self.total_fixation_duration = [0 for _ in range(self.num)]
         self.number_of_fixation = [0 for _ in range(self.num)]
         self.reading_times = [0 for _ in range(self.num)]
+        # 特征2
+        self.fixation_duration_div_syllable = [0 for _ in range(self.num)]
+        self.fixation_duration_div_length = [0 for _ in range(self.num)]
+        # 特征3
+        self.fixation_duration_diff = [0 for _ in range(self.num)]
+        self.number_of_fixations_diff = [0 for _ in range(self.num)]
+        self.reading_times_diff = [0 for _ in range(self.num)]
+
+    def get_syllable(self):
+        return [textstat.syllable_count(word) for word in self.word_list]
+
+    def get_len(self):
+        return [len(word) for word in self.word_list]
+
+    def diff(self,list_a):
+        results = [0 for i in range(len(list_a))]
+        for i,item in enumerate(list_a):
+            if i == 0:
+                results[i] = 0
+                continue
+            results[i] = list_a[i] - list_a[i-1]
+        return results
 
     def to_csv(self, filename, exp_id, page_id, time, user, article_id):
-        print(f"num:{self.num}")
-        print(f"word_list:{len(self.word_list)}")
-        print(f"sentence_id:{len(self.sentence_id)}")
-        print(f"need_prediction:{len(self.need_prediction)}")
-        print(f"label:{len(self.word_understand)}")
-        print(f"feature:{len(self.reading_times)}")
         df = pd.DataFrame(
             {
                 # 1. 实验信息相关
@@ -50,11 +76,19 @@ class WordFeature(object):
                 "word_understand": self.word_understand,
                 "sentence_understand": self.sentence_understand,
                 "mind_wandering": self.mind_wandering,
-                # 3. 特征相关
-                # word level
+                # 3. 特征1
                 "reading_times": self.reading_times,
                 "number_of_fixations": self.number_of_fixation,
                 "fixation_duration": self.total_fixation_duration,
+                # 特征2
+                "fixation_duration_div_syllable": round_list(div_list(self.total_fixation_duration,self.get_syllable()),3),
+                "fixation_duration_div_length": round_list(div_list(self.total_fixation_duration,self.get_len()),3),
+                # 特征3
+                "fixation_duration_diff": self.diff(self.total_fixation_duration),
+                "number_of_fixations_diff": self.diff(self.number_of_fixation),
+                "reading_times_diff": self.diff(self.reading_times)
+
+
             }
         )
 
@@ -67,11 +101,32 @@ class WordFeature(object):
 class SentFeature(object):
     def __init__(self, num):
         self.num = num
-        # 特征
+        # 特征1
         self.total_dwell_time = [0 for _ in range(num)]
         self.saccade_times = [0 for _ in range(num)]
         self.forward_saccade_times = [0 for _ in range(num)]
         self.backward_saccade_times = [0 for _ in range(num)]
+        self.horizontal_saccade_proportion = [0 for _ in range(num)]
+        self.saccade_velocity = [0 for _ in range(num)]
+        self.saccade_duration = [0 for _ in range(num)]
+        # 特征2
+        self.total_dwell_time_of_sentence_div_syllable = [0 for _ in range(self.num)]
+        self.saccade_times_of_sentence_div_syllable = [0 for _ in range(self.num)]
+        self.forward_times_of_sentence_div_syllable = [0 for _ in range(self.num)]
+        self.backward_times_of_sentence__div_syllable = [0 for _ in range(self.num)]
+        self.horizontal_saccade_proportion_div_syllable = [0 for _ in range(self.num)]
+        self.saccade_velocity_div_syllable = [0 for _ in range(self.num)]
+        self.saccade_duration_div_syllable = [0 for _ in range(self.num)]
+        # 特征3
+        self.backward_times_of_sentence_div_log = [0 for _ in range(self.num)]
+        self.forward_times_of_sentence_div_log = [0 for _ in range(self.num)]
+        self.horizontal_saccade_proportion_div_log = [0 for _ in range(self.num)]
+        self.saccade_duration_div_log = [0 for _ in range(self.num)]
+        self.saccade_times_of_sentence_div_log = [0 for _ in range(self.num)]
+        self.saccade_velocity_div_log = [0 for _ in range(self.num)]
+        self.total_dwell_time_of_sentence_div_log = [0 for _ in range(self.num)]
+        # 特征4
+        self.length = [0 for _ in range(self.num)]
         # 实验相关信息
         self.sentence_understand = []
         self.mind_wandering = []
@@ -82,10 +137,32 @@ class SentFeature(object):
         # page_id,exp_id都是需要的
 
     def clean(self):
+        # 特征1
         self.total_dwell_time = [0 for _ in range(self.num)]
         self.saccade_times = [0 for _ in range(self.num)]
         self.forward_saccade_times = [0 for _ in range(self.num)]
         self.backward_saccade_times = [0 for _ in range(self.num)]
+        self.horizontal_saccade_proportion = [0 for _ in range(self.num)]
+        self.saccade_velocity = [0 for _ in range(self.num)]
+        self.saccade_duration = [0 for _ in range(self.num)]
+        # 特征2
+        self.total_dwell_time_of_sentence_div_syllable = [0 for _ in range(self.num)]
+        self.saccade_times_of_sentence_div_syllable = [0 for _ in range(self.num)]
+        self.forward_times_of_sentence_div_syllable = [0 for _ in range(self.num)]
+        self.backward_times_of_sentence__div_syllable = [0 for _ in range(self.num)]
+        self.horizontal_saccade_proportion_div_syllable = [0 for _ in range(self.num)]
+        self.saccade_velocity_div_syllable = [0 for _ in range(self.num)]
+        self.saccade_duration_div_syllable = [0 for _ in range(self.num)]
+        # 特征3
+        self.backward_times_of_sentence_div_log = [0 for _ in range(self.num)]
+        self.forward_times_of_sentence_div_log = [0 for _ in range(self.num)]
+        self.horizontal_saccade_proportion_div_log = [0 for _ in range(self.num)]
+        self.saccade_duration_div_log = [0 for _ in range(self.num)]
+        self.saccade_times_of_sentence_div_log = [0 for _ in range(self.num)]
+        self.saccade_velocity_div_log = [0 for _ in range(self.num)]
+        self.total_dwell_time_of_sentence_div_log = [0 for _ in range(self.num)]
+        # 特征4
+        self.length = [0 for _ in range(self.num)]
 
     def get_syllable(self):
         syllable_len = [0 for _ in range(self.num)]
@@ -95,20 +172,31 @@ class SentFeature(object):
                 syllable_len[i] += textstat.syllable_count(word)
         return syllable_len
 
+    def get_log(self):
+        log = [0 for _ in range(self.num)]
+        for i, sent in enumerate(self.sentence):
+            words = sent.split()
+            for word in words:
+                log[i] += math.log(len(word))
+        return log
+
+    def get_len(self):
+        length = [0 for _ in range(self.num)]
+        for i, sent in enumerate(self.sentence):
+            words = sent.split()
+            for word in words:
+                length[i] += len(word)
+        return length
+
     def to_csv(self, filename, exp_id, page_id, time, user,article_id):
-        print(f"num:{self.num}")
-        print(f"sentence_id:{len(self.sentence_id)}")
-        print(f"sentence:{len(self.sentence)}")
-        print(f"need_prediction:{len(self.need_prediction)}")
-        print(f"sentence_understand:{len(self.sentence_understand)}")
-        print(f"sentence_understand1:{len(self.mind_wandering)}")
-        print(f"total_dwell_time_of_sentence:{len(self.total_dwell_time)}")
-        print(f"2:{len(self.saccade_times)}")
-        print(f"3:{len(self.forward_saccade_times)}")
-        print(f"4:{len(self.backward_saccade_times)}")
 
         # 获取每句的字节数
         syllable_list = self.get_syllable()
+        log_list = self.get_log()
+        self.length = self.get_len()
+
+        self.saccade_velocity = div_list(self.saccade_velocity,self.saccade_duration)
+        self.horizontal_saccade_proportion = div_list(self.horizontal_saccade_proportion,self.saccade_times)
 
         df = pd.DataFrame(
             {
@@ -126,16 +214,35 @@ class SentFeature(object):
                 "sentence_understand": self.sentence_understand,
                 "mind_wandering": self.mind_wandering,
                 # 3. 特征相关
-                # 3.1 raw
+                # 3.1 特征1
                 "total_dwell_time_of_sentence": self.total_dwell_time,
                 "saccade_times_of_sentence": self.saccade_times,
                 "forward_times_of_sentence": self.forward_saccade_times,
                 "backward_times_of_sentence": self.backward_saccade_times,
-                # 3.2 处理后
+                "horizontal_saccade_proportion": self.horizontal_saccade_proportion, # todo
+                "saccade_velocity": self.saccade_velocity, # todo
+                "saccade_duration": self.saccade_duration, # todo
+                # 3.2 特征2
                 "total_dwell_time_of_sentence_div_syllable": round_list(div_list(self.total_dwell_time,syllable_list),3),
                 "saccade_times_of_sentence_div_syllable": round_list(div_list(self.saccade_times,syllable_list),3),
                 "forward_times_of_sentence_div_syllable": round_list(div_list(self.forward_saccade_times,syllable_list),3),
                 "backward_times_of_sentence_div_syllable": round_list(div_list(self.backward_saccade_times,syllable_list),3),
+                "horizontal_saccade_proportion_div_syllable": round_list(div_list(self.horizontal_saccade_proportion,syllable_list),3),
+                "saccade_velocity_div_syllable": round_list(div_list(self.saccade_velocity,syllable_list),3),
+                "saccade_duration_div_syllable": round_list(div_list(self.saccade_duration,syllable_list),3),
+                # 3.2 特征3
+                "total_dwell_time_of_sentence_div_log": round_list(div_list(self.total_dwell_time, log_list),3),
+                "saccade_times_of_sentence_div_log": round_list(div_list(self.saccade_times, log_list), 3),
+                "forward_times_of_sentence_div_log": round_list(
+                    div_list(self.forward_saccade_times, log_list), 3),
+                "backward_times_of_sentence_div_log": round_list(
+                    div_list(self.backward_saccade_times, log_list), 3),
+                "horizontal_saccade_proportion_div_log": round_list(
+                    div_list(self.horizontal_saccade_proportion, log_list), 3),
+                "saccade_velocity_div_log": round_list(div_list(self.saccade_velocity, log_list), 3),
+                "saccade_duration_div_log": round_list(div_list(self.saccade_duration, log_list), 3),
+                # 特征4
+                "length": self.length
             }
         )
 

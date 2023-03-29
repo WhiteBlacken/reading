@@ -14,7 +14,7 @@ from pyheatmap import myHeatmap
 from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_fixations, get_word_location, \
     paint_on_word, get_word_and_sentence_from_text, compute_label, textarea, get_fix_by_time, \
     get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label, coor_to_input, \
-    get_cnn_feature
+    get_cnn_feature, get_row, get_euclid_distance
 import cv2
 
 # Create your views here.
@@ -119,68 +119,70 @@ def dataset_of_timestamp(request):
     fail = 0
 
     for experiment in experiments:
-        try:
-            time = 0 # 记录当前的时间
-            page_data_list = PageData.objects.filter(experiment_id=experiment.id)
-            # 创建不同页的信息
-            word_feature_list = []
-            sent_feature_list = []
-            for page_data in page_data_list:
-                word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
-                # word_level
-                wordFeature = WordFeature(len(word_list))
-                wordFeature.word_list = word_list # 填充单词
-                wordFeature.word_understand, wordFeature.sentence_understand, wordFeature.mind_wandering = compute_label(
-                    page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
-                ) # 填充标签
-                for i, word in enumerate(word_list):
-                    sent_index = get_sentence_by_word(i, sentence_list)
-                    wordFeature.sentence_id[i] = sent_index # 使用page_id,time,sentence_id可以区分
-                word_feature_list.append(wordFeature)
-                # sentence_level
-                sentFeature = SentFeature(len(sentence_list))
-                sentFeature.sentence = [sentence[0] for sentence in sentence_list]
-                sentFeature.sentence_id = list(range(len(sentence_list))) # 记录id
-                # todo 句子标签的生成
-                sentFeature.sentence_understand,sentFeature.mind_wandering = compute_sentence_label(page_data.sentenceLabels, page_data.wanderLabels,sentence_list)
-                sent_feature_list.append(sentFeature)
+        # try:
+        time = 0 # 记录当前的时间
+        page_data_list = PageData.objects.filter(experiment_id=experiment.id)
+        # 创建不同页的信息
+        word_feature_list = []
+        sent_feature_list = []
+        for page_data in page_data_list:
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            # word_level
+            wordFeature = WordFeature(len(word_list))
+            wordFeature.word_list = word_list # 填充单词
+            wordFeature.word_understand, wordFeature.sentence_understand, wordFeature.mind_wandering = compute_label(
+                page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
+            ) # 填充标签
+            for i, word in enumerate(word_list):
+                sent_index = get_sentence_by_word(i, sentence_list)
+                wordFeature.sentence_id[i] = sent_index # 使用page_id,time,sentence_id可以区分
+            word_feature_list.append(wordFeature)
+            # sentence_level
+            sentFeature = SentFeature(len(sentence_list))
+            sentFeature.sentence = [sentence[0] for sentence in sentence_list]
+            sentFeature.sentence_id = list(range(len(sentence_list))) # 记录id
+            # todo 句子标签的生成
+            sentFeature.sentence_understand,sentFeature.mind_wandering = compute_sentence_label(page_data.sentenceLabels, page_data.wanderLabels,sentence_list)
+            sent_feature_list.append(sentFeature)
 
-            for p,page_data in enumerate(page_data_list):
-                wordFeature = word_feature_list[p] # 获取单词特征
-                sentFeature = sent_feature_list[p] # 获取句子特征
+        for p,page_data in enumerate(page_data_list):
+            wordFeature = word_feature_list[p] # 获取单词特征
+            sentFeature = sent_feature_list[p] # 获取句子特征
 
-                word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            border, rows, danger_zone, len_per_word = textarea(page_data.location)
 
-                gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
-                result_fixations, row_sequence, row_level_fix, sequence_fixations = generate_fixations(
-                    gaze_points, page_data.texts, page_data.location
-                )
+            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+            result_fixations, row_sequence, row_level_fix, sequence_fixations = generate_fixations(
+                gaze_points, page_data.texts, page_data.location
+            )
 
-                pre_gaze = 0
-                for g,gaze in enumerate(gaze_points):
-                    if g == 0:
-                        continue
-                    if gaze[-1] - gaze_points[pre_gaze][-1] > interval: # 按照interval切割gaze
-                        # 把当前页的特征清空，因为要重新算一遍特征
-                        wordFeature.clean()
-                        sentFeature.clean()
-                        # 目的是为了拿到gaze的时间，来切割fixation，为什么不直接gaze->fixation,会不准 todo 实时处理
-                        fixations_before = get_fix_by_time(result_fixations, start=0,end=gaze[-1])
-                        fixations_now = get_fix_by_time(result_fixations, gaze_points[pre_gaze][-1], gaze[-1])
-                        # 计算特征
+            pre_gaze = 0
+            for g,gaze in enumerate(gaze_points):
+                if g == 0:
+                    continue
+                if gaze[-1] - gaze_points[pre_gaze][-1] > interval: # 按照interval切割gaze
+                    # 把当前页的特征清空，因为要重新算一遍特征
+                    wordFeature.clean()
+                    sentFeature.clean()
+                    # 目的是为了拿到gaze的时间，来切割fixation，为什么不直接gaze->fixation,会不准 todo 实时处理
+                    fixations_before = get_fix_by_time(result_fixations, start=0,end=gaze[-1])
+                    fixations_now = get_fix_by_time(result_fixations, gaze_points[pre_gaze][-1], gaze[-1])
+                    # 计算特征
 
-                        pre_word_index = -1
-                        for fixation in fixations_before:
-                            word_index, isAdjust = get_item_index_x_y(json.loads(page_data.location), fixation[0], fixation[1])
-                            if word_index != -1:
-                                wordFeature.number_of_fixation[word_index] += 1
-                                wordFeature.total_fixation_duration[word_index] += fixation[2]
-                                if word_index != pre_word_index: # todo reading times的计算
-                                    wordFeature.reading_times[word_index] += 1
+                    pre_word_index = -1
+                    for f,fixation in enumerate(fixations_before):
+                        word_index, isAdjust = get_item_index_x_y(json.loads(page_data.location), fixation[0], fixation[1])
+                        if word_index != -1:
+                            wordFeature.number_of_fixation[word_index] += 1
+                            wordFeature.total_fixation_duration[word_index] += fixation[2]
+                            if word_index != pre_word_index: # todo reading times的计算
+                                wordFeature.reading_times[word_index] += 1
 
-                                sent_index = get_sentence_by_word(word_index, sentence_list)
-                                if sent_index != -1:
-                                    sentFeature.total_dwell_time[sent_index] += fixation[2]
+                            sent_index = get_sentence_by_word(word_index, sentence_list)
+                            if sent_index != -1:
+                                sentFeature.total_dwell_time[sent_index] += fixation[2]
+                                if f!=0:
                                     sentFeature.saccade_times[sent_index] += 1 # 将两个fixation之间都作为saccade
 
                                     if pre_word_index - word_index > 1: # 往后看,阈值暂时设为1个单词
@@ -188,30 +190,37 @@ def dataset_of_timestamp(request):
                                     if pre_word_index - word_index < -1: # 往前阅读（正常阅读顺序)
                                         sentFeature.forward_saccade_times[sent_index] += 1
 
-                                pre_word_index = word_index # todo important
-                        # 计算need prediction
-                        wordFeature.need_prediction = is_watching(fixations_now,json.loads(page_data.location),wordFeature.num)
-                        # 生成数据
-                        for feature in word_feature_list:
-                            feature.to_csv(word_feature_path, experiment.id, page_data.id, time, experiment.user, experiment.article_id)
+                                    sentFeature.saccade_duration[sent_index] += fixations_before[f][3] - fixations_before[f-1][4] # 3是起始，4是结束
+                                    sentFeature.saccade_velocity[sent_index] += get_euclid_distance((fixations_before[f][0],fixations_before[f][1]),(fixations_before[f-1][0],fixations_before[f-1][1])) # 记录的实际上是距离
+                                    pre_row = get_row(pre_word_index, rows)
+                                    now_row = get_row(word_index, rows)
+                                    if pre_row == now_row:
+                                        sentFeature.horizontal_saccade_proportion[sent_index] += 1 # 记录的实际上是次数
 
-                        for feature in sent_feature_list:
-                            feature.to_csv(sent_feature_path, experiment.id, page_data.id, time, experiment.user,experiment.article_id)
+                            pre_word_index = word_index # todo important
+                    # 计算need prediction
+                    wordFeature.need_prediction = is_watching(fixations_now,json.loads(page_data.location),wordFeature.num)
+                    # 生成数据
+                    for feature in word_feature_list:
+                        feature.to_csv(word_feature_path, experiment.id, page_data.id, time, experiment.user, experiment.article_id)
+
+                    for feature in sent_feature_list:
+                        feature.to_csv(sent_feature_path, experiment.id, page_data.id, time, experiment.user,experiment.article_id)
 
 
-                        # cnn feature的生成 todo 暂时不变，之后修改
-                        get_cnn_feature(time,cnnFeature,gaze_points[pre_gaze:g],experiment.id,fixations_now)
+                    # cnn feature的生成 todo 暂时不变，之后修改
+                    get_cnn_feature(time,cnnFeature,gaze_points[pre_gaze:g],experiment.id,fixations_now)
 
-                        # 记录每个时刻的眼动，用于画图
-                        fixationMap.update(time,experiment.id,page_data.id,fixations_now)
+                    # 记录每个时刻的眼动，用于画图
+                    fixationMap.update(time,experiment.id,page_data.id,fixations_now)
 
-                        time += 1
-                        pre_gaze = g  # todo important
+                    time += 1
+                    pre_gaze = g  # todo important
 
             success += 1
             logger.info(f"成功生成{success}条,失败{fail}条")
-        except Exception:
-            fail += 1
+        # except Exception:
+        #     fail += 1
 
     # 生成exp相关信息
     cnnFeature.to_csv(cnn_feature_path)
@@ -253,5 +262,126 @@ def get_part_time_pic(request):
         fix_img = show_fixations(fixations, background)
 
         cv2.imwrite(f"{base_path}fix-{time}.png", fix_img)
+
+    return HttpResponse(1)
+
+def dataset_of_all_time(request):
+    """按照时间切割数据集"""
+    filename = "exp.txt"
+    file = open(filename, 'r')
+    lines = file.readlines()
+
+    experiment_list_select = list(lines)
+    # 确定文件路径
+    from datetime import datetime
+    now = datetime.now().strftime("%Y%m%d")
+
+    base_path = f"data\\dataset\\{now}\\"
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+
+    word_feature_path = f"{base_path}all-word-feature-{now}.csv"
+    sent_feature_path = f"{base_path}all-sent-feature-{now}.csv"
+    cnn_feature_path = f"{base_path}all-cnn-feature-{now}.csv"
+    # 获取需要生成的实验
+    # experiment_list_select = [1011,1792]
+    experiments = Experiment.objects.filter(id__in=experiment_list_select)
+
+    cnnFeature = CNNFeature()
+
+    success = 0
+    fail = 0
+
+    for experiment in experiments:
+        # try:
+        time = 0 # 记录当前的时间
+        page_data_list = PageData.objects.filter(experiment_id=experiment.id)
+        # 创建不同页的信息
+        word_feature_list = []
+        sent_feature_list = []
+        for page_data in page_data_list:
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            # word_level
+            wordFeature = WordFeature(len(word_list))
+            wordFeature.word_list = word_list # 填充单词
+            wordFeature.word_understand, wordFeature.sentence_understand, wordFeature.mind_wandering = compute_label(
+                page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
+            ) # 填充标签
+            for i, word in enumerate(word_list):
+                sent_index = get_sentence_by_word(i, sentence_list)
+                wordFeature.sentence_id[i] = sent_index # 使用page_id,time,sentence_id可以区分
+            word_feature_list.append(wordFeature)
+            # sentence_level
+            sentFeature = SentFeature(len(sentence_list))
+            sentFeature.sentence = [sentence[0] for sentence in sentence_list]
+            sentFeature.sentence_id = list(range(len(sentence_list))) # 记录id
+            # todo 句子标签的生成
+            sentFeature.sentence_understand,sentFeature.mind_wandering = compute_sentence_label(page_data.sentenceLabels, page_data.wanderLabels,sentence_list)
+            sent_feature_list.append(sentFeature)
+
+        for p,page_data in enumerate(page_data_list):
+            wordFeature = word_feature_list[p] # 获取单词特征
+            sentFeature = sent_feature_list[p] # 获取句子特征
+
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            border, rows, danger_zone, len_per_word = textarea(page_data.location)
+
+            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+            result_fixations, row_sequence, row_level_fix, sequence_fixations = generate_fixations(
+                gaze_points, page_data.texts, page_data.location
+            )
+
+            # 计算特征
+            pre_word_index = -1
+            for f,fixation in enumerate(result_fixations):
+                word_index, isAdjust = get_item_index_x_y(json.loads(page_data.location), fixation[0], fixation[1])
+                if word_index != -1:
+                    wordFeature.number_of_fixation[word_index] += 1
+                    wordFeature.total_fixation_duration[word_index] += fixation[2]
+                    if word_index != pre_word_index: # todo reading times的计算
+                        wordFeature.reading_times[word_index] += 1
+
+                    sent_index = get_sentence_by_word(word_index, sentence_list)
+                    if sent_index != -1:
+                        sentFeature.total_dwell_time[sent_index] += fixation[2]
+                        if f!=0:
+                            sentFeature.saccade_times[sent_index] += 1 # 将两个fixation之间都作为saccade
+
+                            if pre_word_index - word_index > 1: # 往后看,阈值暂时设为1个单词
+                                sentFeature.backward_saccade_times[sent_index] += 1
+                            if pre_word_index - word_index < -1: # 往前阅读（正常阅读顺序)
+                                sentFeature.forward_saccade_times[sent_index] += 1
+
+                            sentFeature.saccade_duration[sent_index] += result_fixations[f][3] - result_fixations[f-1][4] # 3是起始，4是结束
+                            sentFeature.saccade_velocity[sent_index] += get_euclid_distance((result_fixations[f][0],result_fixations[f][1]),(result_fixations[f-1][0],result_fixations[f-1][1])) # 记录的实际上是距离
+                            pre_row = get_row(pre_word_index, rows)
+                            now_row = get_row(word_index, rows)
+                            if pre_row == now_row:
+                                sentFeature.horizontal_saccade_proportion[sent_index] += 1 # 记录的实际上是次数
+
+                    pre_word_index = word_index # todo important
+            # 计算need prediction
+            wordFeature.need_prediction = is_watching(result_fixations,json.loads(page_data.location),wordFeature.num)
+            # 生成数据
+            for feature in word_feature_list:
+                feature.to_csv(word_feature_path, experiment.id, page_data.id, time, experiment.user, experiment.article_id)
+
+            for feature in sent_feature_list:
+                feature.to_csv(sent_feature_path, experiment.id, page_data.id, time, experiment.user,experiment.article_id)
+
+
+            # cnn feature的生成 todo 暂时不变，之后修改
+            get_cnn_feature(time,cnnFeature,gaze_points,experiment.id,result_fixations)
+
+
+        time += 1
+
+        success += 1
+        logger.info(f"成功生成{success}条,失败{fail}条")
+        # except Exception:
+        #     fail += 1
+
+    # 生成exp相关信息
+    cnnFeature.to_csv(cnn_feature_path)
 
     return HttpResponse(1)

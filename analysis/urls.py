@@ -23,4 +23,5 @@ urlpatterns = [
     path("all_time_pic/",views.get_all_time_pic),
     path("part_time_pic/",views.get_part_time_pic),
     path("dataset/",views.dataset_of_timestamp),
+    path("dataset_all_time/",views.dataset_of_all_time),
 ]

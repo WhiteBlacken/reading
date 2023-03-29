@@ -1017,6 +1017,12 @@ def get_cnn_feature(time,cnnFeature,gazes,exp_id,fixations):
     cnnFeature.direction.append(direction_now)
     cnnFeature.acc.append(acc_now)
 
+def get_row(index, rows):
+    for i, row in enumerate(rows):
+        if row['begin_index'] <= index <= row['end_index']:
+            return i
+    return -1
+
 if __name__ == '__main__':
     point = np.array([5, 4])
     segment_start = np.array([1, 3])
