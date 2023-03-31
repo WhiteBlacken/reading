@@ -455,7 +455,6 @@ def get_item_index_x_y(location, x, y):
     #         min_dist = distance
     #         index = i
     #         flag = True
-    print(f"min_dist:{min_dist}")
     return index, flag
 
 
@@ -1018,10 +1017,17 @@ def get_cnn_feature(time,cnnFeature,gazes,exp_id,fixations):
     cnnFeature.acc.append(acc_now)
 
 def get_row(index, rows):
-    for i, row in enumerate(rows):
-        if row['begin_index'] <= index <= row['end_index']:
-            return i
-    return -1
+    return next(
+        (
+            i
+            for i, row in enumerate(rows)
+            if row['begin_index'] <= index <= row['end_index']
+        ),
+        -1,
+    )
+
+def get_label_num(label):
+    return len(label)
 
 if __name__ == '__main__':
     point = np.array([5, 4])
@@ -1029,3 +1035,8 @@ if __name__ == '__main__':
     segment_end = np.array([2, 3])
     distance = point_to_segment_distance(point, segment_start, segment_end)
     print(f"distance:{distance}")
+
+    labels = [[9, 39], [184, 216]]
+    num = get_label_num(labels)
+    print(f"num:{num}")
+    assert num == 2

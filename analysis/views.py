@@ -104,10 +104,10 @@ def dataset_of_timestamp(request):
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    word_feature_path = f"{base_path}word-feature-{now}.csv"
-    sent_feature_path = f"{base_path}sent-feature-{now}.csv"
-    cnn_feature_path = f"{base_path}cnn-feature-{now}.csv"
-    fixations_map_path = f"{base_path}fixation-map-{now}.csv"
+    word_feature_path = f"{base_path}word-feature-{now}-old-feature.csv"
+    sent_feature_path = f"{base_path}sent-feature-{now}-old-feature.csv"
+    cnn_feature_path = f"{base_path}cnn-feature-{now}-old-feature.csv"
+    fixations_map_path = f"{base_path}fixation-map-{now}-old-feature.csv"
     # 获取需要生成的实验
     # experiment_list_select = [1011,1792]
     experiments = Experiment.objects.filter(id__in=experiment_list_select)
@@ -182,12 +182,13 @@ def dataset_of_timestamp(request):
                             sent_index = get_sentence_by_word(word_index, sentence_list)
                             if sent_index != -1:
                                 sentFeature.total_dwell_time[sent_index] += fixation[2]
-                                if f!=0:
+                                # if f!=0:
+                                if pre_word_index != word_index:
                                     sentFeature.saccade_times[sent_index] += 1 # 将两个fixation之间都作为saccade
 
-                                    if pre_word_index - word_index > 1: # 往后看,阈值暂时设为1个单词
+                                    if pre_word_index - word_index >= 0: # 往后看,阈值暂时设为1个单词
                                         sentFeature.backward_saccade_times[sent_index] += 1
-                                    if pre_word_index - word_index < -1: # 往前阅读（正常阅读顺序)
+                                    if pre_word_index - word_index < 0: # 往前阅读（正常阅读顺序)
                                         sentFeature.forward_saccade_times[sent_index] += 1
 
                                     sentFeature.saccade_duration[sent_index] += fixations_before[f][3] - fixations_before[f-1][4] # 3是起始，4是结束
@@ -217,8 +218,8 @@ def dataset_of_timestamp(request):
                     time += 1
                     pre_gaze = g  # todo important
 
-            success += 1
-            logger.info(f"成功生成{success}条,失败{fail}条")
+        success += 1
+        logger.info(f"成功生成{success}条,失败{fail}条")
         # except Exception:
         #     fail += 1
 
@@ -280,9 +281,9 @@ def dataset_of_all_time(request):
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    word_feature_path = f"{base_path}all-word-feature-{now}.csv"
-    sent_feature_path = f"{base_path}all-sent-feature-{now}.csv"
-    cnn_feature_path = f"{base_path}all-cnn-feature-{now}.csv"
+    word_feature_path = f"{base_path}all-word-feature-{now}-old-feature.csv"
+    sent_feature_path = f"{base_path}all-sent-feature-{now}-old-feature.csv"
+    cnn_feature_path = f"{base_path}all-cnn-feature-{now}-old-feature.csv"
     # 获取需要生成的实验
     # experiment_list_select = [1011,1792]
     experiments = Experiment.objects.filter(id__in=experiment_list_select)
@@ -344,12 +345,13 @@ def dataset_of_all_time(request):
                     sent_index = get_sentence_by_word(word_index, sentence_list)
                     if sent_index != -1:
                         sentFeature.total_dwell_time[sent_index] += fixation[2]
-                        if f!=0:
+                        # if f!=0:
+                        if pre_word_index != word_index:
                             sentFeature.saccade_times[sent_index] += 1 # 将两个fixation之间都作为saccade
 
-                            if pre_word_index - word_index > 1: # 往后看,阈值暂时设为1个单词
+                            if pre_word_index - word_index >= 0: # 往后看,阈值暂时设为1个单词
                                 sentFeature.backward_saccade_times[sent_index] += 1
-                            if pre_word_index - word_index < -1: # 往前阅读（正常阅读顺序)
+                            if pre_word_index - word_index < 0: # 往前阅读（正常阅读顺序)
                                 sentFeature.forward_saccade_times[sent_index] += 1
 
                             sentFeature.saccade_duration[sent_index] += result_fixations[f][3] - result_fixations[f-1][4] # 3是起始，4是结束
@@ -363,11 +365,9 @@ def dataset_of_all_time(request):
             # 计算need prediction
             wordFeature.need_prediction = is_watching(result_fixations,json.loads(page_data.location),wordFeature.num)
             # 生成数据
-            for feature in word_feature_list:
-                feature.to_csv(word_feature_path, experiment.id, page_data.id, time, experiment.user, experiment.article_id)
+            wordFeature.to_csv(word_feature_path, experiment.id, page_data.id, time, experiment.user, experiment.article_id)
 
-            for feature in sent_feature_list:
-                feature.to_csv(sent_feature_path, experiment.id, page_data.id, time, experiment.user,experiment.article_id)
+            sentFeature.to_csv(sent_feature_path, experiment.id, page_data.id, time, experiment.user,experiment.article_id)
 
 
             # cnn feature的生成 todo 暂时不变，之后修改
@@ -385,3 +385,14 @@ def dataset_of_all_time(request):
     cnnFeature.to_csv(cnn_feature_path)
 
     return HttpResponse(1)
+
+
+def count_label(request):
+    filename = "exp.txt"
+    file = open(filename, 'r')
+    lines = file.readlines()
+
+    pagedatas = PageData.objects.filter(experiment_id__in=list(lines))
+
+    label = sum(len(json.loads(page.sentenceLabels)) for page in pagedatas)
+    return HttpResponse(label)

@@ -81,8 +81,12 @@ class WordFeature(object):
                 "number_of_fixations": self.number_of_fixation,
                 "fixation_duration": self.total_fixation_duration,
                 # 特征2
-                "fixation_duration_div_syllable": round_list(div_list(self.total_fixation_duration,self.get_syllable()),3),
-                "fixation_duration_div_length": round_list(div_list(self.total_fixation_duration,self.get_len()),3),
+                # "fixation_duration_div_syllable": round_list(div_list(self.total_fixation_duration,self.get_syllable()),3),
+                # "fixation_duration_div_length": round_list(div_list(self.total_fixation_duration,self.get_len()),3),
+
+                "fixation_duration_div_syllable":
+                    div_list(self.total_fixation_duration, self.get_syllable()),
+                "fixation_duration_div_length": div_list(self.total_fixation_duration, self.get_len()),
                 # 特征3
                 "fixation_duration_diff": self.diff(self.total_fixation_duration),
                 "number_of_fixations_diff": self.diff(self.number_of_fixation),
@@ -222,25 +226,45 @@ class SentFeature(object):
                 "horizontal_saccade_proportion": self.horizontal_saccade_proportion, # todo
                 "saccade_velocity": self.saccade_velocity, # todo
                 "saccade_duration": self.saccade_duration, # todo
+                # # 3.2 特征2
+                # "total_dwell_time_of_sentence_div_syllable": round_list(div_list(self.total_dwell_time,syllable_list),3),
+                # "saccade_times_of_sentence_div_syllable": round_list(div_list(self.saccade_times,syllable_list),3),
+                # "forward_times_of_sentence_div_syllable": round_list(div_list(self.forward_saccade_times,syllable_list),3),
+                # "backward_times_of_sentence_div_syllable": round_list(div_list(self.backward_saccade_times,syllable_list),3),
+                # "horizontal_saccade_proportion_div_syllable": round_list(div_list(self.horizontal_saccade_proportion,syllable_list),3),
+                # "saccade_velocity_div_syllable": round_list(div_list(self.saccade_velocity,syllable_list),3),
+                # "saccade_duration_div_syllable": round_list(div_list(self.saccade_duration,syllable_list),3),
+                # # 3.2 特征3
+                # "total_dwell_time_of_sentence_div_log": round_list(div_list(self.total_dwell_time, log_list),3),
+                # "saccade_times_of_sentence_div_log": round_list(div_list(self.saccade_times, log_list), 3),
+                # "forward_times_of_sentence_div_log": round_list(
+                #     div_list(self.forward_saccade_times, log_list), 3),
+                # "backward_times_of_sentence_div_log": round_list(
+                #     div_list(self.backward_saccade_times, log_list), 3),
+                # "horizontal_saccade_proportion_div_log": round_list(
+                #     div_list(self.horizontal_saccade_proportion, log_list), 3),
+                # "saccade_velocity_div_log": round_list(div_list(self.saccade_velocity, log_list), 3),
+                # "saccade_duration_div_log": round_list(div_list(self.saccade_duration, log_list), 3),
+
                 # 3.2 特征2
-                "total_dwell_time_of_sentence_div_syllable": round_list(div_list(self.total_dwell_time,syllable_list),3),
-                "saccade_times_of_sentence_div_syllable": round_list(div_list(self.saccade_times,syllable_list),3),
-                "forward_times_of_sentence_div_syllable": round_list(div_list(self.forward_saccade_times,syllable_list),3),
-                "backward_times_of_sentence_div_syllable": round_list(div_list(self.backward_saccade_times,syllable_list),3),
-                "horizontal_saccade_proportion_div_syllable": round_list(div_list(self.horizontal_saccade_proportion,syllable_list),3),
-                "saccade_velocity_div_syllable": round_list(div_list(self.saccade_velocity,syllable_list),3),
-                "saccade_duration_div_syllable": round_list(div_list(self.saccade_duration,syllable_list),3),
+                "total_dwell_time_of_sentence_div_syllable": div_list(self.total_dwell_time, syllable_list),
+                "saccade_times_of_sentence_div_syllable": div_list(self.saccade_times, syllable_list),
+                "forward_times_of_sentence_div_syllable": div_list(self.forward_saccade_times, syllable_list),
+                "backward_times_of_sentence_div_syllable": div_list(self.backward_saccade_times, syllable_list),
+                "horizontal_saccade_proportion_div_syllable": div_list(self.horizontal_saccade_proportion, syllable_list),
+                "saccade_velocity_div_syllable": div_list(self.saccade_velocity, syllable_list),
+                "saccade_duration_div_syllable": div_list(self.saccade_duration, syllable_list),
                 # 3.2 特征3
-                "total_dwell_time_of_sentence_div_log": round_list(div_list(self.total_dwell_time, log_list),3),
-                "saccade_times_of_sentence_div_log": round_list(div_list(self.saccade_times, log_list), 3),
-                "forward_times_of_sentence_div_log": round_list(
-                    div_list(self.forward_saccade_times, log_list), 3),
-                "backward_times_of_sentence_div_log": round_list(
-                    div_list(self.backward_saccade_times, log_list), 3),
-                "horizontal_saccade_proportion_div_log": round_list(
-                    div_list(self.horizontal_saccade_proportion, log_list), 3),
-                "saccade_velocity_div_log": round_list(div_list(self.saccade_velocity, log_list), 3),
-                "saccade_duration_div_log": round_list(div_list(self.saccade_duration, log_list), 3),
+                "total_dwell_time_of_sentence_div_log": div_list(self.total_dwell_time, log_list),
+                "saccade_times_of_sentence_div_log": div_list(self.saccade_times, log_list),
+                "forward_times_of_sentence_div_log":
+                    div_list(self.forward_saccade_times, log_list),
+                "backward_times_of_sentence_div_log":
+                    div_list(self.backward_saccade_times, log_list),
+                "horizontal_saccade_proportion_div_log":
+                    div_list(self.horizontal_saccade_proportion, log_list),
+                "saccade_velocity_div_log": div_list(self.saccade_velocity, log_list),
+                "saccade_duration_div_log": div_list(self.saccade_duration, log_list),
                 # 特征4
                 "length": self.length
             }
