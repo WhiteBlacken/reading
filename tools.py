@@ -455,7 +455,6 @@ def get_item_index_x_y(location, x, y):
     #         min_dist = distance
     #         index = i
     #         flag = True
-    print(f"min_dist:{min_dist}")
     return index, flag
 
 
@@ -919,14 +918,6 @@ def get_sentence_by_word(word_index, sentence_list):
         -1,
     )
 
-def generate_exp_csv(filename,experiments):
-    """生成exp的信息"""
-    pd.DataFrame({
-        'exp_id':[exp.id for exp in experiments],
-        'user':[exp.user for exp in experiments],
-        'article_id':[exp.article_id for exp in experiments]
-    }).to_csv(filename, index=False)
-
 def round_list(a,num):
     return list(np.round(np.array(a),num))
 
@@ -1004,9 +995,48 @@ def coor_to_input(coordinates, window):
     acc = [x[5] for x in coordinates]
     return speed, direction, acc
 
+def get_cnn_feature(time,cnnFeature,gazes,exp_id,fixations):
+    cnnFeature.experiment_ids.append(exp_id)
+    cnnFeature.times.append(time)
+
+    fix_of_x = [x[0] for x in fixations]
+    fix_of_y = [x[1] for x in fixations]
+    cnnFeature.fix_x.append(fix_of_x)
+    cnnFeature.fix_y.append(fix_of_y)
+
+    gaze_of_x = [x[0] for x in gazes]
+    gaze_of_y = [x[1] for x in gazes]
+    gaze_of_t = [x[2] for x in gazes]
+    speed_now, direction_now, acc_now = coor_to_input(gazes, 8)
+    assert len(gaze_of_x) == len(gaze_of_y) == len(speed_now) == len(direction_now) == len(acc_now)
+    cnnFeature.gaze_x.append(gaze_of_x)
+    cnnFeature.gaze_y.append(gaze_of_y)
+    cnnFeature.gaze_t.append(gaze_of_t)
+    cnnFeature.speed.append(speed_now)
+    cnnFeature.direction.append(direction_now)
+    cnnFeature.acc.append(acc_now)
+
+def get_row(index, rows):
+    return next(
+        (
+            i
+            for i, row in enumerate(rows)
+            if row['begin_index'] <= index <= row['end_index']
+        ),
+        -1,
+    )
+
+def get_label_num(label):
+    return len(label)
+
 if __name__ == '__main__':
     point = np.array([5, 4])
     segment_start = np.array([1, 3])
     segment_end = np.array([2, 3])
     distance = point_to_segment_distance(point, segment_start, segment_end)
     print(f"distance:{distance}")
+
+    labels = [[9, 39], [184, 216]]
+    num = get_label_num(labels)
+    print(f"num:{num}")
+    assert num == 2
