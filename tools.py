@@ -1029,6 +1029,12 @@ def get_row(index, rows):
 def get_label_num(label):
     return len(label)
 
+def normalize_list(lst):
+    total = sum(lst)
+    return [x/total for x in lst]
+def multiply_and_sum_lists(list1, list2):
+    return sum(list1[i] * list2[i] for i in range(len(list1)))
+
 if __name__ == '__main__':
     point = np.array([5, 4])
     segment_start = np.array([1, 3])

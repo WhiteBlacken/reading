@@ -72,7 +72,7 @@ class PageData(models.Model):
     gaze_x = models.TextField()
     gaze_y = models.TextField()
     gaze_t = models.TextField()
-    texts = models.TextField()
+    texts = models.CharField(max_length=4000)
 
     wordLabels = models.CharField(max_length=1000)
     sentenceLabels = models.CharField(max_length=1000)

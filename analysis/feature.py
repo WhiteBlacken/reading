@@ -51,7 +51,7 @@ class WordFeature(object):
         return [len(word) for word in self.word_list]
 
     def diff(self,list_a):
-        results = [0 for i in range(len(list_a))]
+        results = [0 for _ in range(len(list_a))]
         for i,item in enumerate(list_a):
             if i == 0:
                 results[i] = 0
@@ -113,22 +113,25 @@ class SentFeature(object):
         self.horizontal_saccade_proportion = [0 for _ in range(num)]
         self.saccade_velocity = [0 for _ in range(num)]
         self.saccade_duration = [0 for _ in range(num)]
-        # 特征2
-        self.total_dwell_time_of_sentence_div_syllable = [0 for _ in range(self.num)]
-        self.saccade_times_of_sentence_div_syllable = [0 for _ in range(self.num)]
-        self.forward_times_of_sentence_div_syllable = [0 for _ in range(self.num)]
-        self.backward_times_of_sentence__div_syllable = [0 for _ in range(self.num)]
-        self.horizontal_saccade_proportion_div_syllable = [0 for _ in range(self.num)]
-        self.saccade_velocity_div_syllable = [0 for _ in range(self.num)]
-        self.saccade_duration_div_syllable = [0 for _ in range(self.num)]
-        # 特征3
-        self.backward_times_of_sentence_div_log = [0 for _ in range(self.num)]
-        self.forward_times_of_sentence_div_log = [0 for _ in range(self.num)]
-        self.horizontal_saccade_proportion_div_log = [0 for _ in range(self.num)]
-        self.saccade_duration_div_log = [0 for _ in range(self.num)]
-        self.saccade_times_of_sentence_div_log = [0 for _ in range(self.num)]
-        self.saccade_velocity_div_log = [0 for _ in range(self.num)]
-        self.total_dwell_time_of_sentence_div_log = [0 for _ in range(self.num)]
+
+        # first pass特征
+        self.first_pass_total_dwell_time = [0 for _ in range(num)]
+        self.first_pass_saccade_times = [0 for _ in range(num)]
+        self.first_pass_forward_saccade_times = [0 for _ in range(num)]
+        self.first_pass_backward_saccade_times = [0 for _ in range(num)]
+        self.first_pass_horizontal_saccade_proportion = [0 for _ in range(num)]
+        self.first_pass_saccade_velocity = [0 for _ in range(num)]
+        self.first_pass_saccade_duration = [0 for _ in range(num)]
+
+        # 相似度特征
+        self.reading_times_cor = [0 for _ in range(num)]
+        self.number_of_fixation_cor = [0 for _ in range(num)]
+        self.total_fixation_duration_cor = [0 for _ in range(num)]
+
+        self.first_pass_reading_times_cor = [0 for _ in range(num)]
+        self.first_pass_number_of_fixation_cor = [0 for _ in range(num)]
+        self.first_pass_total_fixation_duration_cor = [0 for _ in range(num)]
+
         # 特征4
         self.length = [0 for _ in range(self.num)]
         # 实验相关信息
@@ -149,22 +152,25 @@ class SentFeature(object):
         self.horizontal_saccade_proportion = [0 for _ in range(self.num)]
         self.saccade_velocity = [0 for _ in range(self.num)]
         self.saccade_duration = [0 for _ in range(self.num)]
-        # 特征2
-        self.total_dwell_time_of_sentence_div_syllable = [0 for _ in range(self.num)]
-        self.saccade_times_of_sentence_div_syllable = [0 for _ in range(self.num)]
-        self.forward_times_of_sentence_div_syllable = [0 for _ in range(self.num)]
-        self.backward_times_of_sentence__div_syllable = [0 for _ in range(self.num)]
-        self.horizontal_saccade_proportion_div_syllable = [0 for _ in range(self.num)]
-        self.saccade_velocity_div_syllable = [0 for _ in range(self.num)]
-        self.saccade_duration_div_syllable = [0 for _ in range(self.num)]
-        # 特征3
-        self.backward_times_of_sentence_div_log = [0 for _ in range(self.num)]
-        self.forward_times_of_sentence_div_log = [0 for _ in range(self.num)]
-        self.horizontal_saccade_proportion_div_log = [0 for _ in range(self.num)]
-        self.saccade_duration_div_log = [0 for _ in range(self.num)]
-        self.saccade_times_of_sentence_div_log = [0 for _ in range(self.num)]
-        self.saccade_velocity_div_log = [0 for _ in range(self.num)]
-        self.total_dwell_time_of_sentence_div_log = [0 for _ in range(self.num)]
+
+        # first pass特征
+        self.first_pass_total_dwell_time = [0 for _ in range(self.num)]
+        self.first_pass_saccade_times = [0 for _ in range(self.num)]
+        self.first_pass_forward_saccade_times = [0 for _ in range(self.num)]
+        self.first_pass_backward_saccade_times = [0 for _ in range(self.num)]
+        self.first_pass_horizontal_saccade_proportion = [0 for _ in range(self.num)]
+        self.first_pass_saccade_velocity = [0 for _ in range(self.num)]
+        self.first_pass_saccade_duration = [0 for _ in range(self.num)]
+
+        # 相似度特征
+        self.reading_times_cor = [0 for _ in range(self.num)]
+        self.number_of_fixation_cor = [0 for _ in range(self.num)]
+        self.total_fixation_duration_cor = [0 for _ in range(self.num)]
+
+        self.first_pass_reading_times_cor = [0 for _ in range(self.num)]
+        self.first_pass_number_of_fixation_cor = [0 for _ in range(self.num)]
+        self.first_pass_total_fixation_duration_cor = [0 for _ in range(self.num)]
+
         # 特征4
         self.length = [0 for _ in range(self.num)]
 
@@ -246,7 +252,7 @@ class SentFeature(object):
                 # "saccade_velocity_div_log": round_list(div_list(self.saccade_velocity, log_list), 3),
                 # "saccade_duration_div_log": round_list(div_list(self.saccade_duration, log_list), 3),
 
-                # 3.2 特征2
+                # 特征2
                 "total_dwell_time_of_sentence_div_syllable": div_list(self.total_dwell_time, syllable_list),
                 "saccade_times_of_sentence_div_syllable": div_list(self.saccade_times, syllable_list),
                 "forward_times_of_sentence_div_syllable": div_list(self.forward_saccade_times, syllable_list),
@@ -254,7 +260,7 @@ class SentFeature(object):
                 "horizontal_saccade_proportion_div_syllable": div_list(self.horizontal_saccade_proportion, syllable_list),
                 "saccade_velocity_div_syllable": div_list(self.saccade_velocity, syllable_list),
                 "saccade_duration_div_syllable": div_list(self.saccade_duration, syllable_list),
-                # 3.2 特征3
+                # 特征3
                 "total_dwell_time_of_sentence_div_log": div_list(self.total_dwell_time, log_list),
                 "saccade_times_of_sentence_div_log": div_list(self.saccade_times, log_list),
                 "forward_times_of_sentence_div_log":
@@ -265,6 +271,44 @@ class SentFeature(object):
                     div_list(self.horizontal_saccade_proportion, log_list),
                 "saccade_velocity_div_log": div_list(self.saccade_velocity, log_list),
                 "saccade_duration_div_log": div_list(self.saccade_duration, log_list),
+
+                # # first pass
+                # "first_pass_total_dwell_time_of_sentence": self.first_pass_total_dwell_time,
+                # "first_pass_saccade_times_of_sentence": self.first_pass_saccade_times,
+                # "first_pass_forward_times_of_sentence": self.first_pass_forward_saccade_times,
+                # "first_pass_backward_times_of_sentence": self.first_pass_backward_saccade_times,
+                # "first_pass_horizontal_saccade_proportion": self.first_pass_horizontal_saccade_proportion,  # todo
+                # "first_pass_saccade_velocity": self.first_pass_saccade_velocity,  # todo
+                # "first_pass_saccade_duration": self.first_pass_saccade_duration,  # todo
+                #
+                # "first_pass_total_dwell_time_of_sentence_div_syllable": div_list(self.first_pass_total_dwell_time, syllable_list),
+                # "first_pass_saccade_times_of_sentence_div_syllable": div_list(self.first_pass_saccade_times, syllable_list),
+                # "first_pass_forward_times_of_sentence_div_syllable": div_list(self.first_pass_forward_saccade_times, syllable_list),
+                # "first_pass_backward_times_of_sentence_div_syllable": div_list(self.first_pass_backward_saccade_times, syllable_list),
+                # "first_pass_horizontal_saccade_proportion_div_syllable": div_list(self.first_pass_horizontal_saccade_proportion,
+                #                                                        syllable_list),
+                # "first_pass_saccade_velocity_div_syllable": div_list(self.first_pass_saccade_velocity, syllable_list),
+                # "first_pass_saccade_duration_div_syllable": div_list(self.first_pass_saccade_duration, syllable_list),
+                #
+                # "first_pass_total_dwell_time_of_sentence_div_log": div_list(self.first_pass_total_dwell_time, log_list),
+                # "first_pass_saccade_times_of_sentence_div_log": div_list(self.first_pass_saccade_times, log_list),
+                # "first_pass_forward_times_of_sentence_div_log":
+                #     div_list(self.first_pass_forward_saccade_times, log_list),
+                # "first_pass_backward_times_of_sentence_div_log":
+                #     div_list(self.first_pass_backward_saccade_times, log_list),
+                # "first_pass_horizontal_saccade_proportion_div_log":
+                #     div_list(self.first_pass_horizontal_saccade_proportion, log_list),
+                # "first_pass_saccade_velocity_div_log": div_list(self.first_pass_saccade_velocity, log_list),
+                # "first_pass_saccade_duration_div_log": div_list(self.first_pass_saccade_duration, log_list),
+                #
+                # # 相似度特征
+                # "reading_times_cor": self.reading_times_cor,
+                # "number_of_fixation_cor": self.number_of_fixation_cor,
+                # "total_fixation_duration_cor": self.total_fixation_duration_cor,
+                #
+                # "first_pass_reading_times_cor": self.first_pass_reading_times_cor,
+                # "first_pass_number_of_fixation_cor": self.first_pass_number_of_fixation_cor,
+                # "first_pass_total_fixation_duration_cor": self.first_pass_total_fixation_duration_cor,
                 # 特征4
                 "length": self.length
             }
@@ -292,14 +336,6 @@ class CNNFeature(object):
 
 
     def to_csv(self, filename):
-        print(f"exeriment:{len(self.experiment_ids)}")
-        print(f"time:{len(self.times)}")
-        print(f"gaze_x:{len(self.gaze_x)}")
-        print(f"gaze_x:{len(self.gaze_y)}")
-        print(f"gaze_x:{len(self.gaze_t)}")
-        print(f"gaze_x:{len(self.speed)}")
-        print(f"gaze_x:{len(self.direction)}")
-        print(f"gaze_x:{len(self.acc)}")
 
         df = pd.DataFrame(
             {
