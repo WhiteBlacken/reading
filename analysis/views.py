@@ -30,14 +30,18 @@ def get_all_time_pic(request):
         os.mkdir(base_path)
 
     for page_data in page_data_ls:
+
+        end = 500
+        if page_data.id in [2051,2052,2053,2067,1226,1298,1300]:
+            end = 0
+
+        print(f"page_id:{page_data.id}")
         # 拿到gaze point
-        gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+        gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t,end_time=end)
         # 计算fixations
         result_fixations, _, _, _ = generate_fixations(
-            gaze_points, page_data.texts, page_data.location
+            gaze_points, page_data.texts, page_data.location,page_id=page_data.id
         )
-
-        # result_fixations = result_fixations[261:316]
 
         path = f"{base_path}{page_data.id}\\"
 
@@ -93,6 +97,16 @@ def dataset_of_timestamp(request):
     lines = file.readlines()
 
     experiment_list_select = list(lines)
+
+    filename = "exps/data2.txt"
+    file = open(filename, 'r')
+    lines1 = file.readlines()
+    experiment_list_select.extend(list(lines1))
+
+    filename = "exps/data3.txt"
+    file = open(filename, 'r')
+    lines2 = file.readlines()
+    experiment_list_select.extend(list(lines2))
     # 获取切割的窗口大小
     interval = request.GET.get("interval",8)
     interval = interval * 1000
@@ -118,6 +132,7 @@ def dataset_of_timestamp(request):
     success = 0
     fail = 0
 
+    logger.info(f"本次生成{len(experiment_list_select)}条")
     for experiment in experiments:
         # try:
         time = 0 # 记录当前的时间
@@ -152,9 +167,13 @@ def dataset_of_timestamp(request):
             word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
             border, rows, danger_zone, len_per_word = textarea(page_data.location)
 
-            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+            end = 500
+            if page_data.id in [2051, 2052, 2053, 2067, 1226, 1298, 1300]:
+                end = 0
+
+            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t,end_time=end)
             result_fixations, row_sequence, row_level_fix, sequence_fixations = generate_fixations(
-                gaze_points, page_data.texts, page_data.location
+                gaze_points, page_data.texts, page_data.location,page_id=page_data.id
             )
 
             pre_gaze = 0
@@ -273,9 +292,22 @@ def dataset_of_all_time(request):
     lines = file.readlines()
 
     experiment_list_select = list(lines)
+
+    filename = "exps/data2.txt"
+    file = open(filename, 'r')
+    lines1 = file.readlines()
+    experiment_list_select.extend(list(lines1))
+
+    filename = "exps/data3.txt"
+    file = open(filename, 'r')
+    lines2 = file.readlines()
+    experiment_list_select.extend(list(lines2))
+
     # 确定文件路径
     from datetime import datetime
     now = datetime.now().strftime("%Y%m%d")
+
+    logger.info(f"本次生成{len(experiment_list_select)}条")
 
     base_path = f"data\\dataset\\{now}\\"
     if not os.path.exists(base_path):
@@ -327,7 +359,12 @@ def dataset_of_all_time(request):
             word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
             border, rows, danger_zone, len_per_word = textarea(page_data.location)
 
-            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+            end = 500
+            if page_data.id in [2051, 2052, 2053, 2067, 1226, 1298, 1300]:
+                end = 0
+            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t,end_time=end)
+
+
             result_fixations, row_sequence, row_level_fix, sequence_fixations = generate_fixations(
                 gaze_points, page_data.texts, page_data.location
             )

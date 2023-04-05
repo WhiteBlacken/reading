@@ -129,13 +129,15 @@ def format_gaze(
         (
             i
             for i in range(len(gaze_points) - 1, 0, -1)
-            if gaze_points[-1][2] - gaze_points[i][2] > end_time
+            if gaze_points[-1][2] - gaze_points[i][2] >= end_time
         ),
         0,
     )
     assert begin < end
     print(f'len(end_x):{end - begin + 1}')
+    print(f"remove:{end-len(gaze_points)+1}")
     return gaze_points[begin:end]
+
 
 
 def preprocess_data(data, filters):
@@ -230,7 +232,7 @@ def split_fixation_by_row(adjust_fixations, rows):
     return sequence_fixations
 
 
-def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word):
+def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word, page_id=0):
     """利用无空行先验调整fixation"""
     result_rows = []
     result_fixations = []
@@ -291,14 +293,229 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
 
     for i, sequence in enumerate(sequence_fixations):
         if result_rows[i] != -1:
-            adjust_y = (rows[result_rows[i]]["top"] + rows[result_rows[i]]["bottom"]) / 2
-            result_fixation = [[x[0], adjust_y, x[2], x[6], x[7]] for x in sequence]
+            adjust_y = [(rows[result_rows[i]]["top"] + rows[result_rows[i]]["bottom"]) / 2 for _ in sequence]
+            result_fixation = []
+            # begin
+            # 调整fixation位置
+            if page_id == 2046:
+                for j,fix in enumerate(sequence):
+                    if len(result_fixations) + j > 207:
+                        adjust_y[j] = (rows[result_rows[i]+1]["top"] + rows[result_rows[i]+1]["bottom"]) / 2
+            if page_id == 2052:
+                for j,fix in enumerate(sequence):
+                    if len(result_fixations) + j > 311 and result_rows[
+                        i
+                    ] + 1 < len(rows):
+                        adjust_y[j] = (rows[result_rows[i]+1]["top"] + rows[result_rows[i]+1]["bottom"]) / 2
+            if page_id == 2066:
+                for j,fix in enumerate(sequence):
+                    if len(result_fixations) + j > 352 and result_rows[
+                        i
+                    ] + 1 < len(rows):
+                        adjust_y[j] = (rows[result_rows[i]+1]["top"] + rows[result_rows[i]+1]["bottom"]) / 2
+            if page_id == 1298:
+                for j,fix in enumerate(sequence):
+                    if len(result_fixations) + j > 165 and result_rows[
+                        i
+                    ] + 1 < len(rows):
+                        adjust_y[j] = (rows[result_rows[i]+1]["top"] + rows[result_rows[i]+1]["bottom"]) / 2
+                    if 186 < len(result_fixations) + j < 196 and result_rows[
+                        i
+                    ] < len(rows):
+                        adjust_y[j] = (rows[result_rows[i]]["top"] + rows[result_rows[i]]["bottom"]) / 2
+            if page_id == 1299:
+                for j,fix in enumerate(sequence):
+                    if len(result_fixations) + j > 220 and result_rows[
+                        i
+                    ] + 1 < len(rows):
+                        adjust_y[j] = (rows[result_rows[i]+1]["top"] + rows[result_rows[i]+1]["bottom"]) / 2
+            if page_id == 1324:
+                for j,fix in enumerate(sequence):
+                    if len(result_fixations) + j > 140 and result_rows[
+                        i
+                    ] + 1 < len(rows):
+                        adjust_y[j] = (rows[result_rows[i]+1]["top"] + rows[result_rows[i]+1]["bottom"]) / 2
+            if page_id == 1588:
+                for j, fix in enumerate(sequence):
+                    if len(result_fixations) + j > 192 and result_rows[
+                        i
+                    ] + 1 < len(rows):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 1686:
+                for j, fix in enumerate(sequence):
+                    if len(result_fixations) + j > 204 and result_rows[
+                        i
+                    ] + 1 < len(rows):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 1693:
+                for j, fix in enumerate(sequence):
+                    if len(result_fixations) + j > 23 and result_rows[
+                        i
+                    ] + 1 < len(rows):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 1747:
+                for j, fix in enumerate(sequence):
+                    if len(result_fixations) + j > 173 and result_rows[
+                        i
+                    ] + 1 < len(rows):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 1819:
+                for j, fix in enumerate(sequence):
+                    if len(result_fixations) + j > 95 and result_rows[
+                        i
+                    ] + 1 < len(rows):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 1824:
+                for j, fix in enumerate(sequence):
+                    if (
+                            28 < len(result_fixations) + j < 83
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+                    if (
+                            330 < len(result_fixations) + j < 386
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 1860:
+                for j, fix in enumerate(sequence):
+                    if (
+                            3 < len(result_fixations) + j < 45
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+                    if (
+                            364 < len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 2015:
+                for j, fix in enumerate(sequence):
+                    if (
+                            149 < len(result_fixations) + j < 160
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 2020:
+                for j, fix in enumerate(sequence):
+                    if (
+                            62 < len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+
+            if page_id == 1862:
+                for j, fix in enumerate(sequence):
+                    if (
+                            (3 < len(result_fixations) + j < 45)
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+                for j, fix in enumerate(sequence):
+                    if (
+                            110 < len(result_fixations) + j < 206
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 1929:
+                for j, fix in enumerate(sequence):
+                    if (
+                            47 < len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 1931:
+                for j, fix in enumerate(sequence):
+                    if (
+                            29 < len(result_fixations) + j < 46
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 1948:
+                for j, fix in enumerate(sequence):
+                    if (
+                            194 < len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 1950:
+                for j, fix in enumerate(sequence):
+                    if (
+                            (49 < len(result_fixations) + j < 84 or len(result_fixations) < 33)
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+
+            if page_id == 1966:
+                for j, fix in enumerate(sequence):
+                    if (
+                            68 < len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+                    if (
+                            22 < len(result_fixations) + j < 31
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+
+            # 删除fixation
+            if page_id == 1226:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if (i+len(result_fixations))<260]
+            elif page_id == 1300:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 111]
+            elif page_id == 1692:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 378]
+            elif page_id == 1693:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 135]
+            elif page_id == 1819:
+                print(f"执行了{page_id}")
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 229]
+            elif page_id == 2014:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 111]
+            elif page_id == 2015:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) <167]
+            elif page_id == 2016:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 54]
+            elif page_id == 2019:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 202]
+            elif page_id == 1862:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 327]
+            elif page_id == 1929:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 114]
+            elif page_id == 1931:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 114]
+            elif page_id == 1948:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 228]
+            elif page_id == 1949:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 105]
+            elif page_id == 1952:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 17]
+            elif page_id == 1967:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 98]
+            else:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i,x in enumerate(sequence)]
             result_fixations.extend(result_fixation)
             row_level_fix.append(result_fixation)
     return result_fixations, result_rows, row_level_fix
 
 
-def generate_fixations(gaze_points, texts, location):
+def generate_fixations(gaze_points, texts, location, page_id=0):
     """生成fixation"""
     # 根据gaze点生成fixation，未校准
     fixations = detect_fixations(gaze_points)
@@ -318,9 +535,9 @@ def generate_fixations(gaze_points, texts, location):
 
     # 将fixation按行切割
     sequence_fixations = split_fixation_by_row(adjust_fixations, rows)
-
     # 根据行先验调整fixations
-    result_fixations, result_rows, row_level_fix = move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word)
+    result_fixations, result_rows, row_level_fix = move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word,page_id=page_id)
+
 
     return result_fixations, result_rows, row_level_fix, sequence_fixations
 
