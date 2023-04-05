@@ -21,6 +21,19 @@ from scipy.spatial.distance import pdist
 
 from onlineReading import settings
 
+import nltk
+from nltk.corpus import wordnet as wn
+from nltk.corpus import brown
+
+# 加载WordNet词典
+wn.ensure_loaded()
+# 加载brown
+nltk.download('brown')
+
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+tokenizer = AutoTokenizer.from_pretrained("twigs/bart-text2text-simplifier")
+model = AutoModelForSeq2SeqLM.from_pretrained("twigs/bart-text2text-simplifier")
+
 
 def login_required(func):
     @wraps(func)
@@ -495,6 +508,75 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
                             and 1 <= result_rows[i] < len(rows) + 1
                     ):
                         adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 2822:
+                for j, fix in enumerate(sequence):
+                    if (
+                            60 < len(result_fixations) + j <= 150
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+                for j, fix in enumerate(sequence):
+                    if (
+                            122 < len(result_fixations) + j <= 134
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 2]["top"] + rows[result_rows[i] + 2]["bottom"]) / 2
+            if page_id == 2824:
+                for j, fix in enumerate(sequence):
+                    if (
+                            71 < len(result_fixations) + j <= 84
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 2838:
+                for j, fix in enumerate(sequence):
+                    if (
+                            55 <= len(result_fixations) + j <= 58
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 2840:
+                for j, fix in enumerate(sequence):
+                    if (
+                            17 <= len(result_fixations) + j <= 38
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+                for j, fix in enumerate(sequence):
+                    if (
+                            49 <= len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 2]["top"] + rows[result_rows[i] - 2]["bottom"]) / 2
+            if page_id == 2842:
+                for j, fix in enumerate(sequence):
+                    if (
+                            46 <= len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 2848:
+                for j, fix in enumerate(sequence):
+                    if (
+                            33 <= len(result_fixations) + j <= 34
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 2849:
+                for j, fix in enumerate(sequence):
+                    if (
+                            55 <= len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 2852:
+                for j, fix in enumerate(sequence):
+                    if (
+                            80 < len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+
             # 删除fixation
             if page_id == 1226:
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if (i+len(result_fixations))<260]
@@ -556,6 +638,15 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
             elif page_id == 2817:
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
                                    (i + len(result_fixations)) < 30]
+            elif page_id == 2835:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 44]
+            elif page_id == 2836:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 79]
+            elif page_id == 2849:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 69]
             else:
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i,x in enumerate(sequence)]
             result_fixations.extend(result_fixation)
@@ -790,7 +881,7 @@ def textarea(locations: str, danger_r: int = 8) -> tuple:
     确定每一行的边界
     """
     locations = json.loads(locations)
-    assert len(locations) > 0
+    # assert len(locations) > 0
     rows = []
 
     danger_zone = []
@@ -901,7 +992,6 @@ def show_fixations(fixations: list, background: str):
 def paint_fixations(canvas, fixations, interval=1, label=1, line=True):
     """根据fixation画图"""
     fixations = [x for i, x in enumerate(fixations) if i % interval == 0]
-    # fixations = fixations[78:96]
     for i, fix in enumerate(fixations):
         x = int(fix[0])
         y = int(fix[1])
@@ -1299,6 +1389,43 @@ def normalize_list(lst):
     return [x/total for x in lst]
 def multiply_and_sum_lists(list1, list2):
     return sum(list1[i] * list2[i] for i in range(len(list1)))
+
+def simplify_sentence(sentence:str) -> str:
+    """根据句子生成简化的句子"""
+    # ARTICLE_TO_SUMMARIZE = "Safe House,starring Denzel Washington and Ryan Reynolds,is a 2012 South African & American action thriller film directed by Daniel Espinosa"
+    inputs = tokenizer([sentence], max_length=1024, return_tensors="pt")
+    # Generate Summary
+    summary_ids = model.generate(inputs["input_ids"], num_beams=4, min_length=0, max_length=40)
+    res = tokenizer.batch_decode(summary_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+    return res
+
+def simplify_word(word:str) -> str:
+    # 获取单词synset
+    synsets = wn.synsets(word)
+
+    # 获取同义词
+    synonyms = set()
+    for synset in synsets:
+        for lemma in synset.lemmas():
+            synonyms.add(lemma.name())
+
+    # 加载brown语料库，并分词
+    words = brown.words()
+    freq_dist = nltk.FreqDist(words)
+
+    max_freq = 0
+    candidate = ""
+
+    for item in synonyms:
+        if item == word:
+            continue
+        if freq_dist[item] > max_freq:
+            max_freq = freq_dist[item]
+            candidate = item
+
+    print(candidate)
+
+    return candidate if len(candidate)>0 else word
 
 if __name__ == '__main__':
     point = np.array([5, 4])

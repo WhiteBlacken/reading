@@ -107,18 +107,18 @@ def dataset_of_timestamp(request):
     lines = file.readlines()
 
     experiment_list_select = list(lines)
-    #
-    # filename = "exps/data2.txt"
-    # file = open(filename, 'r')
-    # lines1 = file.readlines()
-    # experiment_list_select.extend(list(lines1))
-    #
-    # filename = "exps/data3.txt"
-    # file = open(filename, 'r')
-    # lines2 = file.readlines()
-    # experiment_list_select.extend(list(lines2))
 
-    # experiment_list_select = [1889,1890,1892,1896]
+
+    filename = "exps/data2.txt"
+    file = open(filename, 'r')
+    lines1 = file.readlines()
+    experiment_list_select.extend(list(lines1))
+
+    filename = "exps/data3.txt"
+    file = open(filename, 'r')
+    lines2 = file.readlines()
+    experiment_list_select.extend(list(lines2))
+
     # 获取切割的窗口大小
     interval = request.GET.get("interval",8)
     interval = interval * 1000
@@ -314,20 +314,12 @@ def dataset_of_all_time(request):
     file = open(filename, 'r')
     lines2 = file.readlines()
     experiment_list_select.extend(list(lines2))
-    print(f"lens:{len(experiment_list_select)}")
-    #
-    # experiment_list_select = [1889, 1890, 1892, 1896]
-    # filename = "native.txt"
-    # file = open(filename, 'r')
-    # lines = file.readlines()
 
-    # experiment_list_select = list(lines)
     # 确定文件路径
     from datetime import datetime
     now = datetime.now().strftime("%Y%m%d")
 
     logger.info(f"本次生成{len(experiment_list_select)}条")
-
 
     base_path = f"data\\dataset\\{now}\\"
     if not os.path.exists(base_path):
@@ -386,6 +378,7 @@ def dataset_of_all_time(request):
                 end = 0
             gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t,end_time=end)
             cnn_gaze_points.extend(gaze_points)
+
 
             result_fixations, row_sequence, row_level_fix, sequence_fixations = generate_fixations(
                 gaze_points, page_data.texts, page_data.location
