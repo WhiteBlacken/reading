@@ -185,8 +185,8 @@ def draw_heat_map(data, heatmap_name, base):
         data[i][0] = round(data[i][0])
         data[i][1] = round(data[i][1])
     hm = MyHeatMap(data=data)
-    assert len(data) > 0
-    assert len(data[0]) == 2
+    # assert len(data) > 0
+    # assert len(data[0]) == 2
     hm.heatmap(save_as=heatmap_name, base=base, r=40)
     return hm.hotspot
 

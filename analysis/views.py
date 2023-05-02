@@ -14,7 +14,7 @@ from pyheatmap import myHeatmap
 from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_fixations, get_word_location, \
     paint_on_word, get_word_and_sentence_from_text, compute_label, textarea, get_fix_by_time, \
     get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label, coor_to_input, \
-    get_cnn_feature, get_row, get_euclid_distance
+    get_cnn_feature, get_row, get_euclid_distance, normalize_list, multiply_and_sum_lists
 import cv2
 
 # Create your views here.
@@ -30,14 +30,20 @@ def get_all_time_pic(request):
         os.mkdir(base_path)
 
     for page_data in page_data_ls:
+
+        end = 500
+        if page_data.id in [2818]:
+            begin = 0
+        if page_data.id in [2051,2052,2053,2067,1226,1298,1300,2802,2807,2794]:
+            end = 0
+
+        print(f"page_id:{page_data.id}")
         # 拿到gaze point
-        gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+        gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t,end_time=end)
         # 计算fixations
         result_fixations, _, _, _ = generate_fixations(
-            gaze_points, page_data.texts, page_data.location
+            gaze_points, page_data.texts, page_data.location,page_id=page_data.id
         )
-
-        # result_fixations = result_fixations[261:316]
 
         path = f"{base_path}{page_data.id}\\"
 
@@ -57,6 +63,14 @@ def get_all_time_pic(request):
         # 画热点图
         gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
         myHeatmap.draw_heat_map(gaze_4_heat, f"{path}fix_heatmap.png", background)
+
+        # 画duration图
+        gaze_duration = []
+        for fix in result_fixations:
+            for j in range(fix[2]//100):
+                gaze_duration.append([fix[0],fix[1]])
+        myHeatmap.draw_heat_map(gaze_duration, f"{path}duration_heatmap.png", background)
+
 
         # 画label TODO 合并成一个函数
         image = cv2.imread(background)
@@ -88,11 +102,23 @@ def get_all_time_pic(request):
 
 def dataset_of_timestamp(request):
     """按照时间切割数据集"""
-    filename = "exp.txt"
+    filename = "native.txt"
     file = open(filename, 'r')
     lines = file.readlines()
 
     experiment_list_select = list(lines)
+    #
+    # filename = "exps/data2.txt"
+    # file = open(filename, 'r')
+    # lines1 = file.readlines()
+    # experiment_list_select.extend(list(lines1))
+    #
+    # filename = "exps/data3.txt"
+    # file = open(filename, 'r')
+    # lines2 = file.readlines()
+    # experiment_list_select.extend(list(lines2))
+
+    # experiment_list_select = [1889,1890,1892,1896]
     # 获取切割的窗口大小
     interval = request.GET.get("interval",8)
     interval = interval * 1000
@@ -104,10 +130,10 @@ def dataset_of_timestamp(request):
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    word_feature_path = f"{base_path}word-feature-{now}-old-feature.csv"
-    sent_feature_path = f"{base_path}sent-feature-{now}-old-feature.csv"
-    cnn_feature_path = f"{base_path}cnn-feature-{now}-old-feature.csv"
-    fixations_map_path = f"{base_path}fixation-map-{now}-old-feature.csv"
+    word_feature_path = f"{base_path}word-feature-{now}-{len(experiment_list_select)}.csv"
+    sent_feature_path = f"{base_path}sent-feature-{now}-{len(experiment_list_select)}.csv"
+    cnn_feature_path = f"{base_path}cnn-feature-{now}-{len(experiment_list_select)}.csv"
+    fixations_map_path = f"{base_path}fixation-map-{now}-{len(experiment_list_select)}.csv"
     # 获取需要生成的实验
     # experiment_list_select = [1011,1792]
     experiments = Experiment.objects.filter(id__in=experiment_list_select)
@@ -118,6 +144,7 @@ def dataset_of_timestamp(request):
     success = 0
     fail = 0
 
+    logger.info(f"本次生成{len(experiment_list_select)}条")
     for experiment in experiments:
         # try:
         time = 0 # 记录当前的时间
@@ -152,9 +179,13 @@ def dataset_of_timestamp(request):
             word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
             border, rows, danger_zone, len_per_word = textarea(page_data.location)
 
-            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+            end = 500
+            if page_data.id in [2051, 2052, 2053, 2067, 1226, 1298, 1300,2807]:
+                end = 0
+
+            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t,end_time=end)
             result_fixations, row_sequence, row_level_fix, sequence_fixations = generate_fixations(
-                gaze_points, page_data.texts, page_data.location
+                gaze_points, page_data.texts, page_data.location,page_id=page_data.id
             )
 
             pre_gaze = 0
@@ -268,7 +299,24 @@ def get_part_time_pic(request):
 
 def dataset_of_all_time(request):
     """按照时间切割数据集"""
-    filename = "exp.txt"
+    # filename = "exps/data1.txt"
+    # file = open(filename, 'r')
+    # lines = file.readlines()
+    #
+    # experiment_list_select = list(lines)
+    #
+    # filename = "exps/data2.txt"
+    # file = open(filename, 'r')
+    # lines1 = file.readlines()
+    # experiment_list_select.extend(list(lines1))
+    #
+    # filename = "exps/data3.txt"
+    # file = open(filename, 'r')
+    # lines2 = file.readlines()
+    # experiment_list_select.extend(list(lines2))
+    #
+    # experiment_list_select = [1889, 1890, 1892, 1896]
+    filename = "native.txt"
     file = open(filename, 'r')
     lines = file.readlines()
 
@@ -277,13 +325,15 @@ def dataset_of_all_time(request):
     from datetime import datetime
     now = datetime.now().strftime("%Y%m%d")
 
+    logger.info(f"本次生成{len(experiment_list_select)}条")
+
     base_path = f"data\\dataset\\{now}\\"
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    word_feature_path = f"{base_path}all-word-feature-{now}-old-feature.csv"
-    sent_feature_path = f"{base_path}all-sent-feature-{now}-old-feature.csv"
-    cnn_feature_path = f"{base_path}all-cnn-feature-{now}-old-feature.csv"
+    word_feature_path = f"{base_path}all-word-feature-{now}-{len(experiment_list_select)}.csv"
+    sent_feature_path = f"{base_path}all-sent-feature-{now}-{len(experiment_list_select)}.csv"
+    cnn_feature_path = f"{base_path}all-cnn-feature-{now}-{len(experiment_list_select)}.csv"
     # 获取需要生成的实验
     # experiment_list_select = [1011,1792]
     experiments = Experiment.objects.filter(id__in=experiment_list_select)
@@ -327,10 +377,19 @@ def dataset_of_all_time(request):
             word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
             border, rows, danger_zone, len_per_word = textarea(page_data.location)
 
-            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t)
+            end = 500
+            if page_data.id in [2051, 2052, 2053, 2067, 1226, 1298, 1300]:
+                end = 0
+            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t,end_time=end)
+
+
             result_fixations, row_sequence, row_level_fix, sequence_fixations = generate_fixations(
                 gaze_points, page_data.texts, page_data.location
             )
+            # 记录是否已过first pass
+            first_pass = [0 for _ in sentence_list]
+            reach_medium_times = [0 for _ in sentence_list]
+            max_reach_index = [0 for _ in sentence_list]
 
             # 计算特征
             pre_word_index = -1
@@ -345,21 +404,73 @@ def dataset_of_all_time(request):
                     sent_index = get_sentence_by_word(word_index, sentence_list)
                     if sent_index != -1:
                         sentFeature.total_dwell_time[sent_index] += fixation[2]
+                        if first_pass[sent_index] < 2:
+                            sentFeature.first_pass_total_dwell_time[sent_index] += fixation[2]
                         # if f!=0:
                         if pre_word_index != word_index:
                             sentFeature.saccade_times[sent_index] += 1 # 将两个fixation之间都作为saccade
+                            if first_pass[sent_index] < 2:
+                                sentFeature.first_pass_saccade_times[sent_index] += 1
 
-                            if pre_word_index - word_index >= 0: # 往后看,阈值暂时设为1个单词
+                            if pre_word_index - word_index > 0: # 往后看,阈值暂时设为1个单词
                                 sentFeature.backward_saccade_times[sent_index] += 1
+                                if first_pass[sent_index] < 2:
+                                    sentFeature.first_pass_backward_saccade_times[sent_index] += 1
                             if pre_word_index - word_index < 0: # 往前阅读（正常阅读顺序)
                                 sentFeature.forward_saccade_times[sent_index] += 1
+                                if first_pass[sent_index] < 2:
+                                    sentFeature.first_pass_forward_saccade_times[sent_index] += 1
 
                             sentFeature.saccade_duration[sent_index] += result_fixations[f][3] - result_fixations[f-1][4] # 3是起始，4是结束
                             sentFeature.saccade_velocity[sent_index] += get_euclid_distance((result_fixations[f][0],result_fixations[f][1]),(result_fixations[f-1][0],result_fixations[f-1][1])) # 记录的实际上是距离
+                            if first_pass[sent_index] < 2:
+                                sentFeature.first_pass_saccade_duration[sent_index] += result_fixations[f][3] - \
+                                                                            result_fixations[f - 1][4]  # 3是起始，4是结束
+                                sentFeature.first_pass_saccade_velocity[sent_index] += get_euclid_distance(
+                                    (result_fixations[f][0], result_fixations[f][1]),
+                                    (result_fixations[f - 1][0], result_fixations[f - 1][1]))  # 记录的实际上是距离
+
                             pre_row = get_row(pre_word_index, rows)
                             now_row = get_row(word_index, rows)
                             if pre_row == now_row:
                                 sentFeature.horizontal_saccade_proportion[sent_index] += 1 # 记录的实际上是次数
+                                if first_pass[sent_index] < 2:
+                                    sentFeature.first_pass_horizontal_saccade_proportion[sent_index] += 1  # 记录的实际上是次数
+
+                            if word_index > max_reach_index[sent_index]:
+                                max_reach_index[sent_index] = word_index
+
+                            sentence_now = sentence_list[sent_index]
+                            # 相关度
+                            # words = word_list[sentence_now[1]:sentence_now[2]]
+                            # diffs = [get_word_familiar_rate(word) for word in words]
+                            # diffs = normalize_list(diffs)
+                            # reading_times_norm = normalize_list(wordFeature.reading_times[sentence_now[1]:sentence_now[2]])
+                            # number_of_fixations_norm = normalize_list(wordFeature.number_of_fixation[sentence_now[1]:sentence_now[2]])
+                            # total_fixation_duration_norm = normalize_list(wordFeature.total_fixation_duration[sentence_now[1]:sentence_now[2]])
+                            #
+                            # sentFeature.reading_times_cor[sent_index] = multiply_and_sum_lists(diffs,reading_times_norm)
+                            # sentFeature.number_of_fixation_cor[sent_index] = multiply_and_sum_lists(diffs,number_of_fixations_norm)
+                            # sentFeature.total_fixation_duration_cor[sent_index] = multiply_and_sum_lists(diffs,total_fixation_duration_norm)
+                            #
+                            # if first_pass[sent_index]  < 2:
+                            #     sentFeature.first_pass_reading_times_cor[sent_index] = multiply_and_sum_lists(diffs,
+                            #                                                                        reading_times_norm)
+                            #     sentFeature.first_pass_number_of_fixation_cor[sent_index] = multiply_and_sum_lists(diffs,
+                            #                                                                             number_of_fixations_norm)
+                            #     sentFeature.first_pass_total_fixation_duration_cor[sent_index] = multiply_and_sum_lists(diffs,
+                            #                                                                                  total_fixation_duration_norm)
+                            #
+
+                            # 计算是否为first_pass
+                            word_now_loc = (word_index-sentence_now[1])/sentence_now[3]
+                            if  word_now_loc > 0.5:
+                                reach_medium_times[sent_index] += 1
+                            if reach_medium_times[sent_index] > 3 and word_now_loc < 0.3:
+                                first_pass[sent_index] += 1
+
+
+
 
                     pre_word_index = word_index # todo important
             # 计算need prediction
@@ -396,3 +507,25 @@ def count_label(request):
 
     label = sum(len(json.loads(page.sentenceLabels)) for page in pagedatas)
     return HttpResponse(label)
+
+
+def get_word_index(request):
+    page_id = request.GET.get("page_id")
+    page_data = PageData.objects.get(id=page_id)
+    input = request.GET.get("word")
+    word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+    res = ""
+    for i,word in enumerate(word_list):
+        if word == input:
+            res+=str(i)+","
+
+    return HttpResponse(res)
+
+
+def sent_domain(request):
+    page_id = request.GET.get("page_id")
+    sent_id = int(request.GET.get("sent"))
+    page_data = PageData.objects.get(id=page_id)
+    word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+    res = f"[{sentence_list[sent_id][1]},{sentence_list[sent_id][2]}]"
+    return HttpResponse(res)
