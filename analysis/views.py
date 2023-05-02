@@ -32,7 +32,9 @@ def get_all_time_pic(request):
     for page_data in page_data_ls:
 
         end = 500
-        if page_data.id in [2051,2052,2053,2067,1226,1298,1300]:
+        if page_data.id in [2818]:
+            begin = 0
+        if page_data.id in [2051,2052,2053,2067,1226,1298,1300,2802,2807,2794]:
             end = 0
 
         print(f"page_id:{page_data.id}")
@@ -61,6 +63,14 @@ def get_all_time_pic(request):
         # 画热点图
         gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
         myHeatmap.draw_heat_map(gaze_4_heat, f"{path}fix_heatmap.png", background)
+
+        # 画duration图
+        gaze_duration = []
+        for fix in result_fixations:
+            for j in range(fix[2]//100):
+                gaze_duration.append([fix[0],fix[1]])
+        myHeatmap.draw_heat_map(gaze_duration, f"{path}duration_heatmap.png", background)
+
 
         # 画label TODO 合并成一个函数
         image = cv2.imread(background)
@@ -92,21 +102,23 @@ def get_all_time_pic(request):
 
 def dataset_of_timestamp(request):
     """按照时间切割数据集"""
-    filename = "exps/data1.txt"
+    filename = "native.txt"
     file = open(filename, 'r')
     lines = file.readlines()
 
     experiment_list_select = list(lines)
+    #
+    # filename = "exps/data2.txt"
+    # file = open(filename, 'r')
+    # lines1 = file.readlines()
+    # experiment_list_select.extend(list(lines1))
+    #
+    # filename = "exps/data3.txt"
+    # file = open(filename, 'r')
+    # lines2 = file.readlines()
+    # experiment_list_select.extend(list(lines2))
 
-    filename = "exps/data2.txt"
-    file = open(filename, 'r')
-    lines1 = file.readlines()
-    experiment_list_select.extend(list(lines1))
-
-    filename = "exps/data3.txt"
-    file = open(filename, 'r')
-    lines2 = file.readlines()
-    experiment_list_select.extend(list(lines2))
+    # experiment_list_select = [1889,1890,1892,1896]
     # 获取切割的窗口大小
     interval = request.GET.get("interval",8)
     interval = interval * 1000
@@ -168,7 +180,7 @@ def dataset_of_timestamp(request):
             border, rows, danger_zone, len_per_word = textarea(page_data.location)
 
             end = 500
-            if page_data.id in [2051, 2052, 2053, 2067, 1226, 1298, 1300]:
+            if page_data.id in [2051, 2052, 2053, 2067, 1226, 1298, 1300,2807]:
                 end = 0
 
             gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t,end_time=end)
@@ -287,22 +299,28 @@ def get_part_time_pic(request):
 
 def dataset_of_all_time(request):
     """按照时间切割数据集"""
-    filename = "exps/data1.txt"
+    # filename = "exps/data1.txt"
+    # file = open(filename, 'r')
+    # lines = file.readlines()
+    #
+    # experiment_list_select = list(lines)
+    #
+    # filename = "exps/data2.txt"
+    # file = open(filename, 'r')
+    # lines1 = file.readlines()
+    # experiment_list_select.extend(list(lines1))
+    #
+    # filename = "exps/data3.txt"
+    # file = open(filename, 'r')
+    # lines2 = file.readlines()
+    # experiment_list_select.extend(list(lines2))
+    #
+    # experiment_list_select = [1889, 1890, 1892, 1896]
+    filename = "native.txt"
     file = open(filename, 'r')
     lines = file.readlines()
 
     experiment_list_select = list(lines)
-
-    filename = "exps/data2.txt"
-    file = open(filename, 'r')
-    lines1 = file.readlines()
-    experiment_list_select.extend(list(lines1))
-
-    filename = "exps/data3.txt"
-    file = open(filename, 'r')
-    lines2 = file.readlines()
-    experiment_list_select.extend(list(lines2))
-
     # 确定文件路径
     from datetime import datetime
     now = datetime.now().strftime("%Y%m%d")
@@ -489,3 +507,25 @@ def count_label(request):
 
     label = sum(len(json.loads(page.sentenceLabels)) for page in pagedatas)
     return HttpResponse(label)
+
+
+def get_word_index(request):
+    page_id = request.GET.get("page_id")
+    page_data = PageData.objects.get(id=page_id)
+    input = request.GET.get("word")
+    word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+    res = ""
+    for i,word in enumerate(word_list):
+        if word == input:
+            res+=str(i)+","
+
+    return HttpResponse(res)
+
+
+def sent_domain(request):
+    page_id = request.GET.get("page_id")
+    sent_id = int(request.GET.get("sent"))
+    page_data = PageData.objects.get(id=page_id)
+    word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+    res = f"[{sentence_list[sent_id][1]},{sentence_list[sent_id][2]}]"
+    return HttpResponse(res)

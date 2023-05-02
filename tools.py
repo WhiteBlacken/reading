@@ -125,17 +125,18 @@ def format_gaze(
         ),
         0,
     )
-    end = next(
-        (
-            i
-            for i in range(len(gaze_points) - 1, 0, -1)
-            if gaze_points[-1][2] - gaze_points[i][2] >= end_time
-        ),
-        0,
-    )
-    assert begin < end
-    print(f'len(end_x):{end - begin + 1}')
-    print(f"remove:{end-len(gaze_points)+1}")
+    if end_time == 0:
+        end = -1
+    else:
+        end = next(
+            (
+                i
+                for i in range(len(gaze_points) - 1, 0, -1)
+                if gaze_points[-1][2] - gaze_points[i][2] >= end_time
+            ),
+            0,
+        )
+    # assert begin < end
     return gaze_points[begin:end]
 
 
@@ -459,6 +460,41 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
                     ):
                         adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
 
+            if page_id == 2795:
+                for j, fix in enumerate(sequence):
+                    if (
+                            109 < len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+                    for j, fix in enumerate(sequence):
+                        if (
+                                144 < len(result_fixations) + j
+                                and 1 <= result_rows[i] < len(rows) + 1
+                        ):
+                            adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+
+            if page_id == 2806:
+                for j, fix in enumerate(sequence):
+                    if (
+                            73 < len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 2798:
+                for j, fix in enumerate(sequence):
+                    if (
+                            83 < len(result_fixations) + j <= 93
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 2800:
+                for j, fix in enumerate(sequence):
+                    if (
+                            143 < len(result_fixations) + j <= 272
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
             # 删除fixation
             if page_id == 1226:
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if (i+len(result_fixations))<260]
@@ -508,6 +544,18 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
             elif page_id == 1967:
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
                                    (i + len(result_fixations)) < 98]
+            elif page_id == 2801:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 90]
+            elif page_id == 2806:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 137]
+            elif page_id == 2816:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 104]
+            elif page_id == 2817:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 30]
             else:
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i,x in enumerate(sequence)]
             result_fixations.extend(result_fixation)
@@ -611,7 +659,6 @@ def detect_fixations(
         remaining_gaze.extendleft(reversed(to_be_placed_back))
 
     return fixation_list
-
 
 def gaze_dispersion(gaze_points: list) -> int:
     """计算gaze点的dispersion"""
