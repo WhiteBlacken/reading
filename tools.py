@@ -529,6 +529,7 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
                             and 1 <= result_rows[i] < len(rows) + 1
                     ):
                         adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+
             if page_id == 2838:
                 for j, fix in enumerate(sequence):
                     if (
