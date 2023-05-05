@@ -495,6 +495,26 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
                             and 1 <= result_rows[i] < len(rows) + 1
                     ):
                         adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 2822:
+                for j, fix in enumerate(sequence):
+                    if (
+                            60 < len(result_fixations) + j <= 150
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+                for j, fix in enumerate(sequence):
+                    if (
+                            122 < len(result_fixations) + j <= 134
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 2]["top"] + rows[result_rows[i] + 2]["bottom"]) / 2
+            if page_id == 2824:
+                for j, fix in enumerate(sequence):
+                    if (
+                            71 < len(result_fixations) + j <= 84
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
             # 删除fixation
             if page_id == 1226:
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if (i+len(result_fixations))<260]
@@ -556,6 +576,12 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
             elif page_id == 2817:
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
                                    (i + len(result_fixations)) < 30]
+            elif page_id == 2835:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 44]
+            elif page_id == 2836:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 79]
             else:
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i,x in enumerate(sequence)]
             result_fixations.extend(result_fixation)
