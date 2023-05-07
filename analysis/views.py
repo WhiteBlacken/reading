@@ -299,33 +299,35 @@ def get_part_time_pic(request):
 
 def dataset_of_all_time(request):
     """按照时间切割数据集"""
-    # filename = "exps/data1.txt"
-    # file = open(filename, 'r')
-    # lines = file.readlines()
-    #
-    # experiment_list_select = list(lines)
-    #
-    # filename = "exps/data2.txt"
-    # file = open(filename, 'r')
-    # lines1 = file.readlines()
-    # experiment_list_select.extend(list(lines1))
-    #
-    # filename = "exps/data3.txt"
-    # file = open(filename, 'r')
-    # lines2 = file.readlines()
-    # experiment_list_select.extend(list(lines2))
-    #
-    # experiment_list_select = [1889, 1890, 1892, 1896]
-    filename = "native.txt"
+    filename = "exps/data1.txt"
     file = open(filename, 'r')
     lines = file.readlines()
 
     experiment_list_select = list(lines)
+
+    filename = "exps/data2.txt"
+    file = open(filename, 'r')
+    lines1 = file.readlines()
+    experiment_list_select.extend(list(lines1))
+
+    filename = "exps/data3.txt"
+    file = open(filename, 'r')
+    lines2 = file.readlines()
+    experiment_list_select.extend(list(lines2))
+    print(f"lens:{len(experiment_list_select)}")
+    #
+    # experiment_list_select = [1889, 1890, 1892, 1896]
+    # filename = "native.txt"
+    # file = open(filename, 'r')
+    # lines = file.readlines()
+
+    # experiment_list_select = list(lines)
     # 确定文件路径
     from datetime import datetime
     now = datetime.now().strftime("%Y%m%d")
 
     logger.info(f"本次生成{len(experiment_list_select)}条")
+
 
     base_path = f"data\\dataset\\{now}\\"
     if not os.path.exists(base_path):
@@ -370,6 +372,8 @@ def dataset_of_all_time(request):
             sentFeature.sentence_understand,sentFeature.mind_wandering = compute_sentence_label(page_data.sentenceLabels, page_data.wanderLabels,sentence_list)
             sent_feature_list.append(sentFeature)
 
+        cnn_gaze_points = []
+        cnn_result_fixations = []
         for p,page_data in enumerate(page_data_list):
             wordFeature = word_feature_list[p] # 获取单词特征
             sentFeature = sent_feature_list[p] # 获取句子特征
@@ -381,11 +385,12 @@ def dataset_of_all_time(request):
             if page_data.id in [2051, 2052, 2053, 2067, 1226, 1298, 1300]:
                 end = 0
             gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t,end_time=end)
-
+            cnn_gaze_points.extend(gaze_points)
 
             result_fixations, row_sequence, row_level_fix, sequence_fixations = generate_fixations(
                 gaze_points, page_data.texts, page_data.location
             )
+            cnn_result_fixations.extend(result_fixations)
             # 记录是否已过first pass
             first_pass = [0 for _ in sentence_list]
             reach_medium_times = [0 for _ in sentence_list]
@@ -481,8 +486,8 @@ def dataset_of_all_time(request):
             sentFeature.to_csv(sent_feature_path, experiment.id, page_data.id, time, experiment.user,experiment.article_id)
 
 
-            # cnn feature的生成 todo 暂时不变，之后修改
-            get_cnn_feature(time,cnnFeature,gaze_points,experiment.id,result_fixations)
+        # cnn feature的生成 todo 暂时不变，之后修改
+        get_cnn_feature(time,cnnFeature,cnn_gaze_points,experiment.id,cnn_result_fixations)
 
 
         time += 1

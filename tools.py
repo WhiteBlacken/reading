@@ -515,6 +515,55 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
                             and 1 <= result_rows[i] < len(rows) + 1
                     ):
                         adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 2838:
+                for j, fix in enumerate(sequence):
+                    if (
+                            55 <= len(result_fixations) + j <= 58
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 2840:
+                for j, fix in enumerate(sequence):
+                    if (
+                            17 <= len(result_fixations) + j <= 38
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+                for j, fix in enumerate(sequence):
+                    if (
+                            49 <= len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 2]["top"] + rows[result_rows[i] - 2]["bottom"]) / 2
+            if page_id == 2842:
+                for j, fix in enumerate(sequence):
+                    if (
+                            46 <= len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 2848:
+                for j, fix in enumerate(sequence):
+                    if (
+                            33 <= len(result_fixations) + j <= 34
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] - 1]["top"] + rows[result_rows[i] - 1]["bottom"]) / 2
+            if page_id == 2849:
+                for j, fix in enumerate(sequence):
+                    if (
+                            55 <= len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+            if page_id == 2852:
+                for j, fix in enumerate(sequence):
+                    if (
+                            80 < len(result_fixations) + j
+                            and 1 <= result_rows[i] < len(rows) + 1
+                    ):
+                        adjust_y[j] = (rows[result_rows[i] + 1]["top"] + rows[result_rows[i] + 1]["bottom"]) / 2
+
             # 删除fixation
             if page_id == 1226:
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if (i+len(result_fixations))<260]
@@ -582,6 +631,9 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
             elif page_id == 2836:
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
                                    (i + len(result_fixations)) < 79]
+            elif page_id == 2849:
+                result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
+                                   (i + len(result_fixations)) < 69]
             else:
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i,x in enumerate(sequence)]
             result_fixations.extend(result_fixation)
@@ -816,7 +868,7 @@ def textarea(locations: str, danger_r: int = 8) -> tuple:
     确定每一行的边界
     """
     locations = json.loads(locations)
-    assert len(locations) > 0
+    # assert len(locations) > 0
     rows = []
 
     danger_zone = []
