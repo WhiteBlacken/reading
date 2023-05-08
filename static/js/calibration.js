@@ -17,7 +17,7 @@ function PopUpInstruction(){
   ClearCanvas();
   swal({
     title:"Calibration",
-    text: "请点击屏幕上的9个点， 每个点必须点击5次直至它变成黄色。",
+    text: "Please click on each of the 9 points on the screen. You must click on each point 5 times till it goes yellow. This will calibrate your eye movements.",
     buttons:{
       cancel: false,
       confirm: true
@@ -80,7 +80,7 @@ $(document).ready(function(){
             // notification for the measurement process
             swal({
               title: "Calculating measurement",
-              text: "在接下来的5秒内，请不要移动您的鼠标，并注视屏幕中心的一个圆点。我们将会测量我们预测的准确率。",
+              text: "Please don't move your mouse & stare at the middle dot for the next 5 seconds. This will allow us to calculate the accuracy of our predictions.",
               closeOnEsc: false,
               allowOutsideClick: false,
               closeModal: true
@@ -97,17 +97,17 @@ $(document).ready(function(){
                       var precision_measurement = calculatePrecision(past50);
                       var isRecalibrate;
                       if(precision_measurement >= 80)
-                          isRecalibrate = "现在可以开始阅读啦！";
+                          isRecalibrate = "Now we can start reading!";
                       else
-                          isRecalibrate = "小于 80% ，请重新校准！";
-                      var accuracyLabel = "<a>准确率 | "+precision_measurement+"%</a>";
+                          isRecalibrate = "Accuracy below 80 %, please recalibrate!";
+                      var accuracyLabel = "<a>Accuracy | "+precision_measurement+"%</a>";
                       document.getElementById("Accuracy").innerHTML = accuracyLabel; // Show the accuracy in the nav bar.
                       swal({
-                        title: "你的准确率测量是 " + precision_measurement + "% ，" + isRecalibrate,
+                        title: "Your accuracy measure is " + precision_measurement + "% ，" + isRecalibrate,
                         allowOutsideClick: false,
                         buttons: {
-                          cancel: "重新校准",
-                          confirm: "前往阅读",
+                          cancel: "Recalibration",
+                          confirm: "Go to read",
                         }
                       }).then(isConfirm => {
                           if (isConfirm){
@@ -117,7 +117,7 @@ $(document).ready(function(){
                             window.location.href = '/choose/';
                           } else {
                             //use restart function to restart the calibration
-                            document.getElementById("Accuracy").innerHTML = "<a>暂未校准</a>";
+                            document.getElementById("Accuracy").innerHTML = "<a>Not yet Calibrated</a>";
                             webgazer.clearData();
                             ClearCalibration();
                             ClearCanvas();

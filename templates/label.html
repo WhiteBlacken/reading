@@ -21,17 +21,17 @@
         <!-- Modal content-->
             <div class="modal-content">
                 <div class="modal-body">
-                    接下来，请在您刚才读完的文章中进行标注，具体如下。
+                    Now please label your difficulties while reading the article. The operations are as follows:
                     <br />
-                    1. 若在阅读过程中有影响你顺畅阅读（不论懂不懂）的单词，请<strong>单击该单词</strong>，标注形式如下：
+                    1. to label the word you were processing difficulty while reading, please <strong>click the word</strong> as follows:
                     <img src="/static/images/wordLabel.jpg" width="100%" height="100%" alt="labeling instructions"></img>
-                    2. 若在阅读过程中有影响你顺畅阅读（不论懂不懂）的句子，请<strong>双击句子中任意一个单词</strong>，标注形式如下：
+                    2. to label the sentence you were processing difficulty while reading, please <strong>double click any word in the sentence</strong> as follows:
                     <img src="/static/images/sentenceLabel.jpg" width="100%" height="100%" alt="labeling instructions"></img>
-                    3. 若在阅读过程中出现走神，请<strong>单击对应句子末尾右上方的圆形按钮（若在多句中出现走神，则把可能走神的句子都标注出来）</strong>，标注形式如下：
+                    3. to label the sentence you were mind wandering while reading, please <strong>click the button at the right top of the corresponding sentence</strong> as follows:
                     <img src="/static/images/wanderLabel.jpg" width="100%" height="100%" alt="labeling instructions"></img>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">明白了！</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Start</button>
                 </div>
             </div>
 
@@ -44,7 +44,7 @@
             </div>
         </div>
         <el-button type="primary" style="position: fixed;bottom: 1.8rem;right: 1.8rem;"
-                       v-on:click="collect_labels">标注完成
+                       v-on:click="collect_labels">Finish
         </el-button>
 {#    v-if="page == totalPage"#}
     </div>
@@ -263,7 +263,7 @@
                     url: '/collect_labels/',
                     data: formdata,
                     success: function () {
-                        alert("完成实验！");
+                        alert("Finish labeling!");
                         window.location.href = "/";
 
                     },

@@ -637,6 +637,7 @@ def show_fixations(fixations: list, background: str):
 def paint_fixations(canvas, fixations, interval=1, label=1, line=True):
     """根据fixation画图"""
     fixations = [x for i, x in enumerate(fixations) if i % interval == 0]
+    # fixations = fixations[78:96]
     for i, fix in enumerate(fixations):
         x = int(fix[0])
         y = int(fix[1])

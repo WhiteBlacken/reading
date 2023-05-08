@@ -12,7 +12,7 @@ Instructions on use can be found in the README repository.
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>WebGazer Demo</title>
+        <title>Calibration Model(Copied by Webgazer Calibration Demo)</title>
         <link rel="stylesheet" href="/static/css/style.css">
         <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
         <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
@@ -46,11 +46,11 @@ Instructions on use can be found in the README repository.
             <div class="collapse navbar-collapse" id="myNavbar">
               <ul class="nav navbar-nav">
                 <!-- Accuracy -->
-                <li id="Accuracy"><a>未进行过校准</a></li>
-                <li onclick="Restart()"><a href="#">重新校准</a></li>
+                <li id="Accuracy"><a>Not yet Calibrated</a></li>
+                <li onclick="Restart()"><a href="#">Recalibrate</a></li>
               </ul>
               <ul class="nav navbar-nav navbar-right">
-                <li><button class="helpBtn" data-toggle="modal" data-target="#helpModal"><a data-toggle="modal"><span class="glyphicon glyphicon-cog"></span> 帮助</a></li>
+                <li><button class="helpBtn" data-toggle="modal" data-target="#helpModal"><a data-toggle="modal"><span class="glyphicon glyphicon-cog"></span> Help</a></li>
               </ul>
             </div>
           </div>
@@ -78,8 +78,8 @@ Instructions on use can be found in the README repository.
                 <img src="/static/images/calibration.png" width="100%" height="100%" alt="webgazer demo instructions"></img>
               </div>
               <div class="modal-footer">
-                <button id="closeBtn" type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
-                <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="Restart()">开始校准</button>
+                <button id="closeBtn" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="Restart()">Calibrate</button>
               </div>
             </div>
 
