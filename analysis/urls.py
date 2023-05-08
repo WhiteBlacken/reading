@@ -18,11 +18,11 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # 最重要的两个接口，画图+生成数据集，不过依赖于很多tools
-    # 画图：按照时间画图
     path("all_time_pic/",views.get_all_time_pic),
     path("part_time_pic/",views.get_part_time_pic),
     path("dataset/",views.dataset_of_timestamp),
     path("dataset_all_time/",views.dataset_of_all_time),
-    path("label_count/",views.count_label)
+    path("label_count/",views.count_label),
+    path("word_index/", views.get_word_index),
+    path("sent_domain/",views.sent_domain)
 ]
