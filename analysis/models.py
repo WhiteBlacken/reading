@@ -38,7 +38,8 @@ class Paragraph(models.Model):
 
 class Translation(models.Model):
     # 记录下句子翻译
-    txt = models.TextField()
+    txt = models.CharField(max_length=2000)
+    simplify = models.CharField(max_length=2000)
     article_id = models.BigIntegerField()
     para_id = models.IntegerField()
     sentence_id = models.IntegerField()
@@ -51,7 +52,7 @@ class Dictionary(models.Model):
     # 记录下单词翻译
     en = models.CharField(max_length=100)
     zh = models.CharField(max_length=800)
-
+    synonym = models.CharField(max_length=100)
     class Meta:
         db_table = "material_dictionary"
 

@@ -1,10 +1,11 @@
 import json
 
+from django.db.models import QuerySet
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from loguru import logger
 from analysis.models import Text, Paragraph, Translation, Dictionary, Experiment, PageData
-from tools import login_required, translate, Timer
+from tools import login_required, translate, Timer, simplify_word, simplify_sentence
 
 
 def go_login(request):
@@ -43,11 +44,152 @@ def reading(request):
     进入阅读页面,分为数据收集/阅读辅助两种
     """
     reading_type = request.GET.get('type', '1')
+    native = request.GET.get('native','1')
+    request.session['role'] = 'native' if native == '1' else "nonnative"
 
     if reading_type == '1':
         return render(request, "reading_for_data_1.html")
     else:
         return render(request, "reading_for_aid.html")
+
+
+def get_translation_sentence(paragraphs:QuerySet,article_id:int) -> dict:
+    # sourcery skip: raise-specific-error
+    """将文章及翻译返回"""
+    para_dict = {}
+    para = 0
+    for paragraph in paragraphs:
+        # 切成句子
+        sentences = paragraph.content.split(".")
+        cnt = 0
+        words_dict = {0: paragraph.content}
+        sentence_id = 0
+        for sentence in sentences:
+            # 去除句子前后空格
+            sentence = sentence.strip()
+            if len(sentence) > 3:
+                if translation := (
+                        Translation.objects.filter(article_id=article_id)
+                                .filter(para_id=para)
+                                .filter(sentence_id=sentence_id).first()
+                ):
+                    if translation.txt:
+                        sentence_zh = translation.txt
+                    else:
+                        response = translate(sentence)
+
+                        if response["status"] == 500:
+                            raise Exception("百度翻译接口访问失败")
+
+                        sentence_zh = response["zh"]
+                        translation.txt = sentence_zh
+                        translation.save()
+                else:
+                    response = translate(sentence)
+
+                    if response["status"] == 500:
+                        raise Exception("百度翻译接口访问失败")
+
+                    sentence_zh = response["zh"]
+                    Translation.objects.create(
+                        txt=sentence_zh,
+                        article_id=article_id,
+                        para_id=para,
+                        sentence_id=sentence_id,
+                    )
+                # 切成单词
+                words = sentence.split(" ")
+                for word in words:
+                    word = word.strip().replace(",", "")
+                    if dictionary := Dictionary.objects.filter(
+                            en=word.lower()
+                    ).first():
+                        # 如果字典查得到，就从数据库中取，减少接口使用
+                        if dictionary.zh:
+                            zh = dictionary.zh
+                        else:
+                            response = translate(word)
+                            if response["status"] == 500:
+                                raise Exception("百度翻译接口访问失败")
+                            zh = response["zh"]
+                            dictionary.zh = zh
+                            dictionary.save()
+                    else:
+                        # 字典没有，调用接口
+                        response = translate(word)
+                        if response["status"] == 500:
+                            raise Exception("百度翻译接口访问失败")
+                        zh = response["zh"]
+                        # 存入字典
+                        Dictionary.objects.create(en=word.lower(), zh=zh)
+                    cnt = cnt + 1
+                    words_dict[cnt] = {"en": word, "zh": zh, "sentence_zh": sentence_zh}
+                sentence_id = sentence_id + 1
+        para_dict[para] = words_dict
+        para = para + 1
+    return para_dict
+
+
+def get_simplified_sentence(paragraphs:QuerySet,article_id:int) -> dict:
+    """将文章及其简化后的返回"""
+    para_dict = {}
+    para = 0
+    for paragraph in paragraphs:
+        # 切成句子
+        sentences = paragraph.content.split(".")
+        cnt = 0
+        words_dict = {0: paragraph.content}
+        sentence_id = 0
+        for sentence in sentences:
+            # 去除句子前后空格
+            sentence = sentence.strip()
+            if len(sentence) > 3:
+                if translation := (
+                        Translation.objects.filter(article_id=article_id)
+                                .filter(para_id=para)
+                                .filter(sentence_id=sentence_id).first()
+                ):
+                    if translation.simplify:
+                        sentence_zh = translation.simplify
+                    else:
+                        sentence_zh = simplify_sentence(sentence)
+                        print(sentence_zh)
+                        translation.simplify = sentence_zh
+                        translation.save()
+                else:
+                    sentence_zh = simplify_sentence(sentence)
+
+                    Translation.objects.create(
+                        simplify=sentence_zh,
+                        article_id=article_id,
+                        para_id=para,
+                        sentence_id=sentence_id,
+                    )
+                # 切成单词
+                words = sentence.split(" ")
+                for word in words:
+                    word = word.strip().replace(",", "")
+                    if dictionary := Dictionary.objects.filter(
+                            en=word.lower()
+                    ).first():
+                        # 如果字典查得到，就从数据库中取，减少接口使用（要付费呀）
+                        if dictionary.synonym:
+                            zh = dictionary.synonym
+                        else:
+                            zh = simplify_word(word)
+                            dictionary.synonym=zh
+                            dictionary.save()
+                    else:
+                        # 如果没有该条记录
+                        # 存入字典
+                        zh = simplify_word(word)
+                        Dictionary.objects.create(en=word.lower(), synonym=zh)
+                    cnt = cnt + 1
+                    words_dict[cnt] = {"en": word, "zh": zh, "sentence_zh": sentence_zh}
+                sentence_id = sentence_id + 1
+        para_dict[para] = words_dict
+        para = para + 1
+    return para_dict
 
 
 def get_para(request):
@@ -59,61 +201,21 @@ def get_para(request):
     request.session['article_id'] = article_id
 
     paragraphs = Paragraph.objects.filter(article_id=article_id)
-    para_dict = {}
-    para = 0
     logger.info("--实验开始--")
     name = "读取文章及其翻译"
     with Timer(name):  # 开启计时
-        for paragraph in paragraphs:
-            # 切成句子
-            sentences = paragraph.content.split(".")
-            cnt = 0
-            words_dict = {0: paragraph.content}
-            sentence_id = 0
-            for sentence in sentences:
-                # 去除句子前后空格
-                sentence = sentence.strip()
-                if len(sentence) > 3:
-                    if translations := (
-                            Translation.objects.filter(article_id=article_id)
-                                    .filter(para_id=para)
-                                    .filter(sentence_id=sentence_id)
-                    ):
-                        sentence_zh = translations.first().txt
-                    else:
-                        response = translate(sentence)
-                        print(response)
-                        if response["status"] == 500:
-                            return HttpResponse(f"翻译句子:{sentence} 时出现错误")
-                        sentence_zh = response["zh"]
-                        Translation.objects.create(
-                            txt=sentence_zh,
-                            article_id=article_id,
-                            para_id=para,
-                            sentence_id=sentence_id,
-                        )
-                    # 切成单词
-                    words = sentence.split(" ")
-                    for word in words:
-                        word = word.strip().replace(",", "")
-                        if dictionaries := Dictionary.objects.filter(
-                                en=word.lower()
-                        ):
-                            # 如果字典查得到，就从数据库中取，减少接口使用（要付费呀）
-                            zh = dictionaries.first().zh
-                        else:
-                            # 字典没有，调用接口
-                            response = translate(word)
-                            if response["status"] == 500:
-                                return HttpResponse(f"翻译单词：{word} 时出现错误")
-                            zh = response["zh"]
-                            # 存入字典
-                            Dictionary.objects.create(en=word.lower(), zh=zh)
-                        cnt = cnt + 1
-                        words_dict[cnt] = {"en": word, "zh": zh, "sentence_zh": sentence_zh}
-                    sentence_id = sentence_id + 1
-            para_dict[para] = words_dict
-            para = para + 1
+        print('role:'+request.session.get('role','native'))
+        if request.session.get('role','native') == 'native':
+            try:
+                para_dict = get_simplified_sentence(paragraphs,article_id)
+            except Exception:
+                logger.warning("简化模型调用失败")
+        else:
+            try:
+                para_dict = get_translation_sentence(paragraphs,article_id)
+            except Exception:
+                logger.warning("百度翻译接口访问失败")
+
     # 创建一次实验
     experiment = Experiment.objects.create(article_id=article_id, user=request.session.get("username"),
                                            device=request.session.get("device"))

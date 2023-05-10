@@ -24,5 +24,7 @@ urlpatterns = [
     path("dataset_all_time/",views.dataset_of_all_time),
     path("label_count/",views.count_label),
     path("word_index/", views.get_word_index),
-    path("sent_domain/",views.sent_domain)
+    path("sent_domain/",views.sent_domain),
+    path("article_2_csv/",views.article_2_csv),
+    path("tag/",views.tag_document)
 ]
