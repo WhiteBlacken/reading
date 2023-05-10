@@ -370,7 +370,7 @@
                                 }
                                 app._data.currentMindWanderBox = [];
                             });
-                        }, 80000)
+                        }, 1000)
                         webgazer.resume();
                         {#autoInterClass.MyAutoRun();#}
                     });
@@ -886,18 +886,18 @@
 
         //开启webgazer
         //眼动数据监听--放在getContent前面会采集很多无效数据
-        {#webgazer.setGazeListener(function (data, elapsedTime) {#}
-        {#    if (data == null) {#}
-        {#        return;#}
-        {#    }#}
-        {#    x.push(data.x);#}
-        {#    y.push(data.y);#}
-        {#    t.push(elapsedTime);#}
-        {##}
-        {# }).begin()#}
+        webgazer.setGazeListener(function (data, elapsedTime) {
+            if (data == null) {
+                return;
+            }
+            x.push(data.x);
+            y.push(data.y);
+            t.push(elapsedTime);
+
+         }).begin()
 
         app.getPage();
-        {#autoInterClass.MyAutoRun();#}
+        autoInterClass.MyAutoRun();
     }
 
     //监听空格事件
@@ -920,30 +920,30 @@
             }
             case 32: {
                 stop = true;
-                {#autoInterClass.MyAutoRunSuspend();#}
-                {#webgazer.pause();#}
-                {#let formdata = new FormData();#}
-                {#formdata.append("interventions", interventions.toString());#}
-                {#formdata.append("is_end", '1');#}
-                {#formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page - 1]));#}
-                {#$.ajax({#}
-                {#    type: 'POST',#}
-                {#    url: '/page_info/',#}
-                {#    data: formdata,#}
-                {#    async: false,#}
-                {#    success: function () {#}
-                {#        console.log("finish reading");#}
-                {#    },#}
-                {#    error: function () {#}
-                {#        console.log("finish error");#}
-                {#    },#}
-                {#    processData: false,#}
-                {#    contentType: false#}
-                {# })#}
-                window.location.href = '/label';
+                autoInterClass.MyAutoRunSuspend();
+                webgazer.pause();
+                let formdata = new FormData();
+                formdata.append("interventions", interventions.toString());
+                formdata.append("is_end", '1');
+                formdata.append("word_text_location", JSON.stringify(app._data.wordTextLocPerPage[app._data.page - 1]));
+                $.ajax({
+                    type: 'POST',
+                    url: '/page_info/',
+                    data: formdata,
+                    async: false,
+                    success: function () {
+                        console.log("finish reading");
+                    },
+                    error: function () {
+                        console.log("finish error");
+                    },
+                    processData: false,
+                    contentType: false
+                 })
+                {#window.location.href = '/label';#}
                 //之后的可以不写
-                document.getElementById("mainContent").style.display = "none";
-                document.getElementById("tips_end").style.display = "inline";
+                {#document.getElementById("mainContent").style.display = "none";#}
+                {#document.getElementById("tips_end").style.display = "inline";#}
                 esc_full_screen();
                 break;
             }
