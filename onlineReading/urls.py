@@ -61,7 +61,8 @@ urlpatterns = [
     path("collect_page_data/", views.collect_page_data), # 收集该页数据
     path("label/", views.go_label_page), # 进入打标签页面
     path("collect_labels/", views.collect_labels), # 收集标签
-
+    path("get_pred/", views.get_pred), # 结果预测
+    path("page_info/", views.page_info), # 记录下该页的信息
     path("analysis/", include("analysis.urls")), # 数据分析及生成相关操作
 
 ]

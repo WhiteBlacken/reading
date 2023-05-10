@@ -67,8 +67,7 @@ def get_all_time_pic(request):
         # 画duration图
         gaze_duration = []
         for fix in result_fixations:
-            for j in range(fix[2]//100):
-                gaze_duration.append([fix[0],fix[1]])
+            gaze_duration.extend([fix[0],fix[1]] for _ in range(fix[2]//100))
         myHeatmap.draw_heat_map(gaze_duration, f"{path}duration_heatmap.png", background)
 
 
@@ -262,7 +261,7 @@ def get_part_time_pic(request):
     page_csv = pd.read_csv(f'results\\{now}\\fixation-map-{now}.csv')
 
     page_row = page_csv[(page_csv['exp_id']==int(exp_id))&(page_csv['time']==int(time))]
-    print(page_row)
+
     page_id = page_row['page_id'].iloc[0]
     fixations = json.loads(page_row['fixation'].iloc[0])
 
@@ -270,10 +269,6 @@ def get_part_time_pic(request):
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    print(page_row)
-    print(page_id)
-
-    print(f"{base_path}background.png")
     if page_datas := PageData.objects.filter(id=page_id):
         page_data = page_datas.first()
         background = generate_pic_by_base64(

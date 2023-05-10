@@ -112,7 +112,6 @@ def format_gaze(
             if len(item) > 0:
                 list_t.append(float(item))
 
-    print(f'len(x):{len(list_x)}')
     # 时序滤波
     if use_filter:
         filters = [
@@ -138,17 +137,15 @@ def format_gaze(
         ),
         0,
     )
-    if end_time == 0:
-        end = -1
-    else:
-        end = next(
-            (
-                i
-                for i in range(len(gaze_points) - 1, 0, -1)
-                if gaze_points[-1][2] - gaze_points[i][2] >= end_time
-            ),
-            0,
-        )
+
+    end = next(
+        (
+            i
+            for i in range(len(gaze_points) - 1, 0, -1)
+            if gaze_points[-1][2] - gaze_points[i][2] >= end_time
+        ),
+        -1,
+    )
     # assert begin < end
     return gaze_points[begin:end]
 
@@ -158,7 +155,11 @@ def preprocess_data(data, filters):
     """滤波接口"""
     for layer in filters:
         if layer["type"] == "median":
-            data = signal.medfilt(data, kernel_size=layer["window"])
+            kernel_size = min(layer["window"], len(data))
+            if kernel_size % 2 == 0:
+                kernel_size -= 1
+            if kernel_size > 0:
+                data = signal.medfilt(data, kernel_size=kernel_size)
         if layer["type"] == "mean":
             data = meanFilter(data, layer["window"])
     return data
@@ -592,7 +593,6 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
                                    (i + len(result_fixations)) < 135]
             elif page_id == 1819:
-                print(f"执行了{page_id}")
                 result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i, x in enumerate(sequence) if
                                    (i + len(result_fixations)) < 229]
             elif page_id == 2014:
@@ -795,23 +795,6 @@ def get_item_index_x_y(location, x, y):
             index = i
             return index, False
 
-    # 如果不在范围内,找最近的单词
-    min_dist = 50
-
-    # for i, word in enumerate(location):
-    #     point = np.array([x, y])
-    #     segments = [
-    #         [np.array([word["left"], word["top"]]), np.array([word["left"], word["bottom"]])],  # 左上 左下
-    #         [np.array([word["left"], word["top"]]), np.array([word["right"], word["top"]])],  # 左上 右上
-    #         [np.array([word["left"], word["bottom"]]), np.array([word["right"], word["bottom"]])],  # 左下 右下
-    #         [np.array([word["right"], word["top"]]), np.array([word["right"], word["bottom"]])],  # 右上 右下
-    #     ]
-    #     dis_list = [point_to_segment_distance(point, segment[0], segment[1]) for segment in segments]
-    #     distance = min(dis_list)
-    #     if distance < min_dist:
-    #         min_dist = distance
-    #         index = i
-    #         flag = True
     return index, flag
 
 
@@ -938,8 +921,7 @@ def textarea(locations: str, danger_r: int = 8) -> tuple:
         "right": rows[0]["right"],  # 实际上right不完全相同
         "bottom": rows[-1]["bottom"],
     }
-    # print("word_num")
-    # print(word_num_per_row)
+
     return border, rows, danger_zone, (rows[0]["right"] - rows[0]["left"]) / word_num_per_row
 
 
@@ -1424,8 +1406,6 @@ def simplify_word(word:str) -> str:
         if freq_dist[item] > max_freq:
             max_freq = freq_dist[item]
             candidate = item
-
-    print(candidate)
 
     return candidate if len(candidate)>0 else word
 

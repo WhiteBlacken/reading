@@ -4,14 +4,18 @@ from django.db.models import QuerySet
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from loguru import logger
+
+from analysis.feature import WordFeature, SentFeature
 from analysis.models import Text, Paragraph, Translation, Dictionary, Experiment, PageData
-from tools import login_required, translate, Timer, simplify_word, simplify_sentence
+from tools import login_required, translate, Timer, simplify_word, simplify_sentence, get_word_and_sentence_from_text, \
+    format_gaze, detect_fixations, get_item_index_x_y, get_sentence_by_word
 
 
 def go_login(request):
     """
     跳转去登录页面
     """
+    request.session.flush()
     return render(request, "login.html")
 
 
@@ -153,7 +157,6 @@ def get_simplified_sentence(paragraphs:QuerySet,article_id:int) -> dict:
                         sentence_zh = translation.simplify
                     else:
                         sentence_zh = simplify_sentence(sentence)
-                        print(sentence_zh)
                         translation.simplify = sentence_zh
                         translation.save()
                 else:
@@ -275,4 +278,125 @@ def collect_labels(request):
     logger.info("已获得所有页标签,实验结束")
     # 提交后清空缓存
     request.session.flush()
+    return HttpResponse(1)
+
+
+def get_word_feature_by_fixations(fixations:list, word_list:list, location:str)->WordFeature:
+    wordFeature = WordFeature(len(word_list))
+    pre_fix = -1
+
+    for fix in fixations:
+        index,_ = get_item_index_x_y(location,fix[0],fix[1])
+        if index != -1:
+            wordFeature.number_of_fixation[index] += 1
+            wordFeature.total_fixation_duration[index] += fix[2]
+            if index != pre_fix:
+                wordFeature.reading_times[pre_fix] += 1
+            pre_fix = index
+    wordFeature.word_list = word_list
+    return wordFeature
+
+def get_sent_feature_by_fixations(fixations:list,sent_list:list,location:str)->SentFeature:
+    pre_fix = -1
+    sentFeature = SentFeature(len(sent_list))
+    for i, fix in enumerate(fixations):
+        index,_ = get_item_index_x_y(location,fix[0],fix[1])
+        if index == -1:
+            continue
+        sent_index = get_sentence_by_word(index,sent_list)
+        if sent_index == -1:
+            continue
+        sentFeature.total_dwell_time[sent_index] += fix[2]
+        if i == 0:
+            continue
+        sentFeature.saccade_times[sent_index] += 1
+        sentFeature.saccade_duration[sent_index] += fixations[i][3] - fixations[i-1][4]
+        if index > pre_fix:
+            sentFeature.forward_saccade_times[sent_index] += 1
+        else:
+            sentFeature.backward_saccade_times[sent_index] += 1
+
+        pre_fix = index
+
+    return sentFeature
+
+
+def get_word_not_understand(wordFeature)->list:
+    max_duration = 0
+    max_index = -1
+    for i, item in enumerate(wordFeature.total_fixation_duration):
+        if item > max_duration:
+            max_duration = item
+            max_index = i
+
+    return [max_index] if max_index != -1 else []
+
+
+def get_sent_not_understand(sentFeature):
+    max_duration = 0
+    max_index = -1
+    print(f"total dwell time:{sentFeature.total_dwell_time}")
+    for i, item in enumerate(sentFeature.total_dwell_time):
+        if item > max_duration:
+            max_duration = item
+            max_index = i
+    print(f"max_duration:{max_duration}")
+    return [max_index] if max_index != -1 else []
+
+
+def get_pred(request) -> JsonResponse:
+    """根据眼动获取预测结果"""
+    x = request.POST.get("x")
+    print(f"len(x):{len(x)}")
+    y = request.POST.get("y")
+    t = request.POST.get("t")
+
+    logger.info("执行了get_pred")
+    page_id = request.session['page_id']
+    page_data = PageData.objects.get(id=page_id)
+
+    word_list, sent_list = get_word_and_sentence_from_text(page_data.texts)
+    gaze_points = format_gaze(x, y, t, begin_time=0, end_time=0)
+    fixations = detect_fixations(gaze_points)
+
+    # 通过fixations计算feature
+    location = json.loads(page_data.location)
+    wordFeature = get_word_feature_by_fixations(fixations,word_list,location)
+    sentFeature = get_sent_feature_by_fixations(fixations,sent_list,location)
+
+    word_not_understand_list = get_word_not_understand(wordFeature)
+    sent_not_understand_list = get_sent_not_understand(sentFeature)
+
+
+    context = {
+        "word": word_not_understand_list,
+        "sentence": sent_not_understand_list,
+        "wander": []
+    }
+    print(f"context:{context}")
+
+    return JsonResponse(context)
+
+
+def page_info(request):
+    page_text = request.POST.get("page_text")
+    location = request.POST.get("location")
+
+    is_end = request.POST.get("is_end", 0)
+    experiment_id = request.session.get("experiment_id", None)
+    page_num = request.session.get('page_num', 1)
+
+    print(f'page_num:{page_num}')
+
+    page_data = PageData.objects.create(
+        texts=page_text,
+        page=page_num,
+        experiment_id=experiment_id,
+        location=location,
+        is_pilot_study=True
+    )
+    request.session['page_id'] = page_data.id
+    logger.info(f"第{page_num}页数据已存储,id为{str(page_data.id)}")
+    request.session['page_num'] = page_num + 1
+
     return HttpResponse(1)
