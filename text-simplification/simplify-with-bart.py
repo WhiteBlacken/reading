@@ -1,11 +1,11 @@
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-tokenizer = AutoTokenizer.from_pretrained("husseinMoh/bart-base-finetuned-text-simplification")
+tokenizer = AutoTokenizer.from_pretrained("twigs/bart-text2text-simplifier")
 
-model = AutoModelForSeq2SeqLM.from_pretrained("husseinMoh/bart-base-finetuned-text-simplification")
+model = AutoModelForSeq2SeqLM.from_pretrained("twigs/bart-text2text-simplifier")
 
 if __name__ == '__main__':
-    ARTICLE_TO_SUMMARIZE = "While pondering over the intricacies of linguistics and the convolutions of grammar, the linguist, having been deep in thought for hours, inadvertently overlooked the time and missed his appointment with the head of the department, much to his chagrin and embarrassment. "
+    ARTICLE_TO_SUMMARIZE = "Safe House,starring Denzel Washington and Ryan Reynolds,is a 2012 South African & American action thriller film directed by Daniel Espinosa"
     inputs = tokenizer([ARTICLE_TO_SUMMARIZE], max_length=1024, return_tensors="pt")
     # Generate Summary
     summary_ids = model.generate(inputs["input_ids"], num_beams=4, min_length=0, max_length=20)
