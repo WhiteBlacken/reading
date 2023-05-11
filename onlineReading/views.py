@@ -318,7 +318,7 @@ def get_sent_feature_by_fixations(fixations: list, sent_list: list, location: st
             continue
         sentFeature.saccade_times[sent_index] += 1
         sentFeature.saccade_duration[sent_index] += fixations[i][3] - fixations[i - 1][4]
-        if index > pre_fix:
+        if index >= pre_fix:
             sentFeature.forward_saccade_times[sent_index] += 1
         else:
             sentFeature.backward_saccade_times[sent_index] += 1
@@ -348,7 +348,12 @@ def get_word_not_understand(wordFeature) -> list:
 
     if max_index == -1:
         return []
-    return [max_index] if freq_dist[wordFeature.word_list[max_index]] < 500 else []
+    return (
+        [max_index]
+        if freq_dist[wordFeature.word_list[max_index]] < 300
+        and wordFeature.total_fixation_duration[max_index] > 500
+        else []
+    )
 
 
 def get_sent_not_understand(sentFeature,sent_list):
@@ -369,7 +374,8 @@ def get_sent_not_understand(sentFeature,sent_list):
     if max_index == -1:
         return []
 
-    if sentFeature.backward_saccade_times[max_index] > 0.6 * sentFeature.forward_saccade_times[max_index]:
+    if sentFeature.backward_saccade_times[max_index] > 0.5 * sentFeature.forward_saccade_times[max_index] and sentFeature\
+            and sentFeature.total_dwell_time[max_index] > 3000:
         return [[sent_list[max_index][1],sent_list[max_index][2]+1]]
     return []
 
@@ -391,7 +397,7 @@ def get_mind_wadering(sentFeature, sent_list):
             max_index = i
     if max_index == -1:
         return []
-    if sentFeature.backward_saccade_times[max_index] < (1/3) * sentFeature.forward_saccade_times[max_index] \
+    if sentFeature.backward_saccade_times[max_index] < (1/4) * sentFeature.forward_saccade_times[max_index] \
         and sentFeature.saccade_velocity[max_index] / sentFeature.saccade_duration[max_index] > 2:
             return [[sent_list[max_index][1],sent_list[max_index][2]]]
     return []
