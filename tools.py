@@ -34,6 +34,9 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 tokenizer = AutoTokenizer.from_pretrained("twigs/bart-text2text-simplifier")
 model = AutoModelForSeq2SeqLM.from_pretrained("twigs/bart-text2text-simplifier")
 
+# 加载brown语料库，并分词
+words = brown.words()
+freq_dist = nltk.FreqDist(words)
 
 def login_required(func):
     @wraps(func)
@@ -1387,15 +1390,13 @@ def simplify_word(word:str) -> str:
     # 获取单词synset
     synsets = wn.synsets(word)
 
+
     # 获取同义词
     synonyms = set()
     for synset in synsets:
         for lemma in synset.lemmas():
             synonyms.add(lemma.name())
 
-    # 加载brown语料库，并分词
-    words = brown.words()
-    freq_dist = nltk.FreqDist(words)
 
     max_freq = 0
     candidate = ""

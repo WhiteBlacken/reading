@@ -1,5 +1,6 @@
 import json
 
+import pandas as pd
 from django.db.models import QuerySet
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
@@ -8,7 +9,14 @@ from loguru import logger
 from analysis.feature import WordFeature, SentFeature
 from analysis.models import Text, Paragraph, Translation, Dictionary, Experiment, PageData
 from tools import login_required, translate, Timer, simplify_word, simplify_sentence, get_word_and_sentence_from_text, \
-    format_gaze, detect_fixations, get_item_index_x_y, get_sentence_by_word
+    format_gaze, detect_fixations, get_item_index_x_y, get_sentence_by_word, freq_dist, get_euclid_distance
+
+
+# from autogluon.multimodal import MultiModalPredictor
+
+# wordPredictor = MultiModalPredictor.load('model/word')
+# sentPredictor = MultiModalPredictor.load('model/sent')
+# wanderPredictor = MultiModalPredictor.load('model/wander')
 
 
 def go_login(request):
@@ -48,7 +56,7 @@ def reading(request):
     进入阅读页面,分为数据收集/阅读辅助两种
     """
     reading_type = request.GET.get('type', '1')
-    native = request.GET.get('native','1')
+    native = request.GET.get('native', '1')
     request.session['role'] = 'native' if native == '1' else "nonnative"
 
     if reading_type == '1':
@@ -57,7 +65,7 @@ def reading(request):
         return render(request, "reading_for_aid.html")
 
 
-def get_translation_sentence(paragraphs:QuerySet,article_id:int) -> dict:
+def get_translation_sentence(paragraphs: QuerySet, article_id: int) -> dict:
     # sourcery skip: raise-specific-error
     """将文章及翻译返回"""
     para_dict = {}
@@ -134,7 +142,7 @@ def get_translation_sentence(paragraphs:QuerySet,article_id:int) -> dict:
     return para_dict
 
 
-def get_simplified_sentence(paragraphs:QuerySet,article_id:int) -> dict:
+def get_simplified_sentence(paragraphs: QuerySet, article_id: int) -> dict:
     """将文章及其简化后的返回"""
     para_dict = {}
     para = 0
@@ -180,7 +188,7 @@ def get_simplified_sentence(paragraphs:QuerySet,article_id:int) -> dict:
                             zh = dictionary.synonym
                         else:
                             zh = simplify_word(word)
-                            dictionary.synonym=zh
+                            dictionary.synonym = zh
                             dictionary.save()
                     else:
                         # 如果没有该条记录
@@ -207,15 +215,15 @@ def get_para(request):
     logger.info("--实验开始--")
     name = "读取文章及其翻译"
     with Timer(name):  # 开启计时
-        print('role:'+request.session.get('role','native'))
-        if request.session.get('role','native') == 'native':
+        print('role:' + request.session.get('role', 'native'))
+        if request.session.get('role', 'native') == 'native':
             try:
-                para_dict = get_simplified_sentence(paragraphs,article_id)
+                para_dict = get_simplified_sentence(paragraphs, article_id)
             except Exception:
                 logger.warning("简化模型调用失败")
         else:
             try:
-                para_dict = get_translation_sentence(paragraphs,article_id)
+                para_dict = get_translation_sentence(paragraphs, article_id)
             except Exception:
                 logger.warning("百度翻译接口访问失败")
 
@@ -258,13 +266,11 @@ def go_label_page(request):
     return render(request, "label_1.html")
 
 
-
 def collect_labels(request):
     """一次性获得所有页的label，分页存储"""
     # 示例：labels:[{"page":1,"wordLabels":[],"sentenceLabels":[[27,57]],"wanderLabels":[[0,27]]},{"page":2,"wordLabels":[36],"sentenceLabels":[],"wanderLabels":[]},{"page":3,"wordLabels":[],"sentenceLabels":[],"wanderLabels":[[0,34]]}]
     labels = request.POST.get("labels")
     labels = json.loads(labels)
-
 
     if experiment_id := request.session.get("experiment_id", None):
         for label in labels:
@@ -281,12 +287,12 @@ def collect_labels(request):
     return HttpResponse(1)
 
 
-def get_word_feature_by_fixations(fixations:list, word_list:list, location:str)->WordFeature:
+def get_word_feature_by_fixations(fixations: list, word_list: list, location: str) -> WordFeature:
     wordFeature = WordFeature(len(word_list))
     pre_fix = -1
 
     for fix in fixations:
-        index,_ = get_item_index_x_y(location,fix[0],fix[1])
+        index, _ = get_item_index_x_y(location, fix[0], fix[1])
         if index != -1:
             wordFeature.number_of_fixation[index] += 1
             wordFeature.total_fixation_duration[index] += fix[2]
@@ -296,32 +302,43 @@ def get_word_feature_by_fixations(fixations:list, word_list:list, location:str)-
     wordFeature.word_list = word_list
     return wordFeature
 
-def get_sent_feature_by_fixations(fixations:list,sent_list:list,location:str)->SentFeature:
+
+def get_sent_feature_by_fixations(fixations: list, sent_list: list, location: str) -> SentFeature:
     pre_fix = -1
     sentFeature = SentFeature(len(sent_list))
     for i, fix in enumerate(fixations):
-        index,_ = get_item_index_x_y(location,fix[0],fix[1])
+        index, _ = get_item_index_x_y(location, fix[0], fix[1])
         if index == -1:
             continue
-        sent_index = get_sentence_by_word(index,sent_list)
+        sent_index = get_sentence_by_word(index, sent_list)
         if sent_index == -1:
             continue
         sentFeature.total_dwell_time[sent_index] += fix[2]
         if i == 0:
             continue
         sentFeature.saccade_times[sent_index] += 1
-        sentFeature.saccade_duration[sent_index] += fixations[i][3] - fixations[i-1][4]
+        sentFeature.saccade_duration[sent_index] += fixations[i][3] - fixations[i - 1][4]
         if index > pre_fix:
             sentFeature.forward_saccade_times[sent_index] += 1
         else:
             sentFeature.backward_saccade_times[sent_index] += 1
-
+        sentFeature.saccade_velocity[sent_index] += get_euclid_distance(
+            (fixations[i][0], fixations[i][1]),
+            (fixations[i - 1][0], fixations[i - 1][1]))  # 记录的实际上是距离
         pre_fix = index
 
     return sentFeature
 
 
-def get_word_not_understand(wordFeature)->list:
+def get_word_not_understand(wordFeature) -> list:
+    data = pd.DataFrame({
+        'reading_times': wordFeature.reading_times,
+        'number_of_fixations': wordFeature.number_of_fixation,
+        'fixation_duration': wordFeature.total_fixation_duration,
+        'word': wordFeature.word_list
+    })
+    # results = wordPredictor.predict(data)
+    # results = []
     max_duration = 0
     max_index = -1
     for i, item in enumerate(wordFeature.total_fixation_duration):
@@ -329,19 +346,55 @@ def get_word_not_understand(wordFeature)->list:
             max_duration = item
             max_index = i
 
-    return [max_index] if max_index != -1 else []
+    if max_index == -1:
+        return []
+    return [max_index] if freq_dist[wordFeature.word_list[max_index]] < 500 else []
 
 
 def get_sent_not_understand(sentFeature):
+    data = pd.DataFrame({
+        'total_dwell_time_of_sentence': sentFeature.total_dwell_time,
+        'saccade_times_of_sentence': sentFeature.saccade_times,
+        'saccade_duration': sentFeature.saccade_duration,
+        'forward_times_of_sentence': sentFeature.forward_saccade_times,
+        'backward_times_of_sentence': sentFeature.backward_saccade_times
+    })
+    # results = sentPredictor.predict(data)
     max_duration = 0
     max_index = -1
-    print(f"total dwell time:{sentFeature.total_dwell_time}")
     for i, item in enumerate(sentFeature.total_dwell_time):
         if item > max_duration:
             max_duration = item
             max_index = i
-    print(f"max_duration:{max_duration}")
-    return [max_index] if max_index != -1 else []
+    if max_index == -1:
+        return []
+
+    if sentFeature.backward_saccade_times[max_index] > (1/3) * sentFeature.forward_saccade_times[max_index]:
+        return [max_index]
+    return []
+
+
+def get_mind_wadering(sentFeature):
+    data = pd.DataFrame({
+        'total_dwell_time_of_sentence': sentFeature.total_dwell_time,
+        'saccade_times_of_sentence': sentFeature.saccade_times,
+        'saccade_duration': sentFeature.saccade_duration,
+        'forward_times_of_sentence': sentFeature.forward_saccade_times,
+        'backward_times_of_sentence': sentFeature.backward_saccade_times
+    })
+    # results = wanderPredictor.predict(data)
+    max_duration = 0
+    max_index = -1
+    for i, item in enumerate(sentFeature.total_dwell_time):
+        if item > max_duration:
+            max_duration = item
+            max_index = i
+    if max_index == -1:
+        return []
+    if sentFeature.backward_saccade_times[max_index] < (1/3) * sentFeature.forward_saccade_times[max_index] \
+        and sentFeature.saccade_velocity[max_index] / sentFeature.saccade_duration[max_index] > 2:
+            return [max_index]
+    return []
 
 
 def get_pred(request) -> JsonResponse:
@@ -361,17 +414,30 @@ def get_pred(request) -> JsonResponse:
 
     # 通过fixations计算feature
     location = json.loads(page_data.location)
-    wordFeature = get_word_feature_by_fixations(fixations,word_list,location)
-    sentFeature = get_sent_feature_by_fixations(fixations,sent_list,location)
+    wordFeature = get_word_feature_by_fixations(fixations, word_list, location)
+    sentFeature = get_sent_feature_by_fixations(fixations, sent_list, location)
 
     word_not_understand_list = get_word_not_understand(wordFeature)
     sent_not_understand_list = get_sent_not_understand(sentFeature)
+    mind_wander_list = get_mind_wadering(sentFeature)
 
+    if len(mind_wander_list) > 0:
+        sent_not_understand_list = []
+        word_not_understand_list = []
+    elif len(sent_not_understand_list) > 0:
+        word_not_understand_list = []
 
+    PageData.objects.filter(id=page_id).update(
+        word_intervention=page_data.word_intervention + "," + str(word_not_understand_list),
+        sent_intervention=page_data.sent_intervention + "," + str(sent_not_understand_list),
+        mind_wander_intervention=page_data.mind_wander_intervention + "," + str(mind_wander_list)
+    )
+
+    print(f"word_list:{word_not_understand_list}")
     context = {
         "word": word_not_understand_list,
         "sentence": sent_not_understand_list,
-        "wander": []
+        "wander": mind_wander_list
     }
     print(f"context:{context}")
 
