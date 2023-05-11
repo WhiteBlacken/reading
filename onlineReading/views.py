@@ -369,7 +369,7 @@ def get_sent_not_understand(sentFeature,sent_list):
     if max_index == -1:
         return []
 
-    if sentFeature.backward_saccade_times[max_index] > (1/3) * sentFeature.forward_saccade_times[max_index]:
+    if sentFeature.backward_saccade_times[max_index] > 0.6 * sentFeature.forward_saccade_times[max_index]:
         return [[sent_list[max_index][1],sent_list[max_index][2]+1]]
     return []
 
