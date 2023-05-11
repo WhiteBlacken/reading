@@ -9,7 +9,8 @@ from loguru import logger
 from analysis.feature import WordFeature, SentFeature
 from analysis.models import Text, Paragraph, Translation, Dictionary, Experiment, PageData
 from tools import login_required, translate, Timer, simplify_word, simplify_sentence, get_word_and_sentence_from_text, \
-    format_gaze, detect_fixations, get_item_index_x_y, get_sentence_by_word, freq_dist, get_euclid_distance
+    format_gaze, detect_fixations, get_item_index_x_y, get_sentence_by_word, freq_dist, get_euclid_distance, textarea, \
+    get_row
 
 
 # from autogluon.multimodal import MultiModalPredictor
@@ -330,7 +331,7 @@ def get_sent_feature_by_fixations(fixations: list, sent_list: list, location: st
     return sentFeature
 
 
-def get_word_not_understand(wordFeature) -> list:
+def get_word_not_understand(wordFeature,rows) -> list:
     data = pd.DataFrame({
         'reading_times': wordFeature.reading_times,
         'number_of_fixations': wordFeature.number_of_fixation,
@@ -348,13 +349,20 @@ def get_word_not_understand(wordFeature) -> list:
 
     if max_index == -1:
         return []
-    return (
+    results = (
         [max_index]
         if freq_dist[wordFeature.word_list[max_index]] < 300
         and wordFeature.total_fixation_duration[max_index] > 500
         else []
     )
 
+    words_index = []
+    for result in results:
+        row = get_row(result,rows)
+        if row != -1:
+            words_index = [i for i in range(result-2,result+3) if rows[row]['begin_index'] <= i <= rows[row]['end_index'] and len(wordFeature.word_list[i])>2]
+
+    return words_index
 
 def get_sent_not_understand(sentFeature,sent_list):
     data = pd.DataFrame({
@@ -397,6 +405,7 @@ def get_mind_wadering(sentFeature, sent_list):
             max_index = i
     if max_index == -1:
         return []
+
     if sentFeature.backward_saccade_times[max_index] < (1/4) * sentFeature.forward_saccade_times[max_index] \
         and sentFeature.saccade_velocity[max_index] / sentFeature.saccade_duration[max_index] > 2:
             return [[sent_list[max_index][1],sent_list[max_index][2]]]
@@ -423,7 +432,8 @@ def get_pred(request) -> JsonResponse:
     wordFeature = get_word_feature_by_fixations(fixations, word_list, location)
     sentFeature = get_sent_feature_by_fixations(fixations, sent_list, location)
 
-    word_not_understand_list = get_word_not_understand(wordFeature)
+    border, rows, danger_zone, len_per_word = textarea(page_data.location)
+    word_not_understand_list = get_word_not_understand(wordFeature,rows)
     sent_not_understand_list = get_sent_not_understand(sentFeature,sent_list)
     mind_wander_list = get_mind_wadering(sentFeature, sent_list)
 
