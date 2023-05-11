@@ -351,7 +351,7 @@ def get_word_not_understand(wordFeature) -> list:
     return [max_index] if freq_dist[wordFeature.word_list[max_index]] < 500 else []
 
 
-def get_sent_not_understand(sentFeature):
+def get_sent_not_understand(sentFeature,sent_list):
     data = pd.DataFrame({
         'total_dwell_time_of_sentence': sentFeature.total_dwell_time,
         'saccade_times_of_sentence': sentFeature.saccade_times,
@@ -370,11 +370,11 @@ def get_sent_not_understand(sentFeature):
         return []
 
     if sentFeature.backward_saccade_times[max_index] > (1/3) * sentFeature.forward_saccade_times[max_index]:
-        return [max_index]
+        return [[sent_list[max_index][1],sent_list[max_index][2]+1]]
     return []
 
 
-def get_mind_wadering(sentFeature):
+def get_mind_wadering(sentFeature, sent_list):
     data = pd.DataFrame({
         'total_dwell_time_of_sentence': sentFeature.total_dwell_time,
         'saccade_times_of_sentence': sentFeature.saccade_times,
@@ -393,7 +393,7 @@ def get_mind_wadering(sentFeature):
         return []
     if sentFeature.backward_saccade_times[max_index] < (1/3) * sentFeature.forward_saccade_times[max_index] \
         and sentFeature.saccade_velocity[max_index] / sentFeature.saccade_duration[max_index] > 2:
-            return [max_index]
+            return [[sent_list[max_index][1],sent_list[max_index][2]]]
     return []
 
 
@@ -418,8 +418,8 @@ def get_pred(request) -> JsonResponse:
     sentFeature = get_sent_feature_by_fixations(fixations, sent_list, location)
 
     word_not_understand_list = get_word_not_understand(wordFeature)
-    sent_not_understand_list = get_sent_not_understand(sentFeature)
-    mind_wander_list = get_mind_wadering(sentFeature)
+    sent_not_understand_list = get_sent_not_understand(sentFeature,sent_list)
+    mind_wander_list = get_mind_wadering(sentFeature, sent_list)
 
     if len(mind_wander_list) > 0:
         sent_not_understand_list = []
