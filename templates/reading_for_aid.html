@@ -333,27 +333,29 @@
 
             },
 
-            getWanderRemind: function (num) {
+            getWanderRemind: function (nums) {
                 {#let style = 'alert-warning';#}
                 let start = 0;
                 let end = 0;
-                for (let i = 0; i < this.sentences.length; i++) {
-                    let w = this.sentences[i].split(' ');
-                    for (let j = 0; j < w.length; j++)
-                        if (w[j] == '')
-                            w.splice(j, 1);
-                    if (start + w.length <= num) {
-                        start += w.length;
-                    } else {
-                        end = start + w.length;
-                        break;
+                for(let a = 0; a < nums.length; a++) {
+                    for (let i = 0; i < this.sentences.length; i++) {
+                        let w = this.sentences[i].split(' ');
+                        for (let j = 0; j < w.length; j++)
+                            if (w[j] == '')
+                                w.splice(j, 1);
+                        if (start + w.length <= nums[a]) {
+                            start += w.length;
+                        } else {
+                            end = start + w.length;
+                            break;
+                        }
+                    }
+                    if (!this.isMindwandered(nums[a])) {
+                        this.changeTextStyle(start, end, 'mind');
+                        this.currentMindWanderBox.push(new Array(start, end));
                     }
                 }
-                if (!this.isMindwandered(num)) {
-                    this.changeTextStyle(start, end, 'mind');
-                    this.currentMindWanderBox.push(new Array(start, end));
-                }
-                if(this.currentMindWanderBox.length == 1) {
+                if(this.currentMindWanderBox.length >= 1) {
                     $('<div>')
                     .appendTo('body')
                     .addClass('alert')
@@ -478,7 +480,7 @@
                                 }
                                 console.log(tmp);
                                 for (let j = 0; j < tmp.length; j++) {
-                                    word_inter.splice(j, 1);
+                                    word_inter.splice(tmp[j], 1);
                                 }
                                 {#if(sentence_inter[i] < this.translation.length)#}
                                 app.getSentenceTranslation(start);
@@ -837,6 +839,10 @@
                             let sentence_inter = res['sentence'];
                             let wander_inter = res['wander'];
                             if(wander_inter && wander_inter.length > 0) {
+                                let nums = [];
+                                for(let i = 0; i < wander_inter.length; i++) {
+                                    nums.push(wander_inter[i][0]);
+                                }
                                 app.getWanderRemind();
                             }else {
                                 for(let i = 0; i < sentence_inter.length; i++){
