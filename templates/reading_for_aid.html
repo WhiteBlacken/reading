@@ -541,19 +541,6 @@
                         this.sentenceTranslations.push(tr[s].sentence_zh);
                     }
                 }
-                {#for(let s = 0; s < tr.length; s++){#}
-                {#    for(let t = 0; t < this.sentenceTranslations.length ; t++) {#}
-                {#        if (this.sentenceTranslations[t] == tr[s].sentence_zh) {#}
-                {#            let str = "";#}
-                {#            for(let q = (t - 3 >= 0 ? t-3:0); q < t; q++) {#}
-                {#                str += this.sentenceTranslations[q] + "。";#}
-                {#            }#}
-                {#            tr[s].sentence_zh = str + tr[s].sentence_zh + "。";#}
-                {#        }#}
-                {#    }#}
-                {# }#}
-                {#console.log(tr[0].zh)#}
-                {#console.log(p)#}
                 var e = document.getElementById('para');
 
                 let num = 0;
@@ -843,7 +830,7 @@
                                 for(let i = 0; i < wander_inter.length; i++) {
                                     nums.push(wander_inter[i][0]);
                                 }
-                                app.getWanderRemind();
+                                app.getWanderRemind(nums);
                             }else {
                                 for(let i = 0; i < sentence_inter.length; i++){
                                     let start = sentence_inter[i][0];
@@ -939,8 +926,11 @@
                     async: false,
                     success: function () {
                         console.log("finish reading");
+                        alert("Finish reading!");
+                        window.location.href = "/";
                     },
                     error: function () {
+                        alert("Finish reading!");
                         console.log("finish error");
                     },
                     processData: false,
