@@ -360,7 +360,7 @@ def get_word_not_understand(wordFeature,rows) -> list:
     for result in results:
         row = get_row(result,rows)
         if row != -1:
-            words_index = [i for i in range(result-2,result+3) if rows[row]['begin_index'] <= i <= rows[row]['end_index'] and len(wordFeature.word_list[i])>2]
+            words_index = [i for i in range(result-2,result+3) if rows[row]['begin_index'] <= i <= rows[row]['end_index']]
 
     return words_index
 
