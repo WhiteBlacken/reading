@@ -470,15 +470,19 @@ def page_info(request):
 
     print(f'page_num:{page_num}')
 
-    page_data = PageData.objects.create(
-        texts=page_text,
-        page=page_num,
-        experiment_id=experiment_id,
-        location=location,
-        is_pilot_study=True
-    )
-    request.session['page_id'] = page_data.id
-    logger.info(f"第{page_num}页数据已存储,id为{str(page_data.id)}")
-    request.session['page_num'] = page_num + 1
+    try:
+        page_data = PageData.objects.create(
+            texts=page_text,
+            page=page_num,
+            experiment_id=experiment_id,
+            location=location,
+            is_pilot_study=True
+        )
+
+        request.session['page_id'] = page_data.id
+        logger.info(f"第{page_num}页数据已存储,id为{str(page_data.id)}")
+        request.session['page_num'] = page_num + 1
+    except Exception:
+        print("末尾页")
 
     return HttpResponse(1)
