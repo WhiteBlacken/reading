@@ -352,7 +352,7 @@ def get_word_not_understand(wordFeature,rows) -> list:
     results = (
         [max_index]
         if freq_dist[wordFeature.word_list[max_index]] < 300
-        and wordFeature.total_fixation_duration[max_index] > 500
+        and wordFeature.total_fixation_duration[max_index] > 900
         else []
     )
 
@@ -382,8 +382,8 @@ def get_sent_not_understand(sentFeature,sent_list):
     if max_index == -1:
         return []
 
-    if sentFeature.backward_saccade_times[max_index] > 0.5 * sentFeature.forward_saccade_times[max_index] and sentFeature\
-            and sentFeature.total_dwell_time[max_index] > 3000:
+    if sentFeature.backward_saccade_times[max_index] > 0.6 * sentFeature.forward_saccade_times[max_index] and sentFeature\
+            and sentFeature.total_dwell_time[max_index] > 4000:
         return [[sent_list[max_index][1],sent_list[max_index][2]+1]]
     return []
 
