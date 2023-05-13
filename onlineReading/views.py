@@ -383,7 +383,7 @@ def get_sent_not_understand(sentFeature,sent_list):
         return []
 
     if sentFeature.backward_saccade_times[max_index] > 0.55 * sentFeature.forward_saccade_times[max_index] and sentFeature\
-            and sentFeature.total_dwell_time[max_index] > 3500:
+            and sentFeature.total_dwell_time[max_index] > 2800:
         return [[sent_list[max_index][1],sent_list[max_index][2]+1]]
     return []
 
