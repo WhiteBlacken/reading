@@ -16,6 +16,7 @@ from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_
     get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label, coor_to_input, \
     get_cnn_feature, get_row, get_euclid_distance, normalize_list, multiply_and_sum_lists
 import cv2
+import re
 
 # Create your views here.
 
@@ -515,3 +516,52 @@ def sent_domain(request):
     res = f"[{sentence_list[sent_id][1]},{sentence_list[sent_id][2]}]"
 
     return HttpResponse(res)
+
+
+def get_questionare(request):
+    exp_ids = request.GET.get("exp_ids")
+    exp_ids = exp_ids.split(',')
+    word_list = []
+    sent_list = []
+    for exp_id in exp_ids:
+        page_data_list = PageData.objects.filter(experiment_id=exp_id)
+        for page_data in page_data_list:
+            words, sentences = get_word_and_sentence_from_text(page_data.texts)
+            word_inter = page_data.word_intervention
+            sent_inter = page_data.sent_intervention
+            word_inter = [int(s) for s in re.findall(r'-?\d+\.?\d*', word_inter)]
+            sent = [int(s) for s in re.findall(r'-?\d+\.?\d*', sent_inter)]
+            sent_inter = []
+            print("experiment id: "+exp_id)
+
+            for start, end in zip(sent[0::2], sent[1::2]):
+                sent_inter.append([start, end])
+            for w in word_inter:
+                word_list.append(words[w])
+                print(str(w)+": "+words[w])
+            for sl in sent_inter:
+                for sentence in sentences:
+                    if sentence[1] == sl[0]:
+                        sent_list.append(sentence[0])
+    word_list = list(set(word_list))
+    sent_list = list(set(sent_list))
+    word_dic = {'word':word_list,
+                }
+    sent_dic = {'sentence':sent_list,
+                }
+    word_df = pd.DataFrame(word_dic)
+    word_df['understand now?'] = ''
+    word_df['understand before experiment?'] = ''
+    sent_df = pd.DataFrame(sent_dic)
+    sent_df['understand now?'] = ''
+    sent_df['understand before experiment?'] = ''
+    word_df.to_csv('questionaire/word_questionaire.csv')
+    sent_df.to_csv('questionaire/sent_questionaire.csv')
+    return HttpResponse(1)
+
+
+
+
+
+
+

@@ -25,4 +25,5 @@ urlpatterns = [
     path("label_count/",views.count_label),
     path("word_index/", views.get_word_index),
     path("sent_domain/",views.sent_domain),
+    path("questionaire/",views.get_questionare),
 ]
