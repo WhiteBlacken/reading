@@ -2,7 +2,7 @@ import math
 import os
 
 import pandas as pd
-from textstat import textstat
+# from textstat import textstat
 
 from tools import div_list, round_list
 
@@ -45,7 +45,8 @@ class WordFeature(object):
         self.reading_times_diff = [0 for _ in range(self.num)]
 
     def get_syllable(self):
-        return [textstat.syllable_count(word) for word in self.word_list]
+        return -1
+        # return [textstat.syllable_count(word) for word in self.word_list]
 
     def get_len(self):
         return [len(word) for word in self.word_list]

@@ -25,18 +25,18 @@ import nltk
 from nltk.corpus import wordnet as wn
 from nltk.corpus import brown
 
-# 加载WordNet词典
-wn.ensure_loaded()
-# 加载brown
-nltk.download('brown')
+# # 加载WordNet词典
+# wn.ensure_loaded()
+# # 加载brown
+# nltk.download('brown')
 
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-tokenizer = AutoTokenizer.from_pretrained("twigs/bart-text2text-simplifier")
-model = AutoModelForSeq2SeqLM.from_pretrained("twigs/bart-text2text-simplifier")
-
-# 加载brown语料库，并分词
-words = brown.words()
-freq_dist = nltk.FreqDist(words)
+# from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+# tokenizer = AutoTokenizer.from_pretrained("twigs/bart-text2text-simplifier")
+# model = AutoModelForSeq2SeqLM.from_pretrained("twigs/bart-text2text-simplifier")
+#
+# # 加载brown语料库，并分词
+# words = brown.words()
+# freq_dist = nltk.FreqDist(words)
 
 def login_required(func):
     @wraps(func)

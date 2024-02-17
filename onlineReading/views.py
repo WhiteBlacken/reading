@@ -9,8 +9,10 @@ from loguru import logger
 from analysis.feature import WordFeature, SentFeature
 from analysis.models import Text, Paragraph, Translation, Dictionary, Experiment, PageData
 from tools import login_required, translate, Timer, simplify_word, simplify_sentence, get_word_and_sentence_from_text, \
-    format_gaze, detect_fixations, get_item_index_x_y, get_sentence_by_word, freq_dist, get_euclid_distance, textarea, \
+    format_gaze, detect_fixations, get_item_index_x_y, get_sentence_by_word, get_euclid_distance, textarea, \
     get_row
+
+# from tools import freq_dist
 
 
 # from autogluon.multimodal import MultiModalPredictor
