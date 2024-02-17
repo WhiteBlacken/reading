@@ -64,18 +64,18 @@ class WordFeature(object):
             {
                 # 1. 实验信息相关
                 "exp_id": [exp_id for _ in range(self.num)],
-                "article_id": [article_id for _ in range(self.num)],
-                "time": [time for _ in range(self.num)],
-                "page_id": [page_id for _ in range(self.num)],
-                "user": [user for _ in range(self.num)],
-                "sentence_id": self.sentence_id,
+                # "article_id": [article_id for _ in range(self.num)],
+                # "time": [time for _ in range(self.num)],
+                # "page_id": [page_id for _ in range(self.num)],
+                # "user": [user for _ in range(self.num)],
+                # "sentence_id": self.sentence_id,
                 "word": self.word_list,
-                "need_prediction": self.need_prediction,
+                # "need_prediction": self.need_prediction,
 
                 # # 2. label相关
                 "word_understand": self.word_understand,
-                "sentence_understand": self.sentence_understand,
-                "mind_wandering": self.mind_wandering,
+                # "sentence_understand": self.sentence_understand,
+                # "mind_wandering": self.mind_wandering,
                 # 3. 特征1
                 "reading_times": self.reading_times,
                 "number_of_fixations": self.number_of_fixation,
