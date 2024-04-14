@@ -1,0 +1,5 @@
+有以下格式的数据集csv，每一行包括包含text_sequences,eye_tracking_sequences，和labels，
+其中text_sequences是一个list，里面每一个元素代表单词的属性，结构如下：[[单词索引，单词本身，坐标x, 坐标y，单词宽度，单词高度]，....]
+其中eye_tracking_sequences是一个list，里面每一个元素代表注视点的属性，结构如下：[[注视位置x坐标，注视位置y坐标，注视的时间],...]
+其中labels是一个list，为真实标签，里面每一个元素代表用户在第i位的单词上的懂与不懂的状态，顺序和长度与text_sequences一致，结构如下：[0,1,1,...]
+现在的目标训练一个深度学习模型，对于text_sequences中每一个单词，判断用户懂与不懂，最小化其与labels之间的误差

@@ -41,7 +41,7 @@ from nltk.corpus import brown
 def login_required(func):
     @wraps(func)
     def inner(request, *args, **kwargs):
-        if request.session.get('username'):
+        if request.user:
             return func(request, *args, **kwargs)
         return redirect("/go_login/")
 

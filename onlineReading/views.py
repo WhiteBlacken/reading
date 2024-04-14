@@ -1,6 +1,8 @@
 import json
 
 import pandas as pd
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.models import User
 from django.db.models import QuerySet
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
@@ -30,18 +32,22 @@ def go_login(request):
     return render(request, "login.html")
 
 
-def login(request):
+def my_login(request):
     """
     登录
     ：简单的登录逻辑，记下用户名
     """
     username = request.POST.get("username", None)
+    psw = request.POST.get("psw", None)
     device = request.POST.get("device", None)
-    print(f"device:{device}")
-    print(f"username:{username}")
-    if username:
-        request.session["username"] = username
-        request.session["device"] = device
+    request.session["device"] = device
+
+    user = authenticate(username=username, password=psw)
+    if user is None:
+        user = User.objects.create_user(username=username, password=psw)
+        user.save()
+    login(request, user)
+    # return render(request, "select_role.html")
     return render(request, "calibration.html")
 
 
@@ -219,22 +225,17 @@ def get_para(request):
     name = "读取文章及其翻译"
     with Timer(name):  # 开启计时
         print('role:' + request.session.get('role', 'native'))
-        if request.session.get('role', 'native') == 'native':
-            try:
-                para_dict = get_simplified_sentence(paragraphs, article_id)
-            except Exception:
-                logger.warning("简化模型调用失败")
-        else:
-            try:
-                para_dict = get_translation_sentence(paragraphs, article_id)
-            except Exception:
-                logger.warning("百度翻译接口访问失败")
+        try:
+            para_dict = get_translation_sentence(paragraphs, article_id)
+        except Exception:
+            logger.warning("百度翻译接口访问失败")
 
     # 创建一次实验
-    experiment = Experiment.objects.create(article_id=article_id, user=request.session.get("username"),
-                                           device=request.session.get("device"))
+    # requesert
+    experiment = Experiment.objects.create(article_id=article_id, user=1,
+                                           device=request.session.get("device"), is_finish=0)
     request.session["experiment_id"] = experiment.id
-    logger.info("--本次实验开始,实验者：%s，实验id：%d--" % (request.session.get("username"), experiment.id))
+    logger.info("--本次实验开始,实验者：%s，实验id：%d--" % (request.user.username, experiment.id))
     return JsonResponse(para_dict, json_dumps_params={"ensure_ascii": False})
 
 
@@ -488,3 +489,17 @@ def page_info(request):
         print("末尾页")
 
     return HttpResponse(1)
+
+
+def count_data_num(request):
+    exps = []
+    with open('exp.txt', 'r') as f:
+        exps.extend(int(f.readline()) for _ in f)
+    visited = {
+        page.experiment_id
+        for page in PageData.objects.all()
+        if page.experiment_id in exps
+    }
+    print(len(visited))
+    print(visited)
+    return HttpResponse(exps)

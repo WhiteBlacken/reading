@@ -16,11 +16,6 @@
 <body>
 <div id="app">
 
-{#    <div id="markers">#}
-{#        #}
-{#        <img class="marker" id="leftBottom" src="">#}
-{#        <img class="marker" id="leftBottom" src="">#}
-{#    </div>#}
     <div id="tips_begin">
         <div class="px-4 py-5 my-5 text-center">
             <h1 class="display-5 fw-bold">MemX4Edu data collecting</h1>
@@ -52,14 +47,6 @@
         </div>
     </div>
     <div id="mainContent">
-{#        <div id="markers-top">#}
-{#            <img class="marker" id="left" src="/static/images/left-top.png">#}
-{#            <img class="marker" id="right" src="/static/images/right-top.png">#}
-{#        </div>#}
-{#        <div id="markers-bottom">#}
-{#            <img class="marker" id="left" src="/static/images/left-bottom.png">#}
-{#            <img class="marker" id="right" src="/static/images/right-bottom.png">#}
-{#        </div>#}
         <div id="reading">
             <div id="readArea">
                 <div id="para">
@@ -739,7 +726,7 @@
         document.getElementById("tips_begin").style.display = "none";
 
         await app.getContent_2();
-
+        var first = false;
         //开启webgazer
         //眼动数据监听--放在getContent前面会采集很多无效数据
         webgazer.setGazeListener(function (data, elapsedTime) {
@@ -749,9 +736,40 @@
             x.push(data.x);
             y.push(data.y);
             t.push(elapsedTime);
+
+            if(first==false){
+                // 创建canvas元素
+                var canvas = document.createElement('canvas');
+                var para = document.getElementById('mainContent');
+
+                // 设置canvas大小为父元素的大小
+                canvas.width = para.offsetWidth;
+                canvas.height = para.offsetHeight;
+
+                // 将canvas插入到指定的div中
+                para.appendChild(canvas);
+
+                // 获取canvas的2D上下文
+                var ctx = canvas.getContext('2d');
+
+                // 设置线条颜色和宽度
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 2;
+
+                // 绘制线条
+                ctx.beginPath();
+                ctx.moveTo(0, 0); // 线条起点，这里是canvas的左上角
+                ctx.lineTo(canvas.width, canvas.height); // 线条终点，这里是canvas的右下角
+                ctx.stroke(); // 执行绘制
+                first = true;
+            }
+
          }).begin();
 
         app.getPage();
+
+
+
     }
 
     //监听空格事件
