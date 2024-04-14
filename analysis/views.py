@@ -11,6 +11,7 @@ from loguru import logger
 
 from analysis.feature import WordFeature, SentFeature, CNNFeature, FixationMap
 from analysis.models import PageData, Experiment, Paragraph
+from feature.utils import detect_fixations
 from pyheatmap import myHeatmap
 from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_fixations, get_word_location, \
     paint_on_word, get_word_and_sentence_from_text, compute_label, textarea, get_fix_by_time, \
@@ -54,7 +55,13 @@ def dataset_new(request):
             # text data
             text_sequence = text_data(page.texts, page.location)
             # eye tracking data
-            eye_tracking_sequence = eye_tracking_data(page.gaze_x, page.gaze_y, page.gaze_t)
+            # eye_tracking_sequence = eye_tracking_data(page.gaze_x, page.gaze_y, page.gaze_t)
+            gaze_points = format_gaze(page.gaze_x, page.gaze_y, page.gaze_t)
+            # 计算fixations
+            fixations = detect_fixations(gaze_points)
+            eye_tracking_seq = []
+            for fix in fixations:
+                eye_tracking_seq.append([round(fix[0], 2), round(fix[1], 2), round(fix[2], 2), round(fix[3], 2), round(fix[4], 2)])
             # labels 目前只处理word label
             try:
                 wordLabels = json.loads(page.wordLabels)
@@ -66,7 +73,7 @@ def dataset_new(request):
             datasets['uid'].append(experiment.user)
             datasets['page_id'].append(page.id)
             datasets['text_sequences'].append(text_sequence)
-            datasets['eye_tracking_sequences'].append(eye_tracking_sequence)
+            datasets['eye_tracking_sequences'].append(eye_tracking_seq)
             datasets['labels'].append(labels)
 
             cnt += 1
@@ -74,7 +81,7 @@ def dataset_new(request):
         pages_process_time.append(time.time() - start_time)
 
     start_time = time.time()
-    pd.DataFrame(datasets).to_csv('raw_data_0317.csv')
+    pd.DataFrame(datasets).to_csv('raw_data_0414.csv')
     savefile_time = time.time() - start_time
 
     print(f"时间：查询experiment的时间为{experiments_time}")
