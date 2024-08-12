@@ -16,7 +16,7 @@ from pyheatmap import myHeatmap
 from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_fixations, get_word_location, \
     paint_on_word, get_word_and_sentence_from_text, compute_label, textarea, get_fix_by_time, \
     get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label,\
-    get_cnn_feature, get_row, get_euclid_distance, generate_fixations_in_skip_data
+    get_cnn_feature, get_row, get_euclid_distance, generate_fixations_in_skip_data, show_fixations_by_line
 import cv2
 
 
@@ -140,7 +140,7 @@ def get_all_time_pic(request):
             gaze_points, page_data.texts, page_data.location, page_id=page_data.id
         )
         # 不使用空行假设
-        adjust_fixations_without_row_assumption = generate_fixations_in_skip_data(
+        adjust_fixations_without_row_assumption, row_level_fix_without_row_assumption = generate_fixations_in_skip_data(
             gaze_points, page_data.texts, page_data.location, page_id=page_data.id
         )
 
@@ -161,7 +161,9 @@ def get_all_time_pic(request):
         fix_img = show_fixations(result_fixations, background)
         cv2.imwrite(f"{path}fix-adjust.png", fix_img)
         # 不使用空行假设的fixation图
-        fix_img = show_fixations(adjust_fixations_without_row_assumption, background)
+        # fix_img = show_fixations(adjust_fixations_without_row_assumption, background)
+        # cv2.imwrite(f"{path}fix-adjust-without-row-assumption.png", fix_img)
+        fix_img = show_fixations_by_line(row_level_fix_without_row_assumption, background)
         cv2.imwrite(f"{path}fix-adjust-without-row-assumption.png", fix_img)
         # 画热点图
         gaze_4_heat = [[x[0], x[1]] for x in result_fixations]

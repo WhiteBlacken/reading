@@ -321,6 +321,8 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
             result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i,x in enumerate(sequence)]
             result_fixations.extend(result_fixation)
             row_level_fix.append(result_fixation)
+    print(f"result_fixations:{result_fixations[0:3]}")
+    print(f"row_level_fix:{row_level_fix[0:3]}")
     return result_fixations, result_rows, row_level_fix
 
 
@@ -371,7 +373,7 @@ def generate_fixations_in_skip_data(gaze_points, texts, location, page_id=0):
     print(f"[generate_fixations_in_skip_data] size of sequence_fixations={len(sequence_fixations)}")
     # 根据行先验调整fixations
     result_fixations, result_rows, row_level_fix = move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word,page_id=page_id, use_assumption=False)
-    return result_fixations
+    return result_fixations, row_level_fix
 
 def detect_fixations(
         gaze_points: list, min_duration: int = 200, max_duration: int = 10000, max_dispersion: int = 80
@@ -694,6 +696,47 @@ def paint_fixations(canvas, fixations, interval=1, label=1, line=True):
                 (0, 0, 255),  # GBR
                 1,
             )
+    return canvas
+
+def show_fixations_by_line(fixations: list, background: str):
+    """根据fixation画图/按行区分"""
+    canvas = cv2.imread(background)
+    canvas = paint_fixations_by_line(canvas, fixations)
+    return canvas
+
+def paint_fixations_by_line(canvas, fixations, interval=1, label=1, line=True):
+    """根据fixation画图/按行区分"""
+    # fixations = [x for i, x in enumerate(fixations) if i % interval == 0]
+    colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0)]
+    for row, fixations in enumerate(fixations):
+        for i, fix in enumerate(fixations):
+            x = int(fix[0])
+            y = int(fix[1])
+            cv2.circle(
+                canvas,
+                (x, y),
+                3,
+                (0, 0, 255),
+                -1,
+            )
+            if i % label == 0:
+                cv2.putText(
+                    canvas,
+                    str(i),
+                    (x, y),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    colors[row%3],
+                    2,
+                )
+            if i > 0 and line:
+                cv2.line(
+                    canvas,
+                    (x, y),
+                    (int(fixations[i - 1][0]), int(fixations[i - 1][1])),
+                    colors[row%3],  # GBR
+                    1,
+                )
     return canvas
 
 def get_word_location(location):
