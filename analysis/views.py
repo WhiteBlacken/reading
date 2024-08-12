@@ -151,7 +151,7 @@ def get_all_time_pic(request):
         # 分行的单词
         word_list, _ = get_word_and_sentence_from_text(page_data.texts)
         word_features_by_line = get_word_feature_by_line(word_locations, word_list)
-        # adjust_fix_by_line(word_features_by_line, row_level_fix_without_row_assumption, hit_rows)
+        adjust_fix_by_line(word_features_by_line, row_level_fix_without_row_assumption, hit_rows)
 
         # 生成图片
         path = f"{base_path}{page_data.id}/"
@@ -696,6 +696,9 @@ def adjust_fix_by_line(word_features_by_line, row_level_fix_without_row_assumpti
         for row in domainRow:
             # 看row_fix落在哪个单词上, 只看x轴
             word_features = [x.length for x in word_features_by_line[row]]
+            word_features = pooling(word_features, 3)
+            print(f"pooling_word_feature:{word_features}")
+            # break
             fix_features = [0 for x in word_features_by_line[row]]
             for fixIdx, fix in enumerate(row_fix): 
                 for wordIdx, word in enumerate(word_features_by_line[row]):
@@ -703,7 +706,7 @@ def adjust_fix_by_line(word_features_by_line, row_level_fix_without_row_assumpti
                         if wordIdx == 0:
                             print(f"fix_expect:{fix, fixIdx}")
                             print(f"word:{word.x, word.width, word.word}")
-                        fix_features[wordIdx] += 1
+                        fix_features[wordIdx] += fix[2]
                         break
             # word_features, fix_features = normalize_list_numpy(word_features), normalize_list_numpy(fix_features)
             result_vals.append(sum([x * y for x, y in zip(word_features, fix_features)]))
@@ -722,3 +725,12 @@ import numpy as np
 def normalize_list_numpy(lst):
     arr = np.array(lst)
     return (arr - np.min(arr)) / (np.max(arr) - np.min(arr))
+
+def pooling(data: list, window_size: int) -> list:
+    pooled_features = []
+    for i in range(len(data) - window_size + 1):
+        window = data[i:i + window_size]
+        # 这里以计算平均值作为池化操作，您可以根据需要修改为其他池化方法，如最大值、总和等
+        pooled_value = sum(window) / len(window)
+        pooled_features.append(pooled_value)
+    return pooled_features
