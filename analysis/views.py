@@ -140,10 +140,18 @@ def get_all_time_pic(request):
             gaze_points, page_data.texts, page_data.location, page_id=page_data.id
         )
         # 不使用空行假设
-        adjust_fixations_without_row_assumption, row_level_fix_without_row_assumption = generate_fixations_in_skip_data(
+        _, row_level_fix_without_row_assumption, hit_rows = generate_fixations_in_skip_data(
             gaze_points, page_data.texts, page_data.location, page_id=page_data.id
         )
+        print(f"row_level_fix:{row_level_fix_without_row_assumption}")
+        word_locations = get_word_location(page_data.location)
+        print(f"word_locations:{word_locations}")
+        # 分行的单词
+        word_list, _ = get_word_and_sentence_from_text(page_data.texts)
+        word_features_by_line = get_word_feature_by_line(word_locations, word_list)
+        adjust_fix_by_line(word_features_by_line, row_level_fix_without_row_assumption, hit_rows)
 
+        # 生成图片
         path = f"{base_path}{page_data.id}/"
 
         # 如果目录不存在，则创建目录
@@ -169,6 +177,7 @@ def get_all_time_pic(request):
         gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
         myHeatmap.draw_heat_map(gaze_4_heat, f"{path}fix_heatmap.png", background)
 
+
         # 画duration图
         gaze_duration = []
         for fix in result_fixations:
@@ -177,7 +186,7 @@ def get_all_time_pic(request):
 
         # 画label TODO 合并成一个函数
         image = cv2.imread(background)
-        word_locations = get_word_location(page_data.location)
+        
         # 1. 走神
         words_to_be_painted = []
         paras_wander = json.loads(page_data.wanderLabels) if page_data.wanderLabels else []
@@ -639,3 +648,42 @@ def available_exp_id():
     experiments_id = list(set(experiments_id))
     logger.info(f"实验id的数量为：{len(experiments_id)}")
     return experiments_id
+
+def get_word_feature_by_line(word_locations, word_list):
+    word_features_by_line = []
+    tmp = []
+    size = 0
+    for i, loc in enumerate(word_locations):
+        if len(tmp) == 0:
+            tmp.append(WordFeature(loc[0], loc[1], loc[2], loc[3], word_list[i]))
+            continue
+        if loc[1] != tmp[0].y:
+            size += len(tmp)
+            word_features_by_line.append([x for x in tmp])
+            tmp = []
+        tmp.append(WordFeature(loc[0], loc[1], loc[2], loc[3], word_list[i]))
+    if len(tmp) > 0:
+        size += len(tmp)
+        word_features_by_line.append([x for x in tmp])
+    print(f"size:{size}")
+    return word_features_by_line
+
+
+class WordFeature:
+    def __init__(self, x, y, width, height, word) -> None:
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.word = word
+        self.length = len(word)
+        pass
+
+def adjust_fix_by_line(word_features_by_line, row_level_fix_without_row_assumption, hit_rows):
+    # 单词行级特征/fix行级特征/提前计算好的命中行
+    win = 1
+    for seqIdx, row_fix in enumerate(row_level_fix_without_row_assumption):
+        hitRow = hit_rows[seqIdx]
+        domainRow = [i for i in range(hitRow-win, hitRow+2) if i >= 0 and i < len(word_features_by_line)]
+        print(f"domainRow:{domainRow}")
+        break

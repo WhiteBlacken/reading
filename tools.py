@@ -323,7 +323,8 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
             row_level_fix.append(result_fixation)
     print(f"result_fixations:{result_fixations[0:3]}")
     print(f"row_level_fix:{row_level_fix[0:3]}")
-    return result_fixations, result_rows, row_level_fix
+    print(f"result_rows:{result_rows}")
+    return result_fixations, result_rows, row_level_fix, result_rows
 
 
 def generate_fixations(gaze_points, texts, location, page_id=0):
@@ -347,7 +348,7 @@ def generate_fixations(gaze_points, texts, location, page_id=0):
     # 将fixation按行切割
     sequence_fixations = split_fixation_by_row(adjust_fixations, rows)
     # 根据行先验调整fixations
-    result_fixations, result_rows, row_level_fix = move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word,page_id=page_id)
+    result_fixations, result_rows, row_level_fix, _ = move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word,page_id=page_id)
     return result_fixations, result_rows, row_level_fix, sequence_fixations
 
 def generate_fixations_in_skip_data(gaze_points, texts, location, page_id=0):
@@ -372,8 +373,8 @@ def generate_fixations_in_skip_data(gaze_points, texts, location, page_id=0):
     sequence_fixations = split_fixation_by_row(adjust_fixations, rows)
     print(f"[generate_fixations_in_skip_data] size of sequence_fixations={len(sequence_fixations)}")
     # 根据行先验调整fixations
-    result_fixations, result_rows, row_level_fix = move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word,page_id=page_id, use_assumption=False)
-    return result_fixations, row_level_fix
+    result_fixations, result_rows, row_level_fix, hit_rows = move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word,page_id=page_id, use_assumption=False)
+    return result_fixations, row_level_fix, hit_rows
 
 def detect_fixations(
         gaze_points: list, min_duration: int = 200, max_duration: int = 10000, max_dispersion: int = 80
@@ -708,6 +709,7 @@ def paint_fixations_by_line(canvas, fixations, interval=1, label=1, line=True):
     """根据fixation画图/按行区分"""
     # fixations = [x for i, x in enumerate(fixations) if i % interval == 0]
     colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0)]
+    idx = 0
     for row, fixations in enumerate(fixations):
         for i, fix in enumerate(fixations):
             x = int(fix[0])
@@ -722,7 +724,7 @@ def paint_fixations_by_line(canvas, fixations, interval=1, label=1, line=True):
             if i % label == 0:
                 cv2.putText(
                     canvas,
-                    str(i),
+                    str(idx),
                     (x, y),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.7,
@@ -737,6 +739,7 @@ def paint_fixations_by_line(canvas, fixations, interval=1, label=1, line=True):
                     colors[row%3],  # GBR
                     1,
                 )
+            idx+=1
     return canvas
 
 def get_word_location(location):
