@@ -16,7 +16,7 @@ from pyheatmap import myHeatmap
 from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_fixations, get_word_location, \
     paint_on_word, get_word_and_sentence_from_text, compute_label, textarea, get_fix_by_time, \
     get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label,\
-    get_cnn_feature, get_row, get_euclid_distance, generate_fixations_in_skip_data, show_fixations_by_line
+    get_cnn_feature, get_row, get_euclid_distance, generate_fixations_in_skip_data, show_fixations_by_line, keep_row
 import cv2
 
 
@@ -135,6 +135,8 @@ def get_all_time_pic(request):
         gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t, end_time=end)
         # 原始的fixations
         origin_fixations = detect_fixations(gaze_points)
+        # 滤波数据
+        keep_row_fixations = keep_row(origin_fixations)
         # 计算fixations
         result_fixations, _, _, _ = generate_fixations(
             gaze_points, page_data.texts, page_data.location, page_id=page_data.id
@@ -149,7 +151,7 @@ def get_all_time_pic(request):
         # 分行的单词
         word_list, _ = get_word_and_sentence_from_text(page_data.texts)
         word_features_by_line = get_word_feature_by_line(word_locations, word_list)
-        adjust_fix_by_line(word_features_by_line, row_level_fix_without_row_assumption, hit_rows)
+        # adjust_fix_by_line(word_features_by_line, row_level_fix_without_row_assumption, hit_rows)
 
         # 生成图片
         path = f"{base_path}{page_data.id}/"
@@ -165,6 +167,9 @@ def get_all_time_pic(request):
         # 原始的fixation图
         fix_img = show_fixations(origin_fixations, background)
         cv2.imwrite(f"{path}fix-origin.png", fix_img)
+        # 滤波后的图
+        fix_img = show_fixations(keep_row_fixations, background)
+        cv2.imwrite(f"{path}fix-lvbo.png", fix_img)
         # 生成调整后的fixation图
         fix_img = show_fixations(result_fixations, background)
         cv2.imwrite(f"{path}fix-adjust.png", fix_img)
@@ -683,7 +688,37 @@ def adjust_fix_by_line(word_features_by_line, row_level_fix_without_row_assumpti
     # 单词行级特征/fix行级特征/提前计算好的命中行
     win = 1
     for seqIdx, row_fix in enumerate(row_level_fix_without_row_assumption):
+        # 确定最大可能性的row
         hitRow = hit_rows[seqIdx]
         domainRow = [i for i in range(hitRow-win, hitRow+2) if i >= 0 and i < len(word_features_by_line)]
         print(f"domainRow:{domainRow}")
-        break
+        result_vals = []
+        for row in domainRow:
+            # 看row_fix落在哪个单词上, 只看x轴
+            word_features = [x.length for x in word_features_by_line[row]]
+            fix_features = [0 for x in word_features_by_line[row]]
+            for fixIdx, fix in enumerate(row_fix): 
+                for wordIdx, word in enumerate(word_features_by_line[row]):
+                    if fix[0] >= word.x and fix[0] <= word.x + word.width:
+                        if wordIdx == 0:
+                            print(f"fix_expect:{fix, fixIdx}")
+                            print(f"word:{word.x, word.width, word.word}")
+                        fix_features[wordIdx] += 1
+                        break
+            # word_features, fix_features = normalize_list_numpy(word_features), normalize_list_numpy(fix_features)
+            result_vals.append(sum([x * y for x, y in zip(word_features, fix_features)]))
+            print(f"word_features_{row}:{word_features}")
+            print(f"fix_features_{row}:{fix_features}")
+        max_possible_row = domainRow[result_vals.index(max(result_vals))]
+        print(f"result_vals:{result_vals}")
+        print(f"max_possible_row:{max_possible_row}")
+
+        # 调整fix
+        adjust_y = (word_features_by_line[max_possible_row][0].y + word_features_by_line[max_possible_row][0].height)/2
+        for i, fix in enumerate(row_level_fix_without_row_assumption[seqIdx]):
+            row_level_fix_without_row_assumption[seqIdx][i][1] = adjust_y
+
+import numpy as np
+def normalize_list_numpy(lst):
+    arr = np.array(lst)
+    return (arr - np.min(arr)) / (np.max(arr) - np.min(arr))
