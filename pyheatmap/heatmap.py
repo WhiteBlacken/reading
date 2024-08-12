@@ -270,8 +270,7 @@ if __name__ == "__main__":
         coordinate.append(df["gaze_y"][i])
 
         data.append(coordinate)
-    #
-    # print(data)
+   
     hm = HeatMap(data)
     hm.heatmap(
         save_as="heat.png",
