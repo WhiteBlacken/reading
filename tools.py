@@ -681,10 +681,31 @@ def generate_fixations(gaze_points, texts, location, page_id=0):
     sequence_fixations = split_fixation_by_row(adjust_fixations, rows)
     # 根据行先验调整fixations
     result_fixations, result_rows, row_level_fix = move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word,page_id=page_id)
-
-
     return result_fixations, result_rows, row_level_fix, sequence_fixations
 
+def generate_fixations_in_skip_data(gaze_points, texts, location, page_id=0):
+    """生成fixation"""
+    # 根据gaze点生成fixation，未校准
+    fixations = detect_fixations(gaze_points)
+    # 对fixation的y轴做滤波（时序性的假设，对于行两侧的数据不友好，该假设太简单，TODO 更新算法）
+    fixations = keep_row(fixations)
+
+    word_list, sentence_list = get_word_and_sentence_from_text(texts)  # 获取单词和句子对应的index
+    border, rows, danger_zone, len_per_word = textarea(location)
+    locations = json.loads(location)
+
+    assert len(word_list) == len(locations)
+
+    # 根据fix确定对应的单词，若无对应，则找最近
+    # TODO 所有没有对应单词的fixation都被删除了，这有点问题
+    # adjust_fixations:[x,y,duration,文章中第几个词，一行中第几个词，第几行，起始时间，结束时间]
+    adjust_fixations = fixation_word_mapping(fixations, locations, rows)
+
+    # 将fixation按行切割
+    sequence_fixations = split_fixation_by_row(adjust_fixations, rows)
+    # 根据行先验调整fixations
+    result_fixations, result_rows, row_level_fix = move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word,page_id=page_id)
+    return result_fixations
 
 def detect_fixations(
         gaze_points: list, min_duration: int = 200, max_duration: int = 10000, max_dispersion: int = 80
@@ -1033,8 +1054,8 @@ def paint_on_word(image, target_words_index, word_locations, title, pic_path, al
             -1,
         )
     image = cv2.addWeighted(blk, alpha, image, 1 - alpha, 0)
-    plt.imshow(image)
-    plt.title(title)
+    # plt.imshow(image)
+    # plt.title(title)
     cv2.imwrite(pic_path, image)
     logger.info(f"heatmap已经生成:{pic_path}")
 

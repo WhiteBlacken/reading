@@ -15,8 +15,8 @@ from feature.utils import detect_fixations
 from pyheatmap import myHeatmap
 from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_fixations, get_word_location, \
     paint_on_word, get_word_and_sentence_from_text, compute_label, textarea, get_fix_by_time, \
-    get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label, coor_to_input, \
-    get_cnn_feature, get_row, get_euclid_distance, normalize_list, multiply_and_sum_lists
+    get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label,\
+    get_cnn_feature, get_row, get_euclid_distance, generate_fixations_in_skip_data
 import cv2
 
 
@@ -118,7 +118,7 @@ def get_all_time_pic(request):
     page_data_ls = PageData.objects.filter(experiment_id=exp_id)
     exp = Experiment.objects.get(id=exp_id)
 
-    base_path = f"data\\pic\\all_time\\{exp_id}\\"
+    base_path = f"data/pic/all_time/{exp_id}/"
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
@@ -133,12 +133,18 @@ def get_all_time_pic(request):
         print(f"page_id:{page_data.id}")
         # 拿到gaze point
         gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t, end_time=end)
+        # 原始的fixations
+        origin_fixations = detect_fixations(gaze_points)
         # 计算fixations
         result_fixations, _, _, _ = generate_fixations(
             gaze_points, page_data.texts, page_data.location, page_id=page_data.id
         )
+        # 不使用空行假设
+        adjust_fixations_without_row_assumption = generate_fixations_in_skip_data(
+            gaze_points, page_data.texts, page_data.location, page_id=page_data.id
+        )
 
-        path = f"{base_path}{page_data.id}\\"
+        path = f"{base_path}{page_data.id}/"
 
         # 如果目录不存在，则创建目录
         if not os.path.exists(path):
@@ -148,11 +154,15 @@ def get_all_time_pic(request):
         background = generate_pic_by_base64(
             page_data.image, f"{path}background.png"
         )
+        # 原始的fixation图
+        fix_img = show_fixations(origin_fixations, background)
+        cv2.imwrite(f"{path}fix-origin.png", fix_img)
         # 生成调整后的fixation图
-        print(f"len of fixations:{len(result_fixations)}")
         fix_img = show_fixations(result_fixations, background)
-
         cv2.imwrite(f"{path}fix-adjust.png", fix_img)
+        # 不使用空行假设的fixation图
+        fix_img = show_fixations(adjust_fixations_without_row_assumption, background)
+        cv2.imwrite(f"{path}fix-adjust-without-row-assumption.png", fix_img)
         # 画热点图
         gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
         myHeatmap.draw_heat_map(gaze_4_heat, f"{path}fix_heatmap.png", background)
