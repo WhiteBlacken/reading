@@ -16,7 +16,7 @@ from pyheatmap import myHeatmap
 from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_fixations, get_word_location, \
     paint_on_word, get_word_and_sentence_from_text, compute_label, textarea, get_fix_by_time, \
     get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label,\
-    get_cnn_feature, get_row, get_euclid_distance, generate_fixations_in_skip_data, show_fixations_by_line, keep_row
+    get_cnn_feature, get_row, get_euclid_distance, generate_fixations_in_skip_data, show_fixations_by_line, keep_row,  split_fixations
 import cv2
 
 
@@ -145,6 +145,7 @@ def get_all_time_pic(request):
         _, row_level_fix_without_row_assumption, hit_rows = generate_fixations_in_skip_data(
             gaze_points, page_data.texts, page_data.location, page_id=page_data.id
         )
+        
         print(f"row_level_fix:{row_level_fix_without_row_assumption}")
         word_locations = get_word_location(page_data.location)
         print(f"word_locations:{word_locations}")
@@ -177,7 +178,21 @@ def get_all_time_pic(request):
         # fix_img = show_fixations(adjust_fixations_without_row_assumption, background)
         # cv2.imwrite(f"{path}fix-adjust-without-row-assumption.png", fix_img)
         fix_img = show_fixations_by_line(row_level_fix_without_row_assumption, background)
-        cv2.imwrite(f"{path}fix-adjust-without-row-assumption.png", fix_img)
+        cv2.imwrite(f"{path}fix-split.png", fix_img)
+
+        # 序列切割
+        fixations_seq_split_y_diff = split_fixations(gaze_points, page_data.location, "y_diff")
+        print(f"size of fixations_seq_split_y_diff:{len(fixations_seq_split_y_diff)}")
+        fix_img = show_fixations_by_line(fixations_seq_split_y_diff, background)
+        cv2.imwrite(f"{path}fix-split-by-y-diff-all.png", fix_img)
+
+        fix_seq_path = f"{path}fix_seq/"
+        if not os.path.exists(fix_seq_path):
+            os.mkdir(fix_seq_path)
+        for i, fix_seq in enumerate(fixations_seq_split_y_diff):
+            fix_img = show_fixations(fix_seq, background)
+            cv2.imwrite(f"{fix_seq_path}fix-split-by-y-diff-{i}.png", fix_img)
+
         # 画热点图
         gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
         myHeatmap.draw_heat_map(gaze_4_heat, f"{path}fix_heatmap.png", background)

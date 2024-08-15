@@ -200,6 +200,17 @@ def fixation_word_mapping(fixations, locations, rows):
                 adjust_fixations.append(adjust_fix)
     return adjust_fixations
 
+class FixationSequenceSpilt:
+    def __init__(self, fixations, rows) -> None:
+        self.fixations = fixations
+        self.rows = rows
+
+    def split(self):
+        pass
+
+class FixationSequenceSpiltByRow(FixationSequenceSpilt):
+    def split(self):
+        return split_fixation_by_row(self.fixations, self.rows)
 
 def split_fixation_by_row(adjust_fixations, rows):
     """将fixaton按行切割"""
@@ -249,6 +260,26 @@ def split_fixation_by_row(adjust_fixations, rows):
     print(f"[split_fixation_by_row] sequence_fixations={sequence_fixations}")
     return sequence_fixations
 
+class FixationSequenceSpiltByY(FixationSequenceSpilt):
+    def split(self):
+        diff_threshold = 20
+        sequence_fixations = []
+        tmp = []
+        for i, fix in enumerate(self.fixations):
+            if len(tmp) == 0:
+                tmp.append(self.fixations[i])
+            else:
+                mean_y = sum([x[1] for x in tmp]) / len(tmp)
+                if abs(fix[1] - mean_y) > diff_threshold:
+                    sequence_fixations.append([x for x in tmp])
+                    tmp = []
+                tmp.append(self.fixations[i])   
+        if len(tmp) > 0:
+            sequence_fixations.append([x for x in tmp])
+        return sequence_fixations
+
+
+    
 
 def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word, page_id=0, use_assumption=True):
     """利用无空行先验调整fixation"""
@@ -368,13 +399,22 @@ def generate_fixations_in_skip_data(gaze_points, texts, location, page_id=0):
     # TODO 所有没有对应单词的fixation都被删除了，这有点问题
     # adjust_fixations:[x,y,duration,文章中第几个词，一行中第几个词，第几行，起始时间，结束时间]
     adjust_fixations = fixation_word_mapping(fixations, locations, rows)
-
     # 将fixation按行切割
-    sequence_fixations = split_fixation_by_row(adjust_fixations, rows)
+    sequence_fixations = FixationSequenceSpiltByRow(adjust_fixations, rows).split()
     print(f"[generate_fixations_in_skip_data] size of sequence_fixations={len(sequence_fixations)}")
     # 根据行先验调整fixations
     result_fixations, result_rows, row_level_fix, hit_rows = move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word,page_id=page_id, use_assumption=False)
     return result_fixations, row_level_fix, hit_rows
+
+def split_fixations(gaze_points, location, type):
+    fixations = detect_fixations(gaze_points)
+    fixations = keep_row(fixations)
+    border, rows, danger_zone, len_per_word = textarea(location)
+    sequence_fixations = []
+    if type == "y_diff":
+        sequence_fixations = FixationSequenceSpiltByY(fixations, rows).split()
+    return sequence_fixations
+
 
 def detect_fixations(
         gaze_points: list, min_duration: int = 200, max_duration: int = 10000, max_dispersion: int = 80
