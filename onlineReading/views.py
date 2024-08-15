@@ -73,6 +73,28 @@ def reading(request):
     else:
         return render(request, "reading_for_aid.html")
 
+def get_text_dict(paragraphs: QuerySet, article_id: int) -> dict:
+    # sourcery skip: raise-specific-error
+    """将文章及翻译返回"""
+    para_dict = {}
+    para = 0
+    for paragraph in paragraphs:
+        # 切成句子
+        sentences = paragraph.content.split(".")
+        cnt = 0
+        words_dict = {0: paragraph.content}
+        for sentence in sentences:
+            # 去除句子前后空格
+            sentence = sentence.strip()
+            if len(sentence) > 3:
+                # 切成单词
+                words = sentence.split(" ")
+                for word in words:
+                    cnt = cnt + 1
+                    words_dict[cnt] = {"en": word, "zh": "", "sentence_zh": ""}
+        para_dict[para] = words_dict
+        para = para + 1
+    return para_dict
 
 def get_translation_sentence(paragraphs: QuerySet, article_id: int) -> dict:
     # sourcery skip: raise-specific-error
@@ -226,7 +248,7 @@ def get_para(request):
     with Timer(name):  # 开启计时
         print('role:' + request.session.get('role', 'native'))
         try:
-            para_dict = get_translation_sentence(paragraphs, article_id)
+            para_dict = get_text_dict(paragraphs, article_id)
         except Exception:
             logger.warning("百度翻译接口访问失败")
 
