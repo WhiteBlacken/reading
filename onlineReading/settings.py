@@ -38,6 +38,7 @@ secret_info_dict = yaml.load(fp, Loader=yaml.FullLoader)
 APPID = secret_info_dict.get("baidu_translate").get("appid")
 SECRET = secret_info_dict.get("baidu_translate").get("secret")
 # 数据库配置信息
+host = secret_info_dict.get("db").get("host")
 user = secret_info_dict.get("db").get("user")
 password = secret_info_dict.get("db").get("password")
 
@@ -94,7 +95,7 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "reading",
-        "HOST": "127.0.0.1",
+        "HOST": host,
         "PORT": 3306,
         "USER": user,
         "PASSWORD": password,
