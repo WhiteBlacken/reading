@@ -260,9 +260,10 @@ def split_fixation_by_row(adjust_fixations, rows):
     print(f"[split_fixation_by_row] sequence_fixations={sequence_fixations}")
     return sequence_fixations
 
+
 class FixationSequenceSpiltByY(FixationSequenceSpilt):
     def split(self):
-        diff_threshold = 20
+        diff_threshold = 26
         sequence_fixations = []
         tmp = []
         for i, fix in enumerate(self.fixations):
@@ -278,8 +279,6 @@ class FixationSequenceSpiltByY(FixationSequenceSpilt):
             sequence_fixations.append([x for x in tmp])
         return sequence_fixations
 
-
-    
 
 def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word, page_id=0, use_assumption=True):
     """利用无空行先验调整fixation"""
