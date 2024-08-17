@@ -255,8 +255,10 @@ def get_all_time_pic(request):
             for possible_row in possible_rows:
                 row_y = (rows[possible_row]['top'] + rows[possible_row]['bottom']) / 2
                 fix_to_pic = [[x[0],row_y,x[2]] for x in fix_seq]
-                fix_img = show_fixations(fix_to_pic, word_pic_path)
-                cv2.imwrite(f"{fix_seq_path}fix-split-by-y-diff-{i}-{possible_row}.png", fix_img)
+                gaze_duration = []
+                for fix in fix_to_pic:
+                    gaze_duration.extend([fix[0], fix[1]] for _ in range(fix[2] // 100))
+                myHeatmap.draw_heat_map(gaze_duration, f"{fix_seq_path}fix-split-by-y-diff-{i}-{possible_row}.png", word_pic_path)
 
     return HttpResponse(1)
 
