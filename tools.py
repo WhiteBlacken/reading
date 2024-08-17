@@ -410,6 +410,7 @@ def split_fixations(gaze_points, location, type):
     fixations = detect_fixations(gaze_points)
     fixations = keep_row(fixations)
     border, rows, danger_zone, len_per_word = textarea(location)
+    print(f"rows:{rows}")
     sequence_fixations = []
     if type == "y_diff":
         sequence_fixations = FixationSequenceSpiltByY(fixations, rows).split()

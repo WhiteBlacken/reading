@@ -193,6 +193,35 @@ def get_all_time_pic(request):
             fix_img = show_fixations(fix_seq, background)
             cv2.imwrite(f"{fix_seq_path}fix-split-by-y-diff-{i}.png", fix_img)
 
+        # 序列与三行映射
+        # 切割的可以直接用
+        fix_seq_path = f"{path}fix_seq_in_three_domain/"
+        if not os.path.exists(fix_seq_path):
+            os.mkdir(fix_seq_path)
+        print(f"fixations_seq_split_y_diff:{fixations_seq_split_y_diff}")
+        border, rows, danger_zone, len_per_word = textarea(page_data.location)
+        print(f"this rows:{rows}")
+        for fix_seq in fixations_seq_split_y_diff:
+            y_mean = sum([x[1] for x in fix_seq]) / len(fix_seq)
+            # 查看匹配的行
+            hit_row = 0
+            for i, row in enumerate(rows):
+                if row['bottom'] >= y_mean >= row['top']:
+                    hit_row = i
+                    break
+                if y_mean < rows[0]['top']:
+                    hit_row = 0
+                if y_mean > rows[-1]['bottom']:
+                    hit_row = len(rows) - 1
+            possible_rows = [x for x in range(hit_row-1,hit_row+2) if x >= 0 and x < len(rows)]
+            print(f"this possible_rows:{possible_rows}")
+            for possible_row in possible_rows:
+                row_y = (rows[possible_row]['top'] + rows[possible_row]['bottom']) / 2
+                fix_to_pic = [[x[0],row_y,x[2]] for x in fix_seq]
+                fix_img = show_fixations(fix_to_pic, background)
+                cv2.imwrite(f"{fix_seq_path}fix-split-by-y-diff-{i}-{possible_row}.png", fix_img)
+
+
         # 画热点图
         gaze_4_heat = [[x[0], x[1]] for x in result_fixations]
         myHeatmap.draw_heat_map(gaze_4_heat, f"{path}fix_heatmap.png", background)
