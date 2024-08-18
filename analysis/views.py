@@ -238,7 +238,7 @@ def get_all_time_pic(request):
         print(f"fixations_seq_split_y_diff:{fixations_seq_split_y_diff}")
         border, rows, danger_zone, len_per_word = textarea(page_data.location)
         print(f"this rows:{rows}")
-        for fix_seq in fixations_seq_split_y_diff:
+        for fix_id, fix_seq in enumerate(fixations_seq_split_y_diff):
             y_mean = sum([x[1] for x in fix_seq]) / len(fix_seq)
             # 查看匹配的行
             hit_row = 0
@@ -252,13 +252,18 @@ def get_all_time_pic(request):
                     hit_row = len(rows) - 1
             possible_rows = [x for x in range(hit_row-1,hit_row+2) if x >= 0 and x < len(rows)]
             print(f"this possible_rows:{possible_rows}")
-            for possible_row in possible_rows:
+            for i, possible_row in enumerate(possible_rows):
                 row_y = (rows[possible_row]['top'] + rows[possible_row]['bottom']) / 2
                 fix_to_pic = [[x[0],row_y,x[2]] for x in fix_seq]
                 gaze_duration = []
                 for fix in fix_to_pic:
                     gaze_duration.extend([fix[0], fix[1]] for _ in range(fix[2] // 100))
-                myHeatmap.draw_heat_map(gaze_duration, f"{fix_seq_path}fix-split-by-y-diff-{i}-{possible_row}.png", word_pic_path)
+                final_pic_path = f"{fix_seq_path}fix-split-by-y-diff-{fix_id}.png"
+                if i == 0:
+                    myHeatmap.draw_heat_map(gaze_duration, final_pic_path, word_pic_path)
+                else:
+                    myHeatmap.draw_heat_map(gaze_duration, final_pic_path, final_pic_path)
+
 
     return HttpResponse(1)
 
