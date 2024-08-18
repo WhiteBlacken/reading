@@ -150,7 +150,7 @@ def get_all_time_pic(request):
         word_locations = get_word_location(page_data.location)
         print(f"word_locations:{word_locations}")
         # 分行的单词
-        word_list, _ = get_word_and_sentence_from_text(page_data.texts)
+        word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
         word_features_by_line = get_word_feature_by_line(word_locations, word_list)
         adjust_fix_by_line(word_features_by_line, row_level_fix_without_row_assumption, hit_rows)
 
@@ -265,6 +265,7 @@ def get_all_time_pic(request):
                     myHeatmap.draw_heat_map(gaze_duration, final_pic_path, final_pic_path)
 
         # 画语义图
+        print(f"sentence_list:{sentence_list}")
         print(f"word_list:{word_list}")
         print(f"word_location:{word_locations}")
         assert len(word_list) == len(word_locations)
@@ -272,11 +273,24 @@ def get_all_time_pic(request):
         if not os.path.exists(semantic_path):
             os.mkdir(semantic_path)
         familiar_rate_seq = []
-        for i, word in enumerate(word_list):
+        if len(word_locations) > 0:
+            y_loc = word_locations[0][1]
+
+        row_idx = 0
+        for i, location in enumerate(word_locations):
+            if location[1] != y_loc:
+                semantic_pic_save_path = f"{semantic_path}semantic_familiar_rate_row_{row_idx}.png"
+                myHeatmap.draw_heat_map(familiar_rate_seq, semantic_pic_save_path, word_pic_path)
+                familiar_rate_seq = []
+                row_idx += 1
             x, y = (word_locations[i][0] + word_locations[i][2]) // 2, (word_locations[i][1] + word_locations[i][3]) // 2
-            familiar_rate_seq.extend([x,y] for _ in range(get_word_familiar_rate(word))//10)
-        myHeatmap.draw_heat_map(familiar_rate_seq, semantic_path, word_pic_path)
-        
+            familiar_rate_seq.extend([x,y] for _ in range(get_word_familiar_rate(word_list[i])//10))
+            y_loc = location[1]
+
+        if len(familiar_rate_seq) > 0:
+            semantic_pic_save_path = f"{semantic_path}semantic_familiar_rate_row_{row_idx}.png"
+            myHeatmap.draw_heat_map(familiar_rate_seq, semantic_pic_save_path, word_pic_path)
+     
     return HttpResponse(1)
 
 
