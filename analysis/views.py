@@ -10,7 +10,7 @@ from django.shortcuts import render
 from loguru import logger
 
 from analysis.feature import WordFeature, SentFeature, CNNFeature, FixationMap
-from analysis.models import PageData, Experiment, Paragraph
+from analysis.models import PageData, Experiment
 from feature.utils import detect_fixations
 from pyheatmap import myHeatmap
 from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_fixations, get_word_location, \
@@ -18,7 +18,7 @@ from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_
     get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label,\
     get_cnn_feature, get_row, get_euclid_distance, generate_fixations_in_skip_data, show_fixations_by_line, keep_row,  split_fixations
 import cv2
-
+from semantic_attention import get_word_familiar_rate
 
 # Create your views here.
 
@@ -264,7 +264,19 @@ def get_all_time_pic(request):
                 else:
                     myHeatmap.draw_heat_map(gaze_duration, final_pic_path, final_pic_path)
 
-
+        # 画语义图
+        print(f"word_list:{word_list}")
+        print(f"word_location:{word_locations}")
+        assert len(word_list) == len(word_locations)
+        semantic_path = f"{path}semantic_path/"
+        if not os.path.exists(semantic_path):
+            os.mkdir(semantic_path)
+        familiar_rate_seq = []
+        for i, word in enumerate(word_list):
+            x, y = (word_locations[i][0] + word_locations[i][2]) // 2, (word_locations[i][1] + word_locations[i][3]) // 2
+            familiar_rate_seq.extend([x,y] for _ in range(get_word_familiar_rate(word))//10)
+        myHeatmap.draw_heat_map(familiar_rate_seq, semantic_path, word_pic_path)
+        
     return HttpResponse(1)
 
 

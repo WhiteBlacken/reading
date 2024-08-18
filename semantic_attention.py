@@ -1,19 +1,19 @@
-import numpy as np
-import spacy
-import torch
-from docx import Document
-from nltk.tokenize import sent_tokenize
-from textstat import textstat
-from transformers import BertForMaskedLM, BertTokenizer, XLNetModel, XLNetTokenizerFast
+# import numpy as np
+# import spacy
+# import torch
+# from docx import Document
+# from nltk.tokenize import sent_tokenize
+# from textstat import textstat
+# from transformers import BertForMaskedLM, BertTokenizer, XLNetModel, XLNetTokenizerFast
 
 # base = "D:\\qxy\\pre-trained-model\\"
 base = ""
 
-nlp = spacy.load("en_core_web_lg")
-tokenizer = XLNetTokenizerFast.from_pretrained(base+"xlnet-base-cased")
-model = XLNetModel.from_pretrained(base+"xlnet-base-cased", output_attentions=True)
-bert_tokenizer = BertTokenizer.from_pretrained(base+"bert-base-cased")
-bert_model = BertForMaskedLM.from_pretrained(base+"bert-base-cased")
+# nlp = spacy.load("en_core_web_lg")
+# tokenizer = XLNetTokenizerFast.from_pretrained(base+"xlnet-base-cased")
+# model = XLNetModel.from_pretrained(base+"xlnet-base-cased", output_attentions=True)
+# bert_tokenizer = BertTokenizer.from_pretrained(base+"bert-base-cased")
+# bert_model = BertForMaskedLM.from_pretrained(base+"bert-base-cased")
 
 f = open("mrc2.dct", "r")
 word_fam_map = {}
