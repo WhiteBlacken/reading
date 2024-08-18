@@ -284,8 +284,9 @@ def get_all_time_pic(request):
                 semantic_familiar_pic_save_path = f"{semantic_path}semantic_familiar_rate_row_{row_idx}.png"
                 semantic_topic_pic_save_path = f"{semantic_path}semantic_topic_rate_row_{row_idx}.png"
                 myHeatmap.draw_heat_map(familiar_rate_seq, semantic_familiar_pic_save_path, word_pic_path)
-                myHeatmap.draw_heat_map(familiar_rate_seq, semantic_topic_pic_save_path, word_pic_path)
+                myHeatmap.draw_heat_map(topic_score_seq, semantic_topic_pic_save_path, word_pic_path)
                 familiar_rate_seq = []
+                topic_score_seq = []
                 row_idx += 1
             x, y = (word_locations[i][0] + word_locations[i][2]) // 2, (word_locations[i][1] + word_locations[i][3]) // 2
             familiar_rate_seq.extend([x,y] for _ in range(get_word_familiar_rate(word_list[i])//10))
@@ -298,7 +299,7 @@ def get_all_time_pic(request):
             semantic_familiar_pic_save_path = f"{semantic_path}semantic_familiar_rate_row_{row_idx}.png"
             semantic_topic_pic_save_path = f"{semantic_path}semantic_topic_rate_row_{row_idx}.png"
             myHeatmap.draw_heat_map(familiar_rate_seq, semantic_familiar_pic_save_path, word_pic_path)
-            myHeatmap.draw_heat_map(familiar_rate_seq, semantic_topic_pic_save_path, word_pic_path)
+            myHeatmap.draw_heat_map(topic_score_seq, semantic_topic_pic_save_path, word_pic_path)
     return HttpResponse(1)
 
 

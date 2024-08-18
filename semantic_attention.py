@@ -66,10 +66,9 @@ def get_word_familiar_rate(word_text):
     return 700 - word_fam_map.get(capital_word, 0)
 
 from gensim import corpora, models
-from collections import defaultdict
-import numpy as np
 
 def calculate_topic_related_score(text):
+    print(text)
     text_words = text.split()
     dictionary = corpora.Dictionary([text_words])
     corpus = [dictionary.doc2bow(text_words)]
@@ -79,10 +78,11 @@ def calculate_topic_related_score(text):
     word_score = {}
     for word, topic_scores in topic_distributions:
         word_score[dictionary[word]] = topic_scores
+    print(f"word_score:{word_score}")
     return word_score
 
 # 示例用法
-text = "This is a sample texts about machine learning and data science"
+text = "This is a sample texts about machine learning and data science. In this home, it is big and nice."
 print(calculate_topic_related_score(text))
 
 
@@ -93,3 +93,11 @@ nlp = spacy.load("en_core_web_sm")
 def lemmatize_word_spacy(word):
     doc = nlp(word)
     return doc[0].lemma_
+
+# import nltk
+# nltk.download('punkt')  # 首次使用需要下载
+# from nltk.tokenize import word_tokenize
+
+# text = "The dog has a long tail"
+# words = word_tokenize(text)
+# print(words)
