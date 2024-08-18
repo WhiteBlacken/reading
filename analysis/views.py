@@ -18,7 +18,7 @@ from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_
     get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label,\
     get_cnn_feature, get_row, get_euclid_distance, generate_fixations_in_skip_data, show_fixations_by_line, keep_row,  split_fixations
 import cv2
-from semantic_attention import get_word_familiar_rate
+from semantic_attention import get_word_familiar_rate, calculate_topic_related_score
 
 # Create your views here.
 
@@ -269,28 +269,36 @@ def get_all_time_pic(request):
         print(f"word_list:{word_list}")
         print(f"word_location:{word_locations}")
         assert len(word_list) == len(word_locations)
+        topic_score_dict = calculate_topic_related_score(page_data.texts)
         semantic_path = f"{path}semantic_path/"
         if not os.path.exists(semantic_path):
             os.mkdir(semantic_path)
         familiar_rate_seq = []
+        topic_score_seq = []
         if len(word_locations) > 0:
             y_loc = word_locations[0][1]
 
         row_idx = 0
         for i, location in enumerate(word_locations):
             if location[1] != y_loc:
-                semantic_pic_save_path = f"{semantic_path}semantic_familiar_rate_row_{row_idx}.png"
-                myHeatmap.draw_heat_map(familiar_rate_seq, semantic_pic_save_path, word_pic_path)
+                semantic_familiar_pic_save_path = f"{semantic_path}semantic_familiar_rate_row_{row_idx}.png"
+                semantic_topic_pic_save_path = f"{semantic_path}semantic_topic_rate_row_{row_idx}.png"
+                myHeatmap.draw_heat_map(familiar_rate_seq, semantic_familiar_pic_save_path, word_pic_path)
+                myHeatmap.draw_heat_map(familiar_rate_seq, semantic_topic_pic_save_path, word_pic_path)
                 familiar_rate_seq = []
                 row_idx += 1
             x, y = (word_locations[i][0] + word_locations[i][2]) // 2, (word_locations[i][1] + word_locations[i][3]) // 2
             familiar_rate_seq.extend([x,y] for _ in range(get_word_familiar_rate(word_list[i])//10))
+            if word_list[i] in topic_score_dict:
+                topic_score_seq.extend([x, y] for _ in range(int(topic_score_dict[word_list[i]]*20)))
+
             y_loc = location[1]
 
         if len(familiar_rate_seq) > 0:
-            semantic_pic_save_path = f"{semantic_path}semantic_familiar_rate_row_{row_idx}.png"
-            myHeatmap.draw_heat_map(familiar_rate_seq, semantic_pic_save_path, word_pic_path)
-     
+            semantic_familiar_pic_save_path = f"{semantic_path}semantic_familiar_rate_row_{row_idx}.png"
+            semantic_topic_pic_save_path = f"{semantic_path}semantic_topic_rate_row_{row_idx}.png"
+            myHeatmap.draw_heat_map(familiar_rate_seq, semantic_familiar_pic_save_path, word_pic_path)
+            myHeatmap.draw_heat_map(familiar_rate_seq, semantic_topic_pic_save_path, word_pic_path)
     return HttpResponse(1)
 
 

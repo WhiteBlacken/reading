@@ -61,5 +61,35 @@ for line in f:
 
 
 def get_word_familiar_rate(word_text):
+    word_text = lemmatize_word_spacy(word_text)
     capital_word = word_text.upper()
     return 700 - word_fam_map.get(capital_word, 0)
+
+from gensim import corpora, models
+from collections import defaultdict
+import numpy as np
+
+def calculate_topic_related_score(text):
+    text_words = text.split()
+    dictionary = corpora.Dictionary([text_words])
+    corpus = [dictionary.doc2bow(text_words)]
+    num_topics = 5  # 假设 5 个主题，您可以根据实际情况调整
+    lda_model = models.LdaModel(corpus, num_topics=num_topics, id2word=dictionary)
+    topic_distributions = lda_model.get_document_topics(corpus[0])
+    word_score = {}
+    for word, topic_scores in topic_distributions:
+        word_score[dictionary[word]] = topic_scores
+    return word_score
+
+# 示例用法
+text = "This is a sample texts about machine learning and data science"
+print(calculate_topic_related_score(text))
+
+
+import spacy
+
+nlp = spacy.load("en_core_web_sm")
+
+def lemmatize_word_spacy(word):
+    doc = nlp(word)
+    return doc[0].lemma_
