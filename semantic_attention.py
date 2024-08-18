@@ -86,6 +86,19 @@ text = "This is a sample texts about machine learning and data science. In this 
 print(calculate_topic_related_score(text))
 
 
+from keybert import KeyBERT
+
+def calculate_keywords_score(text):
+    kw_model = KeyBERT()
+    keywords = kw_model.extract_keywords(text, keyphrase_ngram_range=(1, 1), stop_words='english', top_n=200)
+    keywords_dict = {}
+    for keyword in keywords:
+        keywords_dict[keyword[0]] = keyword[1]
+    return keywords_dict
+
+
+
+
 import spacy
 
 nlp = spacy.load("en_core_web_sm")
