@@ -18,7 +18,7 @@ from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_
     get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label,\
     get_cnn_feature, get_row, get_euclid_distance, generate_fixations_in_skip_data, show_fixations_by_line, keep_row,  split_fixations
 import cv2
-from semantic_attention import get_word_familiar_rate, calculate_topic_related_score
+from semantic_attention import get_word_familiar_rate, calculate_topic_related_score, calculate_keywords_score
 
 # Create your views here.
 
@@ -270,6 +270,7 @@ def get_all_time_pic(request):
         print(f"word_location:{word_locations}")
         assert len(word_list) == len(word_locations)
         topic_score_dict = calculate_topic_related_score(page_data.texts)
+        keywords_dict = calculate_keywords_score(page_data.texts)
         semantic_path = f"{path}semantic_path/"
         if not os.path.exists(semantic_path):
             os.mkdir(semantic_path)
