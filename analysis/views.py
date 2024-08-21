@@ -271,11 +271,8 @@ def get_all_time_pic(request):
         print(f"word_location:{word_locations}")
         assert len(word_list) == len(word_locations)
         topic_score_dict = calculate_topic_related_score(page_data.texts)
-<<<<<<< Updated upstream
         keywords_dict = calculate_keywords_score(page_data.texts)
-=======
         print(f"topic_score_dict:{topic_score_dict}")
->>>>>>> Stashed changes
         semantic_path = f"{path}semantic_path/"
         if not os.path.exists(semantic_path):
             os.mkdir(semantic_path)
