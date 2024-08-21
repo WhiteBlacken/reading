@@ -141,7 +141,6 @@ class MyHeatMap(HeatMap):
 
             self._HeatMap__heat(heat_data, x, y, n, circle)
 
-        print(mk_colors())
         self.__paint_heat(heat_data, mk_colors())
         self._HeatMap__add_base()
 

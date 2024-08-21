@@ -68,11 +68,11 @@ def get_word_familiar_rate(word_text):
 from gensim import corpora, models
 
 def calculate_topic_related_score(text):
-    print(text)
+    print(f"text to topic:{text}")
     text_words = text.split()
     dictionary = corpora.Dictionary([text_words])
     corpus = [dictionary.doc2bow(text_words)]
-    num_topics = 5  # 假设 5 个主题，您可以根据实际情况调整
+    num_topics = 1  # 假设 5 个主题，您可以根据实际情况调整
     lda_model = models.LdaModel(corpus, num_topics=num_topics, id2word=dictionary)
     topic_distributions = lda_model.get_document_topics(corpus[0])
     word_score = {}

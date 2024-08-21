@@ -256,24 +256,3 @@ def draw_heat_map(data, heatmap_name, base):
     hm = HeatMap(data)
     hm.heatmap(save_as=heatmap_name, base=base, r=40)
     return hm.hotspot
-
-
-if __name__ == "__main__":
-    import pandas as pd
-
-    df = pd.read_csv("C://Users//20591\Desktop//reading//static//data//heatmap//luqi//1072//gaze.csv")
-    data = []
-
-    for i in range(len(df["id"])):
-        coordinate = []
-        coordinate.append(df["gaze_x"][i])
-        coordinate.append(df["gaze_y"][i])
-
-        data.append(coordinate)
-   
-    hm = HeatMap(data)
-    hm.heatmap(
-        save_as="heat.png",
-        base="C://Users//20591\Desktop//reading//static//data//heatmap//luqi//1072//background.png",
-        r=40,
-    )

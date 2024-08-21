@@ -232,37 +232,38 @@ def get_all_time_pic(request):
 
         # 序列与三行映射
         # 切割的可以直接用
-        fix_seq_path = f"{path}fix_seq_in_three_domain/"
-        if not os.path.exists(fix_seq_path):
-            os.mkdir(fix_seq_path)
-        print(f"fixations_seq_split_y_diff:{fixations_seq_split_y_diff}")
-        border, rows, danger_zone, len_per_word = textarea(page_data.location)
-        print(f"this rows:{rows}")
-        for fix_id, fix_seq in enumerate(fixations_seq_split_y_diff):
-            y_mean = sum([x[1] for x in fix_seq]) / len(fix_seq)
-            # 查看匹配的行
-            hit_row = 0
-            for i, row in enumerate(rows):
-                if row['bottom'] >= y_mean >= row['top']:
-                    hit_row = i
-                    break
-                if y_mean < rows[0]['top']:
-                    hit_row = 0
-                if y_mean > rows[-1]['bottom']:
-                    hit_row = len(rows) - 1
-            possible_rows = [x for x in range(hit_row-1,hit_row+2) if x >= 0 and x < len(rows)]
-            print(f"this possible_rows:{possible_rows}")
-            for i, possible_row in enumerate(possible_rows):
-                row_y = (rows[possible_row]['top'] + rows[possible_row]['bottom']) / 2
-                fix_to_pic = [[x[0],row_y,x[2]] for x in fix_seq]
-                gaze_duration = []
-                for fix in fix_to_pic:
-                    gaze_duration.extend([fix[0], fix[1]] for _ in range(fix[2] // 100))
-                final_pic_path = f"{fix_seq_path}fix-split-by-y-diff-{fix_id}.png"
-                if i == 0:
-                    myHeatmap.draw_heat_map(gaze_duration, final_pic_path, word_pic_path)
-                else:
-                    myHeatmap.draw_heat_map(gaze_duration, final_pic_path, final_pic_path)
+        if False:
+            fix_seq_path = f"{path}fix_seq_in_three_domain/"
+            if not os.path.exists(fix_seq_path):
+                os.mkdir(fix_seq_path)
+            print(f"fixations_seq_split_y_diff:{fixations_seq_split_y_diff}")
+            border, rows, danger_zone, len_per_word = textarea(page_data.location)
+            print(f"this rows:{rows}")
+            for fix_id, fix_seq in enumerate(fixations_seq_split_y_diff):
+                y_mean = sum([x[1] for x in fix_seq]) / len(fix_seq)
+                # 查看匹配的行
+                hit_row = 0
+                for i, row in enumerate(rows):
+                    if row['bottom'] >= y_mean >= row['top']:
+                        hit_row = i
+                        break
+                    if y_mean < rows[0]['top']:
+                        hit_row = 0
+                    if y_mean > rows[-1]['bottom']:
+                        hit_row = len(rows) - 1
+                possible_rows = [x for x in range(hit_row-1,hit_row+2) if x >= 0 and x < len(rows)]
+                print(f"this possible_rows:{possible_rows}")
+                for i, possible_row in enumerate(possible_rows):
+                    row_y = (rows[possible_row]['top'] + rows[possible_row]['bottom']) / 2
+                    fix_to_pic = [[x[0],row_y,x[2]] for x in fix_seq]
+                    gaze_duration = []
+                    for fix in fix_to_pic:
+                        gaze_duration.extend([fix[0], fix[1]] for _ in range(fix[2] // 100))
+                    final_pic_path = f"{fix_seq_path}fix-split-by-y-diff-{fix_id}.png"
+                    if i == 0:
+                        myHeatmap.draw_heat_map(gaze_duration, final_pic_path, word_pic_path)
+                    else:
+                        myHeatmap.draw_heat_map(gaze_duration, final_pic_path, final_pic_path)
 
         # 画语义图
         print(f"sentence_list:{sentence_list}")
@@ -270,7 +271,11 @@ def get_all_time_pic(request):
         print(f"word_location:{word_locations}")
         assert len(word_list) == len(word_locations)
         topic_score_dict = calculate_topic_related_score(page_data.texts)
+<<<<<<< Updated upstream
         keywords_dict = calculate_keywords_score(page_data.texts)
+=======
+        print(f"topic_score_dict:{topic_score_dict}")
+>>>>>>> Stashed changes
         semantic_path = f"{path}semantic_path/"
         if not os.path.exists(semantic_path):
             os.mkdir(semantic_path)
