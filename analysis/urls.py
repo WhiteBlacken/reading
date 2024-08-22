@@ -25,5 +25,6 @@ urlpatterns = [
     path("label_count/",views.count_label),
     path("word_index/", views.get_word_index),
     path("sent_domain/",views.sent_domain),
-    path("dataset_new/", views.dataset_new)
+    path("dataset_new/", views.dataset_new),
+    path("dataset_skip/", views.dataset_of_all_time_for_skip)
 ]

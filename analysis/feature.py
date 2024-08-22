@@ -2,7 +2,8 @@ import math
 import os
 
 import pandas as pd
-# from textstat import textstat
+import numpy as np
+from textstat import textstat
 
 from tools import div_list, round_list
 
@@ -22,13 +23,18 @@ class WordFeature(object):
         self.number_of_fixations_diff = [0 for _ in range(num)]
         self.reading_times_diff = [0 for _ in range(num)]
         # 实验相关信息
-        self.word_list = []  # 单词列表
+        self.word_list = ["" for _ in range(num)]  # 单词列表
         self.sentence_id = [0 for _ in range(num)]  # 不同时刻的同一个句子，为不同的句子
         self.need_prediction = [0 for _ in range(num)]  # 是否需要预测
         # label
         self.word_understand = [0 for _ in range(num)]
         self.sentence_understand = [0 for _ in range(num)]
         self.mind_wandering = [0 for _ in range(num)]
+        
+        # 标识
+        self.fix_seq_id_list = [0 for _ in range(num)]
+        self.row_idx_list = [0 for _ in range(num)]
+
 
 
     def clean(self):
@@ -45,8 +51,8 @@ class WordFeature(object):
         self.reading_times_diff = [0 for _ in range(self.num)]
 
     def get_syllable(self):
-        return -1
-        # return [textstat.syllable_count(word) for word in self.word_list]
+        # return -1
+        return [textstat.syllable_count(word) for word in self.word_list]
 
     def get_len(self):
         return [len(word) for word in self.word_list]
@@ -57,7 +63,7 @@ class WordFeature(object):
             if i == 0:
                 results[i] = 0
                 continue
-            results[i] = list_a[i] - list_a[i-1]
+            results[i] = round(list_a[i] - list_a[i-1], 3)
         return results
 
     def to_csv(self, filename, exp_id, page_id, time, user, article_id):
@@ -65,33 +71,53 @@ class WordFeature(object):
             {
                 # 1. 实验信息相关
                 "exp_id": [exp_id for _ in range(self.num)],
-                "article_id": [article_id for _ in range(self.num)],
-                "time": [time for _ in range(self.num)],
                 "page_id": [page_id for _ in range(self.num)],
+                "fix_seq_id": self.fix_seq_id_list,
+                "row_idx": self.row_idx_list,
+                "article_id": [article_id for _ in range(self.num)],
+                # "time": [time for _ in range(self.num)],
                 "user": [user for _ in range(self.num)],
                 "sentence_id": self.sentence_id,
                 "word": self.word_list,
-                "need_prediction": self.need_prediction,
+                # "need_prediction": self.need_prediction,
 
                 # # 2. label相关
                 "word_understand": self.word_understand,
                 "sentence_understand": self.sentence_understand,
                 "mind_wandering": self.mind_wandering,
-                # 3. 特征1
+                # 单词level特征1
                 "reading_times": self.reading_times,
                 "number_of_fixations": self.number_of_fixation,
                 "fixation_duration": self.total_fixation_duration,
+
+                # 单词level特征2
+                "fixation_duration_diff": self.diff(self.total_fixation_duration),
+                "number_of_fixations_diff": self.diff(self.number_of_fixation),
+                "reading_times_diff": self.diff(self.reading_times),
+
+                # 单词level特征3
+                "fixation_duration_mean": [round(sum(self.total_fixation_duration)/self.num, 3) for _ in range(self.num)],
+                "number_of_fixations_mean": [round(sum(self.number_of_fixation)/self.num, 3) for _ in range(self.num)],
+                "reading_times_mean": [round(sum(self.reading_times)/self.num, 3) for _ in range(self.num)],
+
+                # 单词level特征4
+                "fixation_duration_var": [round(np.var(self.total_fixation_duration), 3) for _ in range(self.num)],
+                "number_of_fixations_var": [round(np.var(self.number_of_fixation), 3) for _ in range(self.num)],
+                "reading_times_var": [round(np.var(self.reading_times), 3) for _ in range(self.num)],
+
+                'fixation_duration_div_syllable': [round(x, 3) for x in div_list(self.total_fixation_duration, self.get_syllable())],
+                'fixation_duration_div_length': [round(x, 3) for x in div_list(self.total_fixation_duration, [len(w) for w in self.word_list])]
                 # 特征2
                 # "fixation_duration_div_syllable": round_list(div_list(self.total_fixation_duration,self.get_syllable()),3),
                 # "fixation_duration_div_length": round_list(div_list(self.total_fixation_duration,self.get_len()),3),
 
-                "fixation_duration_div_syllable":
-                    div_list(self.total_fixation_duration, self.get_syllable()),
-                "fixation_duration_div_length": div_list(self.total_fixation_duration, self.get_len()),
-                # 特征3
-                "fixation_duration_diff": self.diff(self.total_fixation_duration),
-                "number_of_fixations_diff": self.diff(self.number_of_fixation),
-                "reading_times_diff": self.diff(self.reading_times)
+                # "fixation_duration_div_syllable":
+                #     div_list(self.total_fixation_duration, self.get_syllable()),
+                # "fixation_duration_div_length": div_list(self.total_fixation_duration, self.get_len()),
+                # # 特征3
+                # "fixation_duration_diff": self.diff(self.total_fixation_duration),
+                # "number_of_fixations_diff": self.diff(self.number_of_fixation),
+                # "reading_times_diff": self.diff(self.reading_times)
 
 
             }

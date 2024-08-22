@@ -15,10 +15,11 @@ from feature.utils import detect_fixations
 from pyheatmap import myHeatmap
 from tools import format_gaze, generate_fixations, generate_pic_by_base64, show_fixations, get_word_location, \
     paint_on_word, get_word_and_sentence_from_text, compute_label, textarea, get_fix_by_time, \
-    get_item_index_x_y, is_watching, get_sentence_by_word, compute_sentence_label,\
+    get_item_index_x_y, get_item_index_x_y_new, is_watching, get_sentence_by_word, compute_sentence_label,\
     get_cnn_feature, get_row, get_euclid_distance, generate_fixations_in_skip_data, show_fixations_by_line, keep_row,  split_fixations
 import cv2
 from semantic_attention import get_word_familiar_rate, calculate_topic_related_score, calculate_keywords_score
+import numpy as np
 
 # Create your views here.
 
@@ -757,13 +758,13 @@ def get_word_feature_by_line(word_locations, word_list):
     size = 0
     for i, loc in enumerate(word_locations):
         if len(tmp) == 0:
-            tmp.append(WordFeature(loc[0], loc[1], loc[2], loc[3], word_list[i]))
+            tmp.append(WordFeatureByLine(loc[0], loc[1], loc[2], loc[3], word_list[i]))
             continue
         if loc[1] != tmp[0].y:
             size += len(tmp)
             word_features_by_line.append([x for x in tmp])
             tmp = []
-        tmp.append(WordFeature(loc[0], loc[1], loc[2], loc[3], word_list[i]))
+        tmp.append(WordFeatureByLine(loc[0], loc[1], loc[2], loc[3], word_list[i]))
     if len(tmp) > 0:
         size += len(tmp)
         word_features_by_line.append([x for x in tmp])
@@ -771,7 +772,7 @@ def get_word_feature_by_line(word_locations, word_list):
     return word_features_by_line
 
 
-class WordFeature:
+class WordFeatureByLine:
     def __init__(self, x, y, width, height, word) -> None:
         self.x = x
         self.y = y
@@ -818,7 +819,6 @@ def adjust_fix_by_line(word_features_by_line, row_level_fix_without_row_assumpti
         for i, fix in enumerate(row_level_fix_without_row_assumption[seqIdx]):
             row_level_fix_without_row_assumption[seqIdx][i][1] = adjust_y
 
-import numpy as np
 def normalize_list_numpy(lst):
     arr = np.array(lst)
     return (arr - np.min(arr)) / (np.max(arr) - np.min(arr))
@@ -833,3 +833,290 @@ def pooling(data: list, window_size: int) -> list:
         pooled_value = sum(window) / len(window)
         pooled_features.append(pooled_value)
     return pooled_features
+
+
+def dataset_of_all_time_for_skip(request):
+    """按照时间切割数据集"""
+    experiment_list_select = [1934]
+    from datetime import datetime
+    now = datetime.now().strftime("%Y%m%d")
+
+    logger.info(f"本次生成{len(experiment_list_select)}条")
+
+    base_path = f"data/dataset/{now}/"
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+
+    word_feature_path = f"{base_path}all-word-feature-{now}-{len(experiment_list_select)}.csv"
+    sent_feature_path = f"{base_path}all-sent-feature-{now}-{len(experiment_list_select)}.csv"
+    cnn_feature_path = f"{base_path}all-cnn-feature-{now}-{len(experiment_list_select)}.csv"
+
+    experiments = Experiment.objects.filter(id__in=experiment_list_select)
+
+    cnnFeature = CNNFeature()
+
+    success = 0
+    fail = 0
+
+    for experiment in experiments:
+        # try:
+        time = 0  # 记录当前的时间
+        page_data_list = PageData.objects.filter(experiment_id=experiment.id)
+        # 创建不同页的信息
+        word_feature_list = []
+        sent_feature_list = []
+        for page_data in page_data_list:
+            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t, end_time=0)
+            # 按行切割的眼动
+            _, row_level_fix_without_row_assumption, hit_rows = generate_fixations_in_skip_data(
+                gaze_points, page_data.texts, page_data.location, page_id=page_data.id
+            )
+            assert len(row_level_fix_without_row_assumption) == len(hit_rows)
+            # 按行切割的文本
+            word_list, _ = get_word_and_sentence_from_text(page_data.texts)
+            location =  json.loads(page_data.location)
+            text_rows = split_text_by_row(location, word_list)
+            # label
+            word_label, _, _ = compute_label( # 全量的，需要按行截取
+                page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
+            )  # 填充标签
+            word_label_by_rows = get_word_label_by_row(word_label, text_rows)
+            word_list_by_rows = get_word_list_by_row(word_list, text_rows)
+            print(f"row_level_fix_without_row_assumption:{row_level_fix_without_row_assumption}")
+            print(f"hit_rows:{hit_rows}")
+            print(f"text_rows:{text_rows}")
+            print(f"word_label_by_rows:{word_label_by_rows}")
+
+
+            # 处理每一个fix_seq
+            for fix_seq_id, fix_seq in enumerate(row_level_fix_without_row_assumption):
+                possible_rows = [idx for idx in range(hit_rows[fix_seq_id]-1, hit_rows[fix_seq_id]+2) if idx >= 0 and idx < len(text_rows)]
+
+                for row in possible_rows:
+                    adjust_y = (text_rows[row][0][2] + text_rows[row][0][4]) / 2 # word, left, top, right, bottom
+                    fix_seq = [[fix[0], adjust_y, fix[2]] for fix in fix_seq]
+                    # 调整fix到每一行
+                    word_feature = get_word_feature(fix_seq, text_rows[row], word_label_by_rows[row])
+
+                    fix_seq_id_list = [fix_seq_id for _ in range(word_feature.num)]
+                    word_feature.fix_seq_id_list = fix_seq_id_list
+                    row_idx_list = [row for _ in range(word_feature.num)]
+                    word_feature.row_idx_list = row_idx_list
+
+                    word_feature.word_list = word_list_by_rows[row]
+
+                    word_feature.to_csv(word_feature_path, experiment.id, page_data.id, time, experiment.user,
+                               experiment.article_id)
+
+            return HttpResponse(1)
+           
+
+
+
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            # word_level
+            wordFeature = WordFeature(len(word_list))
+            wordFeature.word_list = word_list  # 填充单词
+            wordFeature.word_understand, wordFeature.sentence_understand, wordFeature.mind_wandering = compute_label(
+                page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
+            )  # 填充标签
+            for i, word in enumerate(word_list):
+                sent_index = get_sentence_by_word(i, sentence_list)
+                wordFeature.sentence_id[i] = sent_index  # 使用page_id,time,sentence_id可以区分
+            word_feature_list.append(wordFeature)
+            # sentence_level
+            sentFeature = SentFeature(len(sentence_list))
+            sentFeature.sentence = [sentence[0] for sentence in sentence_list]
+            sentFeature.sentence_id = list(range(len(sentence_list)))  # 记录id
+            # todo 句子标签的生成
+            sentFeature.sentence_understand, sentFeature.mind_wandering = compute_sentence_label(
+                page_data.sentenceLabels, page_data.wanderLabels, sentence_list)
+            sent_feature_list.append(sentFeature)
+
+        cnn_gaze_points = []
+        cnn_result_fixations = []
+        for p, page_data in enumerate(page_data_list):
+            wordFeature = word_feature_list[p]  # 获取单词特征
+            sentFeature = sent_feature_list[p]  # 获取句子特征
+
+            word_list, sentence_list = get_word_and_sentence_from_text(page_data.texts)
+            border, rows, danger_zone, len_per_word = textarea(page_data.location)
+
+            end = 500
+            if page_data.id in [2051, 2052, 2053, 2067, 1226, 1298, 1300]:
+                end = 0
+            gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t, end_time=end)
+            cnn_gaze_points.extend(gaze_points)
+
+            result_fixations, row_sequence, row_level_fix, sequence_fixations = generate_fixations(
+                gaze_points, page_data.texts, page_data.location
+            )
+            cnn_result_fixations.extend(result_fixations)
+            # 记录是否已过first pass
+            first_pass = [0 for _ in sentence_list]
+            reach_medium_times = [0 for _ in sentence_list]
+            max_reach_index = [0 for _ in sentence_list]
+
+            # 计算特征
+            pre_word_index = -1
+            for f, fixation in enumerate(result_fixations):
+                word_index, isAdjust = get_item_index_x_y(json.loads(page_data.location), fixation[0], fixation[1])
+                if word_index != -1:
+                    wordFeature.number_of_fixation[word_index] += 1
+                    wordFeature.total_fixation_duration[word_index] += fixation[2]
+                    if word_index != pre_word_index:  # todo reading times的计算
+                        wordFeature.reading_times[word_index] += 1
+
+                    sent_index = get_sentence_by_word(word_index, sentence_list)
+                    if sent_index != -1:
+                        sentFeature.total_dwell_time[sent_index] += fixation[2]
+                        if first_pass[sent_index] < 2:
+                            sentFeature.first_pass_total_dwell_time[sent_index] += fixation[2]
+                        # if f!=0:
+                        if pre_word_index != word_index:
+                            sentFeature.saccade_times[sent_index] += 1  # 将两个fixation之间都作为saccade
+                            if first_pass[sent_index] < 2:
+                                sentFeature.first_pass_saccade_times[sent_index] += 1
+
+                            if pre_word_index - word_index > 0:  # 往后看,阈值暂时设为1个单词
+                                sentFeature.backward_saccade_times[sent_index] += 1
+                                if first_pass[sent_index] < 2:
+                                    sentFeature.first_pass_backward_saccade_times[sent_index] += 1
+                            if pre_word_index - word_index < 0:  # 往前阅读（正常阅读顺序)
+                                sentFeature.forward_saccade_times[sent_index] += 1
+                                if first_pass[sent_index] < 2:
+                                    sentFeature.first_pass_forward_saccade_times[sent_index] += 1
+
+                            sentFeature.saccade_duration[sent_index] += result_fixations[f][3] - \
+                                                                        result_fixations[f - 1][4]  # 3是起始，4是结束
+                            sentFeature.saccade_velocity[sent_index] += get_euclid_distance(
+                                (result_fixations[f][0], result_fixations[f][1]),
+                                (result_fixations[f - 1][0], result_fixations[f - 1][1]))  # 记录的实际上是距离
+                            if first_pass[sent_index] < 2:
+                                sentFeature.first_pass_saccade_duration[sent_index] += result_fixations[f][3] - \
+                                                                                       result_fixations[f - 1][
+                                                                                           4]  # 3是起始，4是结束
+                                sentFeature.first_pass_saccade_velocity[sent_index] += get_euclid_distance(
+                                    (result_fixations[f][0], result_fixations[f][1]),
+                                    (result_fixations[f - 1][0], result_fixations[f - 1][1]))  # 记录的实际上是距离
+
+                            pre_row = get_row(pre_word_index, rows)
+                            now_row = get_row(word_index, rows)
+                            if pre_row == now_row:
+                                sentFeature.horizontal_saccade_proportion[sent_index] += 1  # 记录的实际上是次数
+                                if first_pass[sent_index] < 2:
+                                    sentFeature.first_pass_horizontal_saccade_proportion[sent_index] += 1  # 记录的实际上是次数
+
+                            if word_index > max_reach_index[sent_index]:
+                                max_reach_index[sent_index] = word_index
+
+                            sentence_now = sentence_list[sent_index]
+                            # 相关度
+                            # words = word_list[sentence_now[1]:sentence_now[2]]
+                            # diffs = [get_word_familiar_rate(word) for word in words]
+                            # diffs = normalize_list(diffs)
+                            # reading_times_norm = normalize_list(wordFeature.reading_times[sentence_now[1]:sentence_now[2]])
+                            # number_of_fixations_norm = normalize_list(wordFeature.number_of_fixation[sentence_now[1]:sentence_now[2]])
+                            # total_fixation_duration_norm = normalize_list(wordFeature.total_fixation_duration[sentence_now[1]:sentence_now[2]])
+                            #
+                            # sentFeature.reading_times_cor[sent_index] = multiply_and_sum_lists(diffs,reading_times_norm)
+                            # sentFeature.number_of_fixation_cor[sent_index] = multiply_and_sum_lists(diffs,number_of_fixations_norm)
+                            # sentFeature.total_fixation_duration_cor[sent_index] = multiply_and_sum_lists(diffs,total_fixation_duration_norm)
+                            #
+                            # if first_pass[sent_index]  < 2:
+                            #     sentFeature.first_pass_reading_times_cor[sent_index] = multiply_and_sum_lists(diffs,
+                            #                                                                        reading_times_norm)
+                            #     sentFeature.first_pass_number_of_fixation_cor[sent_index] = multiply_and_sum_lists(diffs,
+                            #                                                                             number_of_fixations_norm)
+                            #     sentFeature.first_pass_total_fixation_duration_cor[sent_index] = multiply_and_sum_lists(diffs,
+                            #                                                                                  total_fixation_duration_norm)
+                            #
+
+                            # 计算是否为first_pass
+                            word_now_loc = (word_index - sentence_now[1]) / sentence_now[3]
+                            if word_now_loc > 0.5:
+                                reach_medium_times[sent_index] += 1
+                            if reach_medium_times[sent_index] > 3 and word_now_loc < 0.3:
+                                first_pass[sent_index] += 1
+
+                    pre_word_index = word_index  # todo important
+            # 计算need prediction
+            wordFeature.need_prediction = is_watching(result_fixations, json.loads(page_data.location), wordFeature.num)
+            # 生成数据
+            wordFeature.to_csv(word_feature_path, experiment.id, page_data.id, time, experiment.user,
+                               experiment.article_id)
+
+            sentFeature.to_csv(sent_feature_path, experiment.id, page_data.id, time, experiment.user,
+                               experiment.article_id)
+
+        # cnn feature的生成 todo 暂时不变，之后修改
+        get_cnn_feature(time, cnnFeature, cnn_gaze_points, experiment.id, cnn_result_fixations)
+
+        time += 1
+
+        success += 1
+        logger.info(f"成功生成{success}条,失败{fail}条")
+        # except Exception:
+        #     fail += 1
+
+    # 生成exp相关信息
+    cnnFeature.to_csv(cnn_feature_path)
+
+    return HttpResponse(1)
+
+def split_text_by_row(locations, word_list):
+    text_rows = []
+    row_data = []
+    assert len(locations) == len(word_list)
+    if len(locations) == 0:
+        return text_rows
+    top = locations[0]["top"]
+    for i, loc in enumerate(locations):
+        if loc["top"] != top:
+            text_rows.append(row_data)
+            row_data = []
+        row_data.append([word_list[i], loc["left"], loc["top"], loc["right"], loc["bottom"]])
+        top = loc["top"]
+    if len(row_data) > 0:
+        text_rows.append(row_data)
+    return text_rows
+    
+def get_word_feature(fix_seq, text_row, word_label):
+    wordFeature = WordFeature(len(text_row))
+    wordFeature.word_understand = word_label
+    # 计算特征
+    pre_word_index = -1
+    for _, fixation in enumerate(fix_seq):
+        word_index, _ = get_item_index_x_y_new(text_row, fixation[0], fixation[1])
+        if word_index != -1:
+            wordFeature.number_of_fixation[word_index] += 1
+            wordFeature.total_fixation_duration[word_index] += fixation[2]
+            if word_index != pre_word_index:
+                wordFeature.reading_times[word_index] += 1
+                pre_word_index = word_index
+
+    return wordFeature
+
+
+
+def get_word_label_by_row(word_label, text_rows):
+    word_label_by_rows = []
+    begin = 0
+    for row in text_rows:
+        end = begin + len(row)
+        word_label_by_rows.append(word_label[begin: end])
+        begin = end
+    assert len(text_rows) == len(word_label_by_rows)
+    assert len(text_rows[0]) == len(word_label_by_rows[0])
+    return word_label_by_rows
+
+def get_word_list_by_row(word_list, text_rows):
+    word_list_by_rows = []
+    begin = 0
+    for row in text_rows:
+        end = begin + len(row)
+        word_list_by_rows.append(word_list[begin: end])
+        begin = end
+    assert len(text_rows) == len(word_list_by_rows)
+    assert len(text_rows[0]) == len(word_list_by_rows[0])
+    return word_list_by_rows

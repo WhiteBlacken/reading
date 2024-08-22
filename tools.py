@@ -530,6 +530,19 @@ def get_item_index_x_y(location, x, y):
 
     return index, flag
 
+def get_item_index_x_y_new(location, x, y):
+    """根据所有item的位置，当前给出的x,y,判断其在哪个item里 分为word level和row level"""
+
+    flag = False
+    index = -1
+    # 先找是否正好在范围内
+    for i, word in enumerate(location):
+        if word[1] <= x <= word[3] and word[2] <= y <= word[4]:
+            index = i
+            return index, False
+
+    return index, flag
+
 
 def get_euclid_distance(coor1, coor2):
     """计算欧式距离"""
@@ -845,15 +858,15 @@ class FeatureSet(object):
         self.sentence_length = [0 for _ in range(num)]
 
         # label
-        self.word_understand = []
-        self.sentence_understand = []
-        self.mind_wandering = []
+        self.word_understand = [0 for _ in range(num)]
+        self.sentence_understand = [0 for _ in range(num)]
+        self.mind_wandering = [0 for _ in range(num)]
 
         self.page_data = [0 for _ in range(num)]
         self.sentence_index = [0 for _ in range(num)]
 
         # word_list
-        self.word_list = []
+        self.word_list = [0 for _ in range(num)]
 
         # watching
         self.is_watching = [0 for _ in range(num)]
@@ -926,23 +939,23 @@ class FeatureSet(object):
 
 
                 # sentence_level_div_length
-                "total_dwell_time_of_sentence_div_length": self.get_list_div(self.total_dwell_time,
-                                                                             self.sentence_length),
-                "saccade_times_of_sentence_div_length": self.get_list_div(self.saccade_times, self.sentence_length),
-                "forward_times_of_sentence_div_length": self.get_list_div(self.forward_saccade_times,
-                                                                          self.sentence_length),
-                "backward_times_of_sentence_div_length": self.get_list_div(self.backward_saccade_times,
-                                                                           self.sentence_length),
+                # "total_dwell_time_of_sentence_div_length": self.get_list_div(self.total_dwell_time,
+                #                                                              self.sentence_length),
+                # "saccade_times_of_sentence_div_length": self.get_list_div(self.saccade_times, self.sentence_length),
+                # "forward_times_of_sentence_div_length": self.get_list_div(self.forward_saccade_times,
+                #                                                           self.sentence_length),
+                # "backward_times_of_sentence_div_length": self.get_list_div(self.backward_saccade_times,
+                #                                                            self.sentence_length),
 
-                # sentence_level_div_log
-                "total_dwell_time_of_sentence_div_log": self.get_list_div(self.total_dwell_time,
-                                                                          self.list_log(self.sentence_length)),
-                "saccade_times_of_sentence_div_log": self.get_list_div(self.saccade_times,
-                                                                       self.list_log(self.sentence_length)),
-                "forward_times_of_sentence_div_log": self.get_list_div(self.forward_saccade_times,
-                                                                       self.list_log(self.sentence_length)),
-                "backward_times_of_sentence_div_log": self.get_list_div(self.backward_saccade_times,
-                                                                        self.list_log(self.sentence_length)),
+                # # sentence_level_div_log
+                # "total_dwell_time_of_sentence_div_log": self.get_list_div(self.total_dwell_time,
+                #                                                           self.list_log(self.sentence_length)),
+                # "saccade_times_of_sentence_div_log": self.get_list_div(self.saccade_times,
+                #                                                        self.list_log(self.sentence_length)),
+                # "forward_times_of_sentence_div_log": self.get_list_div(self.forward_saccade_times,
+                #                                                        self.list_log(self.sentence_length)),
+                # "backward_times_of_sentence_div_log": self.get_list_div(self.backward_saccade_times,
+                #                                                         self.list_log(self.sentence_length)),
 
 
 
