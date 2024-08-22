@@ -1086,7 +1086,7 @@ def get_word_feature(fix_seq, text_row, word_label):
     wordFeature.word_understand = word_label
     # 计算特征
     pre_word_index = -1
-    for _, fixation in enumerate(fix_seq):
+    for i, fixation in enumerate(fix_seq):
         word_index, _ = get_item_index_x_y_new(text_row, fixation[0], fixation[1])
         if word_index != -1:
             wordFeature.number_of_fixation[word_index] += 1
@@ -1094,6 +1094,18 @@ def get_word_feature(fix_seq, text_row, word_label):
             if word_index != pre_word_index:
                 wordFeature.reading_times[word_index] += 1
                 pre_word_index = word_index
+                # 句子级别
+                wordFeature.saccade_times_of_sentence_one_word += 1
+                if i > 0:
+                    wordFeature.saccade_duration_one_word += fix_seq[i][2] - fix_seq[i-1][2]
+                    if fix_seq[i][2] - fix_seq[i-1][2] != 0:
+                        wordFeature.saccade_velocity_one_word += (get_fix_distance(fix_seq[i-1], fix_seq[i])) / (fix_seq[i][2] - fix_seq[i-1][2])
+                if pre_word_index > word_index:
+                    wordFeature.backward_times_of_sentence_one_word += 1
+                if pre_word_index < word_index:
+                    wordFeature.forward_times_of_sentence_one_word += 1
+    wordFeature.horizontal_saccade_proportion_one_word = 1
+    wordFeature.total_dwell_time_of_sentence_one_word = fix_seq[-1][2] - fix_seq[0][2]
 
     return wordFeature
 
@@ -1120,3 +1132,6 @@ def get_word_list_by_row(word_list, text_rows):
     assert len(text_rows) == len(word_list_by_rows)
     assert len(text_rows[0]) == len(word_list_by_rows[0])
     return word_list_by_rows
+
+def get_fix_distance(pre_fix, fix):
+    return math.sqrt(math.pow(pre_fix[0]-fix[0], 2) + math.pow(pre_fix[1]-fix[1], 2))

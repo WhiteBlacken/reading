@@ -22,6 +22,17 @@ class WordFeature(object):
         self.fixation_duration_diff = [0 for _ in range(num)]
         self.number_of_fixations_diff = [0 for _ in range(num)]
         self.reading_times_diff = [0 for _ in range(num)]
+
+        #
+        self.backward_times_of_sentence_one_word = 0 # 反正每行都一样
+        self.forward_times_of_sentence_one_word = 0
+        self.horizontal_saccade_proportion_one_word = 0
+        self.saccade_duration_one_word = 0
+        self.saccade_times_of_sentence_one_word = 0
+        self.saccade_velocity_one_word = 0
+        self.total_dwell_time_of_sentence_one_word = 0
+
+
         # 实验相关信息
         self.word_list = ["" for _ in range(num)]  # 单词列表
         self.sentence_id = [0 for _ in range(num)]  # 不同时刻的同一个句子，为不同的句子
@@ -67,6 +78,9 @@ class WordFeature(object):
         return results
 
     def to_csv(self, filename, exp_id, page_id, time, user, article_id):
+        self.sum_word_len = sum([len(x) for x in self.word_list])
+        self.sum_word_syllable = sum(self.get_syllable())
+
         df = pd.DataFrame(
             {
                 # 1. 实验信息相关
@@ -106,7 +120,32 @@ class WordFeature(object):
                 "reading_times_var": [round(np.var(self.reading_times), 3) for _ in range(self.num)],
 
                 'fixation_duration_div_syllable': [round(x, 3) for x in div_list(self.total_fixation_duration, self.get_syllable())],
-                'fixation_duration_div_length': [round(x, 3) for x in div_list(self.total_fixation_duration, [len(w) for w in self.word_list])]
+                'fixation_duration_div_length': [round(x, 3) for x in div_list(self.total_fixation_duration, [len(w) for w in self.word_list])],
+                
+                "backward_times_of_sentence": [self.backward_times_of_sentence_one_word for _ in range(self.num)],
+                "forward_times_of_sentence": [self.forward_times_of_sentence_one_word for _ in range(self.num)],
+                "horizontal_saccade_proportion": [self.horizontal_saccade_proportion_one_word for _ in range(self.num)],
+                "saccade_duration": [self.saccade_duration_one_word for _ in range(self.num)],
+                "saccade_times_of_sentence": [self.saccade_times_of_sentence_one_word for _ in range(self.num)],
+                "saccade_velocity": [round(self.saccade_velocity_one_word, 3) for _ in range(self.num)],
+                "total_dwell_time_of_sentence": [self.total_dwell_time_of_sentence_one_word for _ in range(self.num)],
+
+                "backward_times_of_sentence_div_log": [round(self.backward_times_of_sentence_one_word/math.log(self.sum_word_len),3) for _ in range(self.num)],
+                "forward_times_of_sentence_div_log": [round(self.forward_times_of_sentence_one_word/math.log(self.sum_word_len),3) for _ in range(self.num)],
+                "horizontal_saccade_proportion_div_log": [round(self.horizontal_saccade_proportion_one_word/math.log(self.sum_word_len),3) for _ in range(self.num)],
+                "saccade_duration_div_log": [round(self.saccade_duration_one_word/math.log(self.sum_word_len),3) for _ in range(self.num)],
+                "saccade_times_of_sentence_div_log": [round(self.saccade_times_of_sentence_one_word/math.log(self.sum_word_len),3) for _ in range(self.num)],
+                "saccade_velocity_div_log": [round(self.saccade_velocity_one_word/math.log(self.sum_word_len), 3) for _ in range(self.num)],
+                "total_dwell_time_of_sentence_div_log": [round(self.total_dwell_time_of_sentence_one_word/math.log(self.sum_word_len),3) for _ in range(self.num)],
+                
+                "backward_times_of_sentence_div_syllable": [round(self.backward_times_of_sentence_one_word/self.sum_word_syllable,3) for _ in range(self.num)],
+                "forward_times_of_sentence_div_syllable": [round(self.forward_times_of_sentence_one_word/self.sum_word_syllable,3) for _ in range(self.num)],
+                "horizontal_saccade_proportion_div_syllable": [round(self.horizontal_saccade_proportion_one_word/self.sum_word_syllable,3) for _ in range(self.num)],
+                "saccade_duration_div_syllable": [round(self.saccade_duration_one_word/self.sum_word_syllable,3) for _ in range(self.num)],
+                "saccade_times_of_sentence_div_syllable": [round(self.saccade_times_of_sentence_one_word/self.sum_word_syllable,3) for _ in range(self.num)],
+                "saccade_velocity_div_syllable": [round(self.saccade_velocity_one_word/self.sum_word_syllable, 3) for _ in range(self.num)],
+                "total_dwell_time_of_sentence_div_syllable": [round(self.total_dwell_time_of_sentence_one_word/self.sum_word_syllable,3) for _ in range(self.num)],
+                
                 # 特征2
                 # "fixation_duration_div_syllable": round_list(div_list(self.total_fixation_duration,self.get_syllable()),3),
                 # "fixation_duration_div_length": round_list(div_list(self.total_fixation_duration,self.get_len()),3),
