@@ -7,6 +7,7 @@ from django.db.models import QuerySet
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from loguru import logger
+from django.shortcuts import redirect
 
 from analysis.feature import WordFeature, SentFeature
 from analysis.models import Text, Paragraph, Translation, Dictionary, Experiment, PageData
@@ -41,14 +42,19 @@ def my_login(request):
     psw = request.POST.get("psw", None)
     device = request.POST.get("device", None)
     request.session["device"] = device
+    needCorrection = request.POST.get("needCorrection", None)
+    print(f"needCorrection:{needCorrection}")
 
     user = authenticate(username=username, password=psw)
     if user is None:
         user = User.objects.create_user(username=username, password=psw)
         user.save()
     login(request, user)
-    # return render(request, "select_role.html")
-    return render(request, "calibration.html")
+    
+    if needCorrection == "true":
+        return render(request, "calibration.html")
+    else:
+        return redirect(choose_text)
 
 
 def choose_text(request):
@@ -376,7 +382,7 @@ def get_word_not_understand(wordFeature,rows) -> list:
         return []
     results = (
         [max_index]
-        if freq_dist[wordFeature.word_list[max_index]] < 300
+        if len([wordFeature.word_list[max_index]]) < 4
         and wordFeature.total_fixation_duration[max_index] > 900
         else []
     )

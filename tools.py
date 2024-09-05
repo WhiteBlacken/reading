@@ -340,7 +340,7 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
                 row_pass_time[row_index] += 1
                 result_rows.append(row_index)
         now_max_row = max(result_rows)
-    print(f"[move_fixation_by_no_blank_row_assumption] row_index:{result_rows}")
+    # print(f"[move_fixation_by_no_blank_row_assumption] row_index:{result_rows}")
     assert len(result_rows) == len(sequence_fixations)
 
     for i, sequence in enumerate(sequence_fixations):
@@ -351,9 +351,9 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
             result_fixation = [[x[0], adjust_y[i], x[2], x[6], x[7]] for i,x in enumerate(sequence)]
             result_fixations.extend(result_fixation)
             row_level_fix.append(result_fixation)
-    print(f"result_fixations:{result_fixations[0:3]}")
-    print(f"row_level_fix:{row_level_fix[0:3]}")
-    print(f"result_rows:{result_rows}")
+    # print(f"result_fixations:{result_fixations[0:3]}")
+    # print(f"row_level_fix:{row_level_fix[0:3]}")
+    # print(f"result_rows:{result_rows}")
     return result_fixations, result_rows, row_level_fix, result_rows
 
 

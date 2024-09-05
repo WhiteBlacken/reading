@@ -7,6 +7,28 @@ from textstat import textstat
 
 from tools import div_list, round_list
 
+class RowArticle:
+    def __init__(self, num):
+        self.num = num
+        self.article_id = 0
+        self.row_idx = []
+        self.row_text = []
+
+
+    def to_csv(self, filename):
+        df = pd.DataFrame({
+            "article_id": [self.article_id for _ in range(self.num)],
+            "row_idx": self.row_idx,
+            "row_text": self.row_text
+
+        })
+        if os.path.exists(filename):
+            df.to_csv(filename, index=False, mode="a", header=False)
+        else:
+            df.to_csv(filename, index=False, mode="a")
+
+
+    
 
 class WordFeature(object):
     def __init__(self, num):
@@ -146,18 +168,6 @@ class WordFeature(object):
                 "saccade_velocity_div_syllable": [round(self.saccade_velocity_one_word/self.sum_word_syllable, 3) for _ in range(self.num)],
                 "total_dwell_time_of_sentence_div_syllable": [round(self.total_dwell_time_of_sentence_one_word/self.sum_word_syllable,3) for _ in range(self.num)],
                 
-                # 特征2
-                # "fixation_duration_div_syllable": round_list(div_list(self.total_fixation_duration,self.get_syllable()),3),
-                # "fixation_duration_div_length": round_list(div_list(self.total_fixation_duration,self.get_len()),3),
-
-                # "fixation_duration_div_syllable":
-                #     div_list(self.total_fixation_duration, self.get_syllable()),
-                # "fixation_duration_div_length": div_list(self.total_fixation_duration, self.get_len()),
-                # # 特征3
-                # "fixation_duration_diff": self.diff(self.total_fixation_duration),
-                # "number_of_fixations_diff": self.diff(self.number_of_fixation),
-                # "reading_times_diff": self.diff(self.reading_times)
-
 
             }
         )

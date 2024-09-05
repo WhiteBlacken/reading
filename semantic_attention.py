@@ -83,7 +83,7 @@ def calculate_topic_related_score(text):
 
 # 示例用法
 text = "This is a sample texts about machine learning and data science. In this home, it is big and nice."
-print(calculate_topic_related_score(text))
+# print(calculate_topic_related_score(text))
 
 
 from keybert import KeyBERT
