@@ -1028,7 +1028,6 @@ def get_pic_by_fix(request):
 
     fix_seq_max_id = 0
     for idx, row in data.iterrows():
-        print("----0")
         exp_id, page_id, fix_seq_id, row_id = row['exp_id'], row['page_id'], row['fix_seq_id'], row['row_id']
         if exp_id != int(request_exp_id):
             continue
@@ -1040,15 +1039,12 @@ def get_pic_by_fix(request):
             location = json.loads(page.location)
             text_rows = split_text_by_row(location, word_list)
             text_rows_num_by_page.append(text_rows_num_by_page[-1]+len(text_rows))
-        print(f"text_rows_num_by_page:{text_rows_num_by_page}")
-
         page_data = PageData.objects.get(id=page_id)
         gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t, end_time=0)
         # 按行切割的眼动
         _, row_level_fix_without_row_assumption, hit_rows = generate_fixations_in_skip_data(
             gaze_points, page_data.texts, page_data.location, page_id=page_data.id
         )
-        print(f"row_level_fix_without_row_assumption:{row_level_fix_without_row_assumption[:5]}")
         assert len(row_level_fix_without_row_assumption) == len(hit_rows)
         # 按行切割的文本
         word_list, _ = get_word_and_sentence_from_text(page_data.texts)
