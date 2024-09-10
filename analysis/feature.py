@@ -13,14 +13,17 @@ class RowArticle:
         self.article_id = 0
         self.row_idx = []
         self.row_text = []
+        self.row_label = []
+        self.experiment_id = 0
 
 
     def to_csv(self, filename):
         df = pd.DataFrame({
+            "experiment_id": [self.experiment_id for _ in range(self.num)],
             "article_id": [self.article_id for _ in range(self.num)],
             "row_idx": self.row_idx,
-            "row_text": self.row_text
-
+            "row_text": self.row_text,
+            "row_label": self.row_label
         })
         if os.path.exists(filename):
             df.to_csv(filename, index=False, mode="a", header=False)

@@ -398,11 +398,14 @@ def generate_fixations_in_skip_data(gaze_points, texts, location, page_id=0):
     # TODO 所有没有对应单词的fixation都被删除了，这有点问题
     # adjust_fixations:[x,y,duration,文章中第几个词，一行中第几个词，第几行，起始时间，结束时间]
     adjust_fixations = fixation_word_mapping(fixations, locations, rows)
+    print(f"adjust_fixation:{adjust_fixations}")
     # 将fixation按行切割
     sequence_fixations = FixationSequenceSpiltByRow(adjust_fixations, rows).split()
     print(f"[generate_fixations_in_skip_data] size of sequence_fixations={len(sequence_fixations)}")
+    print(f"sequence_fixations:{sequence_fixations[:5]}")
     # 根据行先验调整fixations
     result_fixations, result_rows, row_level_fix, hit_rows = move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_word,page_id=page_id, use_assumption=False)
+    print(f"row_level_fix:{row_level_fix[:5]}")
     return result_fixations, row_level_fix, hit_rows
 
 def split_fixations(gaze_points, location, type):

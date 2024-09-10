@@ -506,23 +506,31 @@ def get_part_time_pic(request):
 
 
 def dataset_of_all_time(request):
-    """按照时间切割数据集"""
-    filename = "exps/data1.txt"
-    file = open(filename, 'r')
-    lines = file.readlines()
+    # """按照时间切割数据集"""
+    # filename = "exps/data1.txt"
+    # file = open(filename, 'r')
+    # lines = file.readlines()
 
-    experiment_list_select = list(lines)
+    # experiment_list_select = list(lines)
 
-    filename = "exps/data2.txt"
-    file = open(filename, 'r')
-    lines1 = file.readlines()
-    experiment_list_select.extend(list(lines1))
+    # filename = "exps/data2.txt"
+    # file = open(filename, 'r')
+    # lines1 = file.readlines()
+    # experiment_list_select.extend(list(lines1))
 
-    filename = "exps/data3.txt"
-    file = open(filename, 'r')
-    lines2 = file.readlines()
-    experiment_list_select.extend(list(lines2))
-    print(f"lens:{len(experiment_list_select)}")
+    # filename = "exps/data3.txt"
+    # file = open(filename, 'r')
+    # lines2 = file.readlines()
+    # experiment_list_select.extend(list(lines2))
+    # print(f"lens:{len(experiment_list_select)}")
+
+    skip_page_list = [1589, 1825, 1929, 1960, 1985, 2020, 2640, 2650, 2653, 2671, 2682, 2691, 2713, 2726, 2738, 2749, 2750, 2751, 2752, 2753, 2754, 2762, 2763, 2771, 2773, 2775, 2782, 2784, 2785, 2787, 2788]
+    # experiments = Experiment.objects.filter(id__in=experiment_list_select)
+
+    exp_ids = [x.experiment_id for x in PageData.objects.filter(id__in=skip_page_list)]
+    exp_ids = list(set(exp_ids))
+    experiments = Experiment.objects.filter(id__in=exp_ids)
+    experiment_list_select = experiments
     #
     # experiment_list_select = [1889, 1890, 1892, 1896]
     # filename = "native.txt"
@@ -536,7 +544,7 @@ def dataset_of_all_time(request):
 
     logger.info(f"本次生成{len(experiment_list_select)}条")
 
-    base_path = f"data\\dataset\\{now}\\"
+    base_path = f"data/dataset/{now}/"
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
@@ -551,6 +559,8 @@ def dataset_of_all_time(request):
 
     success = 0
     fail = 0
+
+    
 
     for experiment in experiments:
         # try:
@@ -854,11 +864,11 @@ def dataset_of_all_time_for_skip(request):
     exp_ids = list(set(exp_ids))
     experiments = Experiment.objects.filter(id__in=exp_ids)
 
-    word_feature_path = f"{base_path}all-word-feature-{now}-{len(experiments)}.csv"
-    sent_feature_path = f"{base_path}all-sent-feature-{now}-{len(experiments)}.csv"
-    cnn_feature_path = f"{base_path}all-cnn-feature-{now}-{len(experiments)}.csv"
+    word_feature_path = f"{base_path}all-word-feature-{now}-{len(experiments)}-row-formart.csv"
+    sent_feature_path = f"{base_path}all-sent-feature-{now}-{len(experiments)}-row-formart.csv"
+    cnn_feature_path = f"{base_path}all-cnn-feature-{now}-{len(experiments)}-row-formart.csv"
 
-    row_article_path = f"{base_path}row_article-{now}-{len(experiments)}.csv"
+    row_article_path = f"{base_path}row_article-{now}-{len(experiments)}-row-formart.csv"
 
 
     for experiment in experiments:
@@ -873,6 +883,7 @@ def dataset_of_all_time_for_skip(request):
             _, row_level_fix_without_row_assumption, hit_rows = generate_fixations_in_skip_data(
                 gaze_points, page_data.texts, page_data.location, page_id=page_data.id
             )
+            print(f"row_level_fix_without_row_assumption:{row_level_fix_without_row_assumption[:5]}")
             assert len(row_level_fix_without_row_assumption) == len(hit_rows)
             # 按行切割的文本
             word_list, _ = get_word_and_sentence_from_text(page_data.texts)
@@ -894,6 +905,8 @@ def dataset_of_all_time_for_skip(request):
             rowArticle.article_id = experiment.article_id
             rowArticle.row_idx = [i+row_idx for i in range(len(text_rows))]
             rowArticle.row_text = word_list_by_rows
+            rowArticle.row_label = word_label_by_rows
+            rowArticle.experiment_id = experiment.id
             rowArticle.to_csv(row_article_path)
 
             # 处理每一个fix_seq
@@ -902,7 +915,7 @@ def dataset_of_all_time_for_skip(request):
 
                 for row in possible_rows:
                     adjust_y = (text_rows[row][0][2] + text_rows[row][0][4]) / 2 # word, left, top, right, bottom
-                    fix_seq = [[fix[0], adjust_y, fix[2]] for fix in fix_seq]
+                    fix_seq = [[fix[0], adjust_y, fix[2], fix[3], fix[4]] for fix in fix_seq]
                     # 调整fix到每一行
                     word_feature = get_word_feature(fix_seq, text_rows[row], word_label_by_rows[row])
 
@@ -951,27 +964,26 @@ def get_word_feature(fix_seq, text_row, word_label):
             wordFeature.total_fixation_duration[word_index] += fixation[2]
             if word_index != pre_word_index:
                 wordFeature.reading_times[word_index] += 1
-                pre_word_index = word_index
                 # 句子级别
                 wordFeature.saccade_times_of_sentence_one_word += 1
                 if i > 0:
-                    wordFeature.saccade_duration_one_word += fix_seq[i][2] - fix_seq[i-1][2] # error 是duration，不是timestamp
+                    wordFeature.saccade_duration_one_word += fix_seq[i][3] - fix_seq[i-1][4]
                     print(fix_seq)
                     # raise KeyError
-                    if fix_seq[i][2] - fix_seq[i-1][2] != 0:
-                        if fix_seq[i][2] - fix_seq[i-1][2] < 0:
-                            pass
-                            # print("error")
+                    if fix_seq[i][3] - fix_seq[i-1][4] != 0:
+                        if fix_seq[i][3] - fix_seq[i-1][4] < 0:
+                            print("error----")
                             # print(fix_seq)
                             # raise KeyError
-                        wordFeature.saccade_velocity_one_word += (get_fix_distance(fix_seq[i-1], fix_seq[i])) / (fix_seq[i][2] - fix_seq[i-1][2]) # error 是duration，不是timestamp
+                        wordFeature.saccade_velocity_one_word += (get_fix_distance(fix_seq[i-1], fix_seq[i])) / (fix_seq[i][3] - fix_seq[i-1][4]) # error 是duration，不是timestamp
                 if pre_word_index > word_index:
                     wordFeature.backward_times_of_sentence_one_word += 1
                 if pre_word_index < word_index:
                     wordFeature.forward_times_of_sentence_one_word += 1
+                pre_word_index = word_index
     wordFeature.horizontal_saccade_proportion_one_word = 1
-    wordFeature.total_dwell_time_of_sentence_one_word = fix_seq[-1][2] - fix_seq[0][2]
-
+    wordFeature.total_dwell_time_of_sentence_one_word = fix_seq[-1][3] - fix_seq[0][3]
+    print(f"backward_times_of_sentence_one_word:{wordFeature.backward_times_of_sentence_one_word},forward_times_of_sentence_one_word:{wordFeature.forward_times_of_sentence_one_word}")
     return wordFeature
 
 
@@ -1001,3 +1013,92 @@ def get_word_list_by_row(word_list, text_rows):
 def get_fix_distance(pre_fix, fix):
     return math.sqrt(math.pow(pre_fix[0]-fix[0], 2) + math.pow(pre_fix[1]-fix[1], 2))
 
+
+def get_pic_by_fix(request):
+    """按照时间切割数据集"""
+    experiment_list_select = [1924]
+    from datetime import datetime
+    request_exp_id = request.GET.get('exp_id')
+    print(f"request_exp_id:{request_exp_id}, type(request):{type(request_exp_id)}")
+    logger.info(f"本次生成{len(experiment_list_select)}条")
+
+    file_path = f"data/reader/20240908-exp_fix_match_row.csv"
+    
+    data = pd.read_csv(file_path)
+
+    fix_seq_max_id = 0
+    for idx, row in data.iterrows():
+        print("----0")
+        exp_id, page_id, fix_seq_id, row_id = row['exp_id'], row['page_id'], row['fix_seq_id'], row['row_id']
+        if exp_id != int(request_exp_id):
+            continue
+
+        page_data_in_exp = PageData.objects.filter(experiment_id=exp_id).order_by('id')
+        text_rows_num_by_page = [0]
+        for page in page_data_in_exp:
+            word_list, _ = get_word_and_sentence_from_text(page.texts)
+            location = json.loads(page.location)
+            text_rows = split_text_by_row(location, word_list)
+            text_rows_num_by_page.append(text_rows_num_by_page[-1]+len(text_rows))
+        print(f"text_rows_num_by_page:{text_rows_num_by_page}")
+
+        page_data = PageData.objects.get(id=page_id)
+        gaze_points = format_gaze(page_data.gaze_x, page_data.gaze_y, page_data.gaze_t, end_time=0)
+        # 按行切割的眼动
+        _, row_level_fix_without_row_assumption, hit_rows = generate_fixations_in_skip_data(
+            gaze_points, page_data.texts, page_data.location, page_id=page_data.id
+        )
+        print(f"row_level_fix_without_row_assumption:{row_level_fix_without_row_assumption[:5]}")
+        assert len(row_level_fix_without_row_assumption) == len(hit_rows)
+        # 按行切割的文本
+        word_list, _ = get_word_and_sentence_from_text(page_data.texts)
+        location =  json.loads(page_data.location)
+        # label
+        word_label, _, _ = compute_label( # 全量的，需要按行截取
+            page_data.wordLabels, page_data.sentenceLabels, page_data.wanderLabels, word_list
+        )  # 填充标签
+        word_label_by_rows = get_word_label_by_row(word_label, text_rows)
+        word_list_by_rows = get_word_list_by_row(word_list, text_rows)
+
+        text_rows = split_text_by_row(json.loads(page_data.location), word_list)
+
+        # 转换row_id
+        convert_row_id = 0
+        for row_max_id in text_rows_num_by_page:
+            if row_id >= row_max_id:
+                convert_row_id = row_id - row_max_id
+        print(f"convert_row_id:{convert_row_id}")
+        adjust_y = (text_rows[convert_row_id][0][2] + text_rows[convert_row_id][0][4]) / 2 # word, left, top, right, bottom
+        try:
+            fix_seq = [[x[0], adjust_y] for x in row_level_fix_without_row_assumption[fix_seq_id-fix_seq_max_id]]
+        except:
+            fix_seq_max_id = fix_seq_id
+            fix_seq = [[x[0], adjust_y] for x in row_level_fix_without_row_assumption[fix_seq_id-fix_seq_max_id]]
+
+
+        base_path = f"data/pic/all_time/{exp_id}/"
+        if not os.path.exists(base_path):
+            os.mkdir(base_path)
+
+         # 生成图片
+        path = f"{base_path}{page_data.id}/"
+
+        # 如果目录不存在，则创建目录
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+        background_path = f"{path}background.png"
+        if not os.path.exists(background_path):
+            # 生成背景图
+            background = generate_pic_by_base64(
+                page_data.image, f"{path}background.png"
+            )
+        # 原始的fixation图
+        fix_img = show_fixations(fix_seq, background_path)
+        cv2.imwrite(f"{path}fix-origin-{fix_seq_id}.png", fix_img)
+
+        gaze_4_heat = [[x[0], x[1]] for x in fix_seq]
+        myHeatmap.draw_heat_map(gaze_4_heat, f"{path}fix_heatmap-{fix_seq_id}.png", background_path)
+
+        # print(f"fix_seq:{fix_seq}")
+    return HttpResponse(1)
