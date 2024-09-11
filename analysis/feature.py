@@ -120,6 +120,7 @@ class WordFeature(object):
                 "word": self.word_list,
                 # "need_prediction": self.need_prediction,
 
+                "need_prediction": [1 if x > 0 else 0 for x in self.number_of_fixation],
                 # # 2. label相关
                 "word_understand": self.word_understand,
                 "sentence_understand": self.sentence_understand,

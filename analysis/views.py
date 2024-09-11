@@ -895,10 +895,6 @@ def dataset_of_all_time_for_skip(request):
             )  # 填充标签
             word_label_by_rows = get_word_label_by_row(word_label, text_rows)
             word_list_by_rows = get_word_list_by_row(word_list, text_rows)
-            # print(f"row_level_fix_without_row_assumption:{row_level_fix_without_row_assumption}")
-            # print(f"hit_rows:{hit_rows}")
-            # print(f"text_rows:{text_rows}")
-            # print(f"word_label_by_rows:{word_label_by_rows}")
 
             # 生成文本集
             rowArticle = RowArticle(len(text_rows))
@@ -909,8 +905,13 @@ def dataset_of_all_time_for_skip(request):
             rowArticle.experiment_id = experiment.id
             rowArticle.to_csv(row_article_path)
 
+            border, rows, danger_zone, len_per_word = textarea(page_data.location)
+            fixations_seq_split_y_diff = split_fixations(gaze_points, page_data.location, "y_diff")
+            hit_rows = get_hit_row(fixations_seq_split_y_diff, rows)
+            assert len(fixations_seq_split_y_diff) == len(hit_rows)
+            print(f"hit_rows:{hit_rows}")
             # 处理每一个fix_seq
-            for fix_seq_id, fix_seq in enumerate(row_level_fix_without_row_assumption):
+            for fix_seq_id, fix_seq in enumerate(fixations_seq_split_y_diff):
                 possible_rows = [idx for idx in range(hit_rows[fix_seq_id]-1, hit_rows[fix_seq_id]+2) if idx >= 0 and idx < len(text_rows)]
 
                 for row in possible_rows:
@@ -1059,6 +1060,8 @@ def get_pic_by_fix(request):
 
         text_rows = split_text_by_row(json.loads(page_data.location), word_list)
 
+        fixations_seq_split_y_diff = split_fixations(gaze_points, page_data.location, "y_diff")
+
         # 转换row_id
         convert_row_id = 0
         for row_max_id in text_rows_num_by_page:
@@ -1067,10 +1070,10 @@ def get_pic_by_fix(request):
         print(f"convert_row_id:{convert_row_id}")
         adjust_y = (text_rows[convert_row_id][0][2] + text_rows[convert_row_id][0][4]) / 2 # word, left, top, right, bottom
         try:
-            fix_seq = [[x[0], adjust_y] for x in row_level_fix_without_row_assumption[fix_seq_id-fix_seq_max_id]]
+            fix_seq = [[x[0], adjust_y] for x in fixations_seq_split_y_diff[fix_seq_id-fix_seq_max_id]]
         except:
             fix_seq_max_id = fix_seq_id
-            fix_seq = [[x[0], adjust_y] for x in row_level_fix_without_row_assumption[fix_seq_id-fix_seq_max_id]]
+            fix_seq = [[x[0], adjust_y] for x in fixations_seq_split_y_diff[fix_seq_id-fix_seq_max_id]]
 
 
         base_path = f"data/pic/all_time/{exp_id}/"
@@ -1091,10 +1094,20 @@ def get_pic_by_fix(request):
             background = generate_pic_by_base64(
                 page_data.image, f"{path}background.png"
             )
+            image = cv2.imread(background)
+            word_locations = get_word_location(page_data.location)
+            words_not_understand = json.loads(page_data.wordLabels) if page_data.wordLabels else []
+            title = ""
+            paint_on_word(image, words_not_understand, word_locations, title, background_path)
         if not os.path.exists(fix_all_path):
             fix_all = generate_pic_by_base64(
                 page_data.image, f"{path}fix-all-{page_data.id}.png"
             )
+            image = cv2.imread(fix_all)
+            word_locations = get_word_location(page_data.location)
+            words_not_understand = json.loads(page_data.wordLabels) if page_data.wordLabels else []
+            title = ""
+            paint_on_word(image, words_not_understand, word_locations, title, fix_all)
         # 原始的fixation图
         fix_img = show_fixations(fix_seq, background_path)
         cv2.imwrite(f"{path}fix-origin-{fix_seq_id}.png", fix_img)
@@ -1109,3 +1122,19 @@ def get_pic_by_fix(request):
         fix_num += len(fix_seq)
         # print(f"fix_seq:{fix_seq}")
     return HttpResponse(1)
+
+def get_hit_row(sequence_fixations, rows):
+    result_rows = []
+    for _, sequence in enumerate(sequence_fixations):
+        y_list = np.array([x[1] for x in sequence])
+        y_mean = np.mean(y_list)
+        row_index = row_index_of_sequence(rows, y_mean)
+        result_rows.append(row_index)
+    return result_rows
+
+def row_index_of_sequence(rows, y):
+    """根据y轴坐标确定行号"""
+    return next(
+        (i for i, row in enumerate(rows) if row["bottom"] >= y >= row["top"]),
+        -1,
+    )
