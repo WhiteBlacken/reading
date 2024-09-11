@@ -716,13 +716,13 @@ def generate_pic_by_base64(image_base64: str, path:str, isMac=False):
     #     new_img.save(save_path + filename)
     return path
 
-def show_fixations(fixations: list, background: str):
+def show_fixations(fixations: list, background: str, begin=0):
     """根据fixation画图"""
     canvas = cv2.imread(background)
-    canvas = paint_fixations(canvas, fixations)
+    canvas = paint_fixations(canvas, fixations, begin)
     return canvas
 
-def paint_fixations(canvas, fixations, interval=1, label=1, line=True):
+def paint_fixations(canvas, fixations, begin, interval=1, label=1, line=True):
     """根据fixation画图"""
     fixations = [x for i, x in enumerate(fixations) if i % interval == 0]
     for i, fix in enumerate(fixations):
@@ -738,7 +738,7 @@ def paint_fixations(canvas, fixations, interval=1, label=1, line=True):
         if i % label == 0:
             cv2.putText(
                 canvas,
-                str(i),
+                str(i+begin),
                 (x, y),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.7,

@@ -1027,6 +1027,7 @@ def get_pic_by_fix(request):
     data = pd.read_csv(file_path)
 
     fix_seq_max_id = 0
+    fix_num = 0
     for idx, row in data.iterrows():
         exp_id, page_id, fix_seq_id, row_id = row['exp_id'], row['page_id'], row['fix_seq_id'], row['row_id']
         if exp_id != int(request_exp_id):
@@ -1084,17 +1085,27 @@ def get_pic_by_fix(request):
             os.mkdir(path)
 
         background_path = f"{path}background.png"
+        fix_all_path = f"{path}fix-all-{page_data.id}.png"
         if not os.path.exists(background_path):
             # 生成背景图
             background = generate_pic_by_base64(
                 page_data.image, f"{path}background.png"
             )
+        if not os.path.exists(fix_all_path):
+            fix_all = generate_pic_by_base64(
+                page_data.image, f"{path}fix-all-{page_data.id}.png"
+            )
         # 原始的fixation图
         fix_img = show_fixations(fix_seq, background_path)
         cv2.imwrite(f"{path}fix-origin-{fix_seq_id}.png", fix_img)
 
+        fix_img = show_fixations(fix_seq, fix_all_path, begin=fix_num)
+        print(f"fix_img:{fix_img}")
+        cv2.imwrite( f"{path}fix-all-{page_data.id}.png", fix_img)
+
         gaze_4_heat = [[x[0], x[1]] for x in fix_seq]
         myHeatmap.draw_heat_map(gaze_4_heat, f"{path}fix_heatmap-{fix_seq_id}.png", background_path)
 
+        fix_num += len(fix_seq)
         # print(f"fix_seq:{fix_seq}")
     return HttpResponse(1)
