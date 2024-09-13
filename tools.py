@@ -356,6 +356,14 @@ def move_fixation_by_no_blank_row_assumption(sequence_fixations, rows, len_per_w
     # print(f"result_rows:{result_rows}")
     return result_fixations, result_rows, row_level_fix, result_rows
 
+def get_hit_row(sequence_fixations, rows):
+    result_rows = []
+    for _, sequence in enumerate(sequence_fixations):
+        y_list = np.array([x[1] for x in sequence])
+        y_mean = np.mean(y_list)
+        row_index = row_index_of_sequence(rows, y_mean)
+        result_rows.append(row_index)
+    return result_rows
 
 def generate_fixations(gaze_points, texts, location, page_id=0):
     """生成fixation"""
