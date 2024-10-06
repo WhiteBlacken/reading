@@ -857,6 +857,7 @@ def dataset_of_all_time_for_skip(request):
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
+    skip_page_list = [1226, 1227, 1236, 1237, 1247, 1248, 1249, 1250, 1298, 1299, 1300, 1323, 1324, 1588, 1590, 1591, 1592, 1593, 1642, 1643, 1686, 1687, 1692, 1693, 1699, 1700, 1701, 1702, 1742, 1743, 1745, 1747, 1794, 1795, 1807, 1808, 1819, 1820, 1821, 1822, 1823, 1824, 1826, 1831, 1860, 1861, 1862, 1863, 1926, 1927, 1930, 1931, 1948, 1949, 1950, 1952, 1951, 1953, 1959, 1966, 1967, 1980, 1981, 1984, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2035, 2036, 2044, 2045, 2046, 2047, 2051, 2052, 2053, 2066, 2067, 2639, 2641, 2644, 2645, 2649, 2651, 2646, 2648, 2647, 2652, 2654, 2655, 2656, 2658, 2660, 2657, 2659, 2661, 2662, 2663, 2664, 2665, 2666, 2667, 2668, 2670, 2672, 2673, 2674, 2675, 2676, 2677, 2678, 2679, 2680, 2681, 2683, 2684, 2685, 2686, 2687, 2688, 2689, 2690, 2692, 2693, 2704, 2705, 2706, 2707, 2712, 2714, 2716, 2715, 2717, 2720, 2721, 2722, 2723, 2724, 2725, 2729, 2730, 2731, 2732, 2733, 2736, 2737, 2739, 2744, 2745, 2746, 2747, 2748, 2755, 2756, 2757, 2758, 2759, 2760, 2761, 2764, 2765, 2766, 2767, 2768, 2769, 2770, 2772, 2774, 2776, 2777, 2778, 2779, 2780, 2781, 2783, 2786, 2789, 2790, 2791]
     skip_page_list = [1589, 1825, 1929, 1960, 1985, 2020, 2640, 2650, 2653, 2671, 2682, 2691, 2713, 2726, 2738, 2749, 2750, 2751, 2752, 2753, 2754, 2762, 2763, 2771, 2773, 2775, 2782, 2784, 2785, 2787, 2788]
     # experiments = Experiment.objects.filter(id__in=experiment_list_select)
 
@@ -884,7 +885,13 @@ def dataset_of_all_time_for_skip(request):
                 gaze_points, page_data.texts, page_data.location, page_id=page_data.id
             )
             print(f"row_level_fix_without_row_assumption:{row_level_fix_without_row_assumption[:5]}")
-            assert len(row_level_fix_without_row_assumption) == len(hit_rows)
+            border, rows, danger_zone, len_per_word = textarea(page_data.location)
+            if len(rows) <= 3: continue
+
+            try:
+                assert len(row_level_fix_without_row_assumption) == len(hit_rows)
+            except Exception as e:
+                continue
             # 按行切割的文本
             word_list, _ = get_word_and_sentence_from_text(page_data.texts)
             location =  json.loads(page_data.location)
@@ -905,15 +912,14 @@ def dataset_of_all_time_for_skip(request):
             rowArticle.experiment_id = experiment.id
             rowArticle.to_csv(row_article_path)
 
-            border, rows, danger_zone, len_per_word = textarea(page_data.location)
             fixations_seq_split_y_diff = split_fixations(gaze_points, page_data.location, "y_diff")
-            hit_rows = get_hit_row(fixations_seq_split_y_diff, rows)
+            hit_rows = get_hit_row_new(fixations_seq_split_y_diff, rows)
             assert len(fixations_seq_split_y_diff) == len(hit_rows)
             print(f"hit_rows:{hit_rows}")
             # 处理每一个fix_seq
             for fix_seq_id, fix_seq in enumerate(fixations_seq_split_y_diff):
-                possible_rows = [idx for idx in range(hit_rows[fix_seq_id]-1, hit_rows[fix_seq_id]+2) if idx >= 0 and idx < len(text_rows)]
-
+                possible_rows = hit_rows[fix_seq_id]
+                assert len(possible_rows) == 3
                 for row in possible_rows:
                     adjust_y = (text_rows[row][0][2] + text_rows[row][0][4]) / 2 # word, left, top, right, bottom
                     fix_seq = [[fix[0], adjust_y, fix[2], fix[3], fix[4]] for fix in fix_seq]
@@ -1138,3 +1144,19 @@ def row_index_of_sequence(rows, y):
         (i for i, row in enumerate(rows) if row["bottom"] >= y >= row["top"]),
         -1,
     )
+
+def get_hit_row_new(sequence_fixations, rows):
+    result_rows = []
+    for _, sequence in enumerate(sequence_fixations):
+        y_list = np.array([x[1] for x in sequence])
+        y_mean = np.mean(y_list)
+        # 获取最接近 y_mean 的三个行号
+        row_indices = find_closest_rows(rows, y_mean)
+        print(f"row_indices:{row_indices}")
+        result_rows.append(row_indices)
+    return result_rows
+
+def find_closest_rows(rows, y):
+    distances = [abs(row["top"] - y) + abs(row["bottom"] - y) for row in rows]
+    sorted_indices = sorted(range(len(distances)), key=lambda i: distances[i])
+    return sorted_indices[:3]
